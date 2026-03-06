@@ -8,12 +8,11 @@ from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
     QLineEdit, QCheckBox, QPushButton, QLabel, QProgressBar, QComboBox,
-    QGraphicsDropShadowEffect,
+    QGraphicsDropShadowEffect, QSizePolicy,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QColor, QLinearGradient, QPainter, QPalette
+from PyQt6.QtCore import Qt, pyqtSignal, QRectF
+from PyQt6.QtGui import QIcon, QColor, QLinearGradient, QPainter, QPalette, QFont
 from PyQt6.QtSvg import QSvgRenderer
-from PyQt6.QtCore import QRectF
 from PyQt6.QtWidgets import QApplication as _QApp
 
 from core import theme
@@ -103,6 +102,74 @@ class _GradientHeader(QWidget):
         p.end()
 
 
+class _IllustrationPanel(QWidget):
+    """Left panel: gradient background + SVG illustration + headline + description."""
+
+    _BG_SVG = "icons/app/login-bg.svg"
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setFixedWidth(380)
+        self._svg = QSvgRenderer(self._BG_SVG)
+        self._headline = t("login.headline")
+        self._description = t("login.description")
+
+    def set_texts(self, headline: str, description: str) -> None:
+        self._headline = headline
+        self._description = description
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        w, h = self.width(), self.height()
+
+        # Gradient background
+        grad = QLinearGradient(0, 0, w, h)
+        grad.setColorAt(0.0, QColor(_ACCENT))
+        grad.setColorAt(1.0, QColor("#00b4d8"))
+        p.fillRect(self.rect(), grad)
+
+        # SVG illustration — centered in upper portion
+        if self._svg.isValid():
+            svg_w, svg_h = self._svg.defaultSize().width(), self._svg.defaultSize().height()
+            pad = 30
+            avail_w = w - pad * 2
+            avail_h = h * 0.55  # use top 55% for illustration
+            scale = min(avail_w / svg_w, avail_h / svg_h)
+            logo_w, logo_h = svg_w * scale, svg_h * scale
+            x = (w - logo_w) / 2
+            y = pad + (avail_h - logo_h) / 2
+            self._svg.render(p, QRectF(x, y, logo_w, logo_h))
+
+        # Headline text
+        p.setPen(QColor("white"))
+        headline_y = int(h * 0.60)
+        headline_font = theme.font(size=theme.FONT_SIZE_LG, bold=True)
+        p.setFont(headline_font)
+        headline_rect = self.rect().adjusted(24, headline_y, -24, 0)
+        p.drawText(
+            headline_rect,
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter | Qt.TextFlag.TextWordWrap,
+            self._headline,
+        )
+
+        # Description text — below headline
+        desc_color = QColor(255, 255, 255, 180)
+        p.setPen(desc_color)
+        desc_font = theme.font(size=theme.FONT_SIZE_SM)
+        p.setFont(desc_font)
+        desc_rect = self.rect().adjusted(24, headline_y + 40, -24, -16)
+        p.drawText(
+            desc_rect,
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter | Qt.TextFlag.TextWordWrap,
+            self._description,
+        )
+
+        p.end()
+
+
 def _add_eye_toggle(line_edit: QLineEdit) -> None:
     """Them icon con mat ben phai de toggle hien/an password."""
     icon_hide = QIcon("icons/layui/eye-invisible.svg")
@@ -186,22 +253,6 @@ class _LoginForm(QWidget):
         btn_lay.addWidget(self._btn_login)
         lay.addLayout(btn_lay)
 
-        # Headline + description — fills the gap
-        lay.addSpacing(theme.SPACING_MD)
-        self._headline = QLabel(t("login.headline"))
-        self._headline.setFont(theme.font(size=theme.FONT_SIZE_SM, bold=True))
-        self._headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._headline.setWordWrap(True)
-        self._headline.setStyleSheet("color: #666;")
-        lay.addWidget(self._headline)
-
-        self._desc = QLabel(t("login.description"))
-        self._desc.setFont(theme.font(size=8))
-        self._desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._desc.setWordWrap(True)
-        self._desc.setStyleSheet("color: #999; line-height: 1.3;")
-        lay.addWidget(self._desc)
-
         lay.addStretch()
 
         # Switch link
@@ -226,8 +277,6 @@ class _LoginForm(QWidget):
         self._btn_login.setText(t("login.btn_login"))
         self._no_account_lbl.setText(t("login.no_account"))
         self._link_register.setText(t("login.link_register"))
-        self._headline.setText(t("login.headline"))
-        self._desc.setText(t("login.description"))
 
     def _on_cancel(self) -> None:
         self._username.clear()
@@ -337,22 +386,6 @@ class _RegisterForm(QWidget):
         btn_lay.addWidget(self._btn_register)
         lay.addLayout(btn_lay)
 
-        # Headline + description
-        lay.addSpacing(theme.SPACING_MD)
-        self._headline = QLabel(t("login.headline"))
-        self._headline.setFont(theme.font(size=theme.FONT_SIZE_SM, bold=True))
-        self._headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._headline.setWordWrap(True)
-        self._headline.setStyleSheet("color: #666;")
-        lay.addWidget(self._headline)
-
-        self._desc = QLabel(t("login.description"))
-        self._desc.setFont(theme.font(size=8))
-        self._desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._desc.setWordWrap(True)
-        self._desc.setStyleSheet("color: #999; line-height: 1.3;")
-        lay.addWidget(self._desc)
-
         lay.addStretch()
 
         # Switch link
@@ -377,8 +410,6 @@ class _RegisterForm(QWidget):
         self._btn_register.setText(t("register.btn_register"))
         self._has_account_lbl.setText(t("register.has_account"))
         self._link_login.setText(t("register.link_login"))
-        self._headline.setText(t("login.headline"))
-        self._desc.setText(t("login.description"))
 
     def _on_cancel(self) -> None:
         self._username.clear()
@@ -432,10 +463,17 @@ class LoginWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(t("login.title"))
-        self.setFixedSize(380, 490)
+        self.setFixedSize(760, 490)
 
-        root = vbox(spacing=0, margins=theme.MARGIN_ZERO)
+        root = hbox(spacing=0, margins=theme.MARGIN_ZERO)
         self.setLayout(root)
+
+        # Left: illustration panel
+        self._illustration = _IllustrationPanel()
+        root.addWidget(self._illustration)
+
+        # Right: form column
+        right = vbox(spacing=0, margins=theme.MARGIN_ZERO)
 
         # Stacked: login / register
         self._stack = QStackedWidget()
@@ -443,7 +481,7 @@ class LoginWindow(QWidget):
         self._register_form = _RegisterForm()
         self._stack.addWidget(self._login_form)
         self._stack.addWidget(self._register_form)
-        root.addWidget(self._stack, 1)
+        right.addWidget(self._stack, 1)
 
         # Loading bar — indeterminate, ẩn mặc định
         self._progress = QProgressBar()
@@ -451,7 +489,7 @@ class LoginWindow(QWidget):
         self._progress.setTextVisible(False)
         self._progress.setFixedHeight(3)
         self._progress.hide()
-        root.addWidget(self._progress)
+        right.addWidget(self._progress)
 
         # Language selector — bottom of window
         lang_lay = hbox(spacing=theme.SPACING_SM, margins=theme.MARGIN_ZERO)
@@ -466,14 +504,16 @@ class LoginWindow(QWidget):
         self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
         lang_lay.addWidget(self._lang_combo)
         lang_lay.addStretch()
-        root.addLayout(lang_lay)
+        right.addLayout(lang_lay)
 
         # Version label
         from utils.updater import APP_VERSION
         ver_lbl = QLabel(f"v{APP_VERSION}")
         ver_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ver_lbl.setStyleSheet("color: #999; font-size: 8pt; padding: 4px;")
-        root.addWidget(ver_lbl)
+        right.addWidget(ver_lbl)
+
+        root.addLayout(right)
 
         # Signals
         self._login_form.switch_to_register.connect(
@@ -499,6 +539,7 @@ class LoginWindow(QWidget):
         self.setWindowTitle(t("login.title"))
         self._login_form.retranslate()
         self._register_form.retranslate()
+        self._illustration.set_texts(t("login.headline"), t("login.description"))
 
     # ── Handlers ─────────────────────────────────────────────────
 
