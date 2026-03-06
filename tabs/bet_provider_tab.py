@@ -21,10 +21,21 @@ class BetProviderTab(UpstreamTab):
         ("bet_provider.col_result",     "win_lose"),
         ("bet_provider.col_time",       "bet_time"),
     ]
+    _search_fields = [
+        {"key": "bet_time", "type": "date_range",
+         "label": "search.bet_time"},
+        {"key": "serial_no", "type": "text",
+         "label": "search.serial_no", "placeholder": "search.serial_no_ph",
+         "width": 200},
+        {"key": "platform_username", "type": "text",
+         "label": "search.platform_account",
+         "placeholder": "search.platform_account_ph",
+         "width": 180},
+    ]
 
-    def _fetch_upstream(self, agent_id, page, limit, search):
+    def _fetch_upstream(self, agent_id, page, limit, **params):
         return upstream.fetch_bet_provider(
-            agent_id=agent_id, page=page, limit=limit, username=search,
+            agent_id=agent_id, page=page, limit=limit, **params,
         )
 
     def _formatters(self):

@@ -213,51 +213,50 @@ class UpstreamClient:
     # ── Per-endpoint convenience methods ─────────────────────
 
     def fetch_customers(self, agent_id: int, page: int = 1, limit: int = 50,
-                        username: str = "") -> dict[str, Any]:
+                        **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/user.html",
-                           page=page, limit=limit, username=username)
+                           page=page, limit=limit, **kwargs)
 
     def fetch_deposits(self, agent_id: int, page: int = 1, limit: int = 50,
-                       username: str = "", date: str = "") -> dict[str, Any]:
+                       **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/depositAndWithdrawal.html",
-                           page=page, limit=limit, username=username, date=date)
+                           page=page, limit=limit, **kwargs)
 
     def fetch_withdrawals(self, agent_id: int, page: int = 1, limit: int = 50,
-                          username: str = "", date: str = "") -> dict[str, Any]:
+                          **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/withdrawalsRecord.html",
-                           page=page, limit=limit, username=username, date=date)
+                           page=page, limit=limit, **kwargs)
 
     def fetch_transactions(self, agent_id: int, page: int = 1, limit: int = 50,
-                           username: str = "", date: str = "") -> dict[str, Any]:
+                           **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/reportFunds.html",
-                           page=page, limit=limit, username=username, date=date)
+                           page=page, limit=limit, **kwargs)
 
     def fetch_bet_lottery(self, agent_id: int, page: int = 1, limit: int = 50,
-                          username: str = "", date: str = "") -> dict[str, Any]:
+                          **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/bet.html",
-                           page=page, limit=limit, username=username, date=date,
-                           es="1", is_summary="0")
+                           page=page, limit=limit, es="1", is_summary="0",
+                           **kwargs)
 
     def fetch_bet_provider(self, agent_id: int, page: int = 1, limit: int = 50,
-                           username: str = "", bet_time: str = "") -> dict[str, Any]:
+                           **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/betOrder.html",
-                           page=page, limit=limit, platform_username=username,
-                           bet_time=bet_time, es="1")
+                           page=page, limit=limit, es="1", **kwargs)
 
     def fetch_lottery(self, agent_id: int, page: int = 1, limit: int = 50,
-                      username: str = "", date: str = "") -> dict[str, Any]:
+                      **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/reportLottery.html",
-                           page=page, limit=limit, username=username, date=date)
+                           page=page, limit=limit, **kwargs)
 
     def fetch_provider(self, agent_id: int, page: int = 1, limit: int = 50,
-                       username: str = "", date: str = "") -> dict[str, Any]:
+                       **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/reportThirdGame.html",
-                           page=page, limit=limit, username=username, date=date)
+                           page=page, limit=limit, **kwargs)
 
     def fetch_referrals(self, agent_id: int, page: int = 1, limit: int = 50,
-                        invite_code: str = "") -> dict[str, Any]:
+                        **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/inviteList.html",
-                           page=page, limit=limit, invite_code=invite_code)
+                           page=page, limit=limit, **kwargs)
 
 
 # Singleton

@@ -23,10 +23,14 @@ class TransactionTab(UpstreamTab):
         ("transaction.col_3rd_bonus",   "third_activity_amount"),
         ("transaction.col_date",        "date"),
     ]
+    _search_fields = [
+        {"key": "date", "type": "date_range",
+         "label": "search.date"},
+    ]
 
-    def _fetch_upstream(self, agent_id, page, limit, search):
+    def _fetch_upstream(self, agent_id, page, limit, **params):
         return upstream.fetch_transactions(
-            agent_id=agent_id, page=page, limit=limit, username=search,
+            agent_id=agent_id, page=page, limit=limit, **params,
         )
 
     def _formatters(self):

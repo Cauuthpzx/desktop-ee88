@@ -3,12 +3,17 @@ tabs/_upstream_tab.py — Base class cho cac tab fetch data tu upstream.
 
 Pattern chung:
 - Agent selector combo
+- Search filter row (text, date range, select)
 - TableCrud + pagination + infinite scroll
 - Fetch upstream truc tiep bang cookies local
-- Cac tab con chi can khai bao: COLUMNS_KEYS, _title_key, _fetch_upstream()
+- Cac tab con chi can khai bao: _columns_keys, _title_key, _search_fields,
+  _fetch_upstream(), _formatters()
 """
-from PyQt6.QtWidgets import QComboBox, QTableWidgetItem
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QComboBox, QTableWidgetItem, QLineEdit, QDateEdit,
+    QHBoxLayout, QPushButton, QLabel, QWidget,
+)
+from PyQt6.QtCore import Qt, QDate
 
 from core.base_widgets import BaseTab, label, divider, hbox
 from core import theme
@@ -29,11 +34,15 @@ class UpstreamTab(BaseTab):
     Subclass PHAI override:
         _title_key: str           — i18n key cho title (e.g. "deposit.title")
         _columns_keys: list       — [(i18n_key, data_key), ...]
-        _fetch_upstream(aid, page, limit, search) → dict
-        _formatters() → dict      — optional, override neu can format columns
+        _fetch_upstream(aid, page, limit, **params) → dict
+
+    Optional override:
+        _search_fields: list      — field definitions for search row
+        _formatters() → dict      — column formatters
     """
     _title_key: str = ""
     _columns_keys: list[tuple[str, str]] = []
+    _search_fields: list[dict] = []
 
     def _build(self, layout) -> None:
         self._title_lbl = label(t(self._title_key), bold=True, size=theme.FONT_SIZE_LG)
@@ -51,17 +60,25 @@ class UpstreamTab(BaseTab):
         agent_row.addStretch()
         layout.addLayout(agent_row)
 
+        # Search filter row
+        self._filter_widgets: dict[str, QWidget] = {}
+        self._filter_labels: dict[str, QLabel] = {}
+        if self._search_fields:
+            self._build_filters(layout)
+
         # Table + pagination + infinite scroll
         columns = [t(ck[0]) for ck in self._columns_keys]
         self.crud = TableCrud(
             columns=columns,
             on_add=None, on_edit=None, on_delete=None,
-            on_search=self._on_search,
+            on_search=None,
             on_page_change=self._on_page,
             page_size=PAGE_SIZE,
         )
         for btn in self.crud._toolbar._buttons.values():
             btn.hide()
+        # Hide toolbar completely since we have our own filter row
+        self.crud._toolbar.hide()
         layout.addWidget(self.crud)
 
         # Infinite scroll
@@ -71,7 +88,6 @@ class UpstreamTab(BaseTab):
         self._loading = LoadingOverlay(self)
         self._agents: list[dict] = []
         self._current_agent_id: int | None = None
-        self._search_text = ""
         self._first_show = True
 
         # Infinite scroll state
@@ -79,6 +95,109 @@ class UpstreamTab(BaseTab):
         self._total_count = 0
         self._is_loading = False
         self._all_rows: list[dict] = []
+
+    # ── Search filter row ──────────────────────────────────
+
+    def _build_filters(self, layout) -> None:
+        """Build search filter widgets from _search_fields.
+
+        Each field dict:
+            {"key": "username", "type": "text", "label": "search.username",
+             "placeholder": "search.username_ph", "width": 160}
+            {"key": "date", "type": "date_range", "label": "search.date"}
+            {"key": "status", "type": "select", "label": "search.status",
+             "options": [("search.all", ""), ("search.active", "1"), ...]}
+        """
+        row = hbox(spacing=theme.SPACING_SM, margins=theme.MARGIN_ZERO)
+
+        for field in self._search_fields:
+            ftype = field.get("type", "text")
+            key = field["key"]
+
+            # Label
+            lbl = QLabel(t(field["label"]))
+            row.addWidget(lbl)
+            self._filter_labels[key] = lbl
+
+            if ftype == "text":
+                w = QLineEdit()
+                w.setPlaceholderText(t(field.get("placeholder", "crud.search")))
+                w.setMinimumWidth(field.get("width", 150))
+                w.returnPressed.connect(self._on_filter_search)
+                row.addWidget(w)
+
+            elif ftype == "date_range":
+                w = QWidget()
+                dl = QHBoxLayout(w)
+                dl.setContentsMargins(0, 0, 0, 0)
+                dl.setSpacing(theme.SPACING_XS)
+
+                d_from = QDateEdit()
+                d_from.setCalendarPopup(True)
+                d_from.setDate(QDate.currentDate().addDays(-7))
+                d_from.setDisplayFormat("yyyy-MM-dd")
+                dl.addWidget(d_from)
+
+                dl.addWidget(QLabel("~"))
+
+                d_to = QDateEdit()
+                d_to.setCalendarPopup(True)
+                d_to.setDate(QDate.currentDate())
+                d_to.setDisplayFormat("yyyy-MM-dd")
+                dl.addWidget(d_to)
+
+                w._d_from = d_from
+                w._d_to = d_to
+                row.addWidget(w)
+
+            elif ftype == "select":
+                w = QComboBox()
+                for opt_label, opt_val in field.get("options", []):
+                    w.addItem(t(opt_label), opt_val)
+                w.setMinimumWidth(field.get("width", 120))
+                row.addWidget(w)
+
+            self._filter_widgets[key] = w
+
+        # Search button
+        self._btn_search = QPushButton(t("crud.search"))
+        self._btn_search.clicked.connect(self._on_filter_search)
+        row.addWidget(self._btn_search)
+
+        row.addStretch()
+        layout.addLayout(row)
+
+    def _get_search_params(self) -> dict[str, str]:
+        """Collect search params from filter widgets."""
+        params: dict[str, str] = {}
+        for field in self._search_fields:
+            key = field["key"]
+            w = self._filter_widgets.get(key)
+            if not w:
+                continue
+
+            ftype = field.get("type", "text")
+            param_key = field.get("param", key)
+
+            if ftype == "text":
+                val = w.text().strip()
+                if val:
+                    params[param_key] = val
+
+            elif ftype == "date_range":
+                d_from = w._d_from.date().toString("yyyy-MM-dd")
+                d_to = w._d_to.date().toString("yyyy-MM-dd")
+                params[param_key] = f"{d_from}|{d_to}"
+
+            elif ftype == "select":
+                val = w.currentData()
+                if val:
+                    params[param_key] = val
+
+        return params
+
+    def _on_filter_search(self) -> None:
+        self._reload_fresh()
 
     # ── Show ─────────────────────────────────────────────────
 
@@ -134,11 +253,11 @@ class UpstreamTab(BaseTab):
 
         self._is_loading = True
         aid = self._current_agent_id
-        search = self._search_text
+        params = self._get_search_params()
         page = self._current_page + 1
 
         run_in_thread(
-            lambda: self._fetch_upstream(aid, page, PAGE_SIZE, search),
+            lambda: self._fetch_upstream(aid, page, PAGE_SIZE, **params),
             on_result=lambda data: self._on_page_data(data, page),
             on_error=self._on_error,
             on_finished=self._on_load_finished,
@@ -147,7 +266,7 @@ class UpstreamTab(BaseTab):
             self._loading.start(t("loading.loading_data"))
 
     def _fetch_upstream(self, agent_id: int, page: int, limit: int,
-                        search: str) -> dict:
+                        **params) -> dict:
         """Override in subclass."""
         raise NotImplementedError
 
@@ -234,11 +353,7 @@ class UpstreamTab(BaseTab):
         if remaining <= threshold:
             self._load_next_page()
 
-    # ── Search & Pagination ──────────────────────────────────
-
-    def _on_search(self, text: str) -> None:
-        self._search_text = text.strip()
-        self._reload_fresh()
+    # ── Pagination ───────────────────────────────────────────
 
     def _on_page(self, page: int) -> None:
         if self._is_loading:
@@ -247,10 +362,10 @@ class UpstreamTab(BaseTab):
         self._all_rows = []
         self._is_loading = True
         aid = self._current_agent_id
-        search = self._search_text
+        params = self._get_search_params()
 
         run_in_thread(
-            lambda: self._fetch_upstream(aid, page, PAGE_SIZE, search),
+            lambda: self._fetch_upstream(aid, page, PAGE_SIZE, **params),
             on_result=lambda data: self._on_jump_data(data, page),
             on_error=self._on_error,
             on_finished=self._on_load_finished,
@@ -271,3 +386,18 @@ class UpstreamTab(BaseTab):
         self._agent_label.setText(t("customer.agent_select"))
         columns = [t(ck[0]) for ck in self._columns_keys]
         self.crud.table.setHorizontalHeaderLabels(columns)
+
+        # Retranslate filter labels
+        for field in self._search_fields:
+            key = field["key"]
+            if key in self._filter_labels:
+                self._filter_labels[key].setText(t(field["label"]))
+            w = self._filter_widgets.get(key)
+            if w and field.get("type") == "text":
+                w.setPlaceholderText(t(field.get("placeholder", "crud.search")))
+            elif w and field.get("type") == "select":
+                for i, (opt_label, _) in enumerate(field.get("options", [])):
+                    w.setItemText(i, t(opt_label))
+
+        if hasattr(self, "_btn_search"):
+            self._btn_search.setText(t("crud.search"))

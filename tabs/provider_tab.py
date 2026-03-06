@@ -1,5 +1,6 @@
 """
 tabs/provider_tab.py — Tab Nhà cung cấp (upstream: /agent/reportThirdGame.html)
+Note: reportThirdGame.html không có search form trên upstream.
 """
 from tabs._upstream_tab import UpstreamTab
 from utils.upstream import upstream
@@ -18,10 +19,11 @@ class ProviderTab(UpstreamTab):
         ("provider.col_prize",    "t_prize"),
         ("provider.col_result",   "t_win_lose"),
     ]
+    # No search fields — upstream page has no search form
 
-    def _fetch_upstream(self, agent_id, page, limit, search):
+    def _fetch_upstream(self, agent_id, page, limit, **params):
         return upstream.fetch_provider(
-            agent_id=agent_id, page=page, limit=limit, username=search,
+            agent_id=agent_id, page=page, limit=limit, **params,
         )
 
     def _formatters(self):

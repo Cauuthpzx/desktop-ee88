@@ -21,10 +21,23 @@ class CustomerTab(UpstreamTab):
         ("customer.col_register",    "register_time"),
         ("customer.col_status",      "status_format"),
     ]
+    _search_fields = [
+        {"key": "username", "type": "text",
+         "label": "search.username", "placeholder": "search.username_ph",
+         "width": 160},
+        {"key": "first_deposit_time", "type": "date_range",
+         "label": "search.first_deposit_time"},
+        {"key": "status", "type": "select", "label": "search.status",
+         "options": [
+             ("search.all", ""),
+             ("search.status_normal", "0"),
+             ("search.status_frozen", "1"),
+         ]},
+    ]
 
-    def _fetch_upstream(self, agent_id, page, limit, search):
+    def _fetch_upstream(self, agent_id, page, limit, **params):
         return upstream.fetch_customers(
-            agent_id=agent_id, page=page, limit=limit, username=search,
+            agent_id=agent_id, page=page, limit=limit, **params,
         )
 
     def _formatters(self):

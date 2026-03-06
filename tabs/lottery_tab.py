@@ -21,10 +21,17 @@ class LotteryTab(UpstreamTab):
         ("lottery.col_prize",    "prize"),
         ("lottery.col_name",     "lottery_name"),
     ]
+    _search_fields = [
+        {"key": "date", "type": "date_range",
+         "label": "search.date"},
+        {"key": "username", "type": "text",
+         "label": "search.username", "placeholder": "search.username_ph",
+         "width": 160},
+    ]
 
-    def _fetch_upstream(self, agent_id, page, limit, search):
+    def _fetch_upstream(self, agent_id, page, limit, **params):
         return upstream.fetch_lottery(
-            agent_id=agent_id, page=page, limit=limit, username=search,
+            agent_id=agent_id, page=page, limit=limit, **params,
         )
 
     def _formatters(self):

@@ -23,10 +23,29 @@ class BetLotteryTab(UpstreamTab):
         ("bet_lottery.col_result",   "result"),
         ("bet_lottery.col_status",   "status_text"),
     ]
+    _search_fields = [
+        {"key": "create_time", "type": "date_range",
+         "label": "search.bet_time"},
+        {"key": "username", "type": "text",
+         "label": "search.username", "placeholder": "search.username_ph",
+         "width": 150},
+        {"key": "serial_no", "type": "text",
+         "label": "search.serial_no", "placeholder": "search.serial_no_ph",
+         "width": 180},
+        {"key": "status", "type": "select", "label": "search.status",
+         "options": [
+             ("search.all", ""),
+             ("search.bet_pending", "0"),
+             ("search.bet_won", "1"),
+             ("search.bet_lost", "2"),
+             ("search.bet_tie", "3"),
+             ("search.bet_cancelled", "4"),
+         ], "width": 120},
+    ]
 
-    def _fetch_upstream(self, agent_id, page, limit, search):
+    def _fetch_upstream(self, agent_id, page, limit, **params):
         return upstream.fetch_bet_lottery(
-            agent_id=agent_id, page=page, limit=limit, username=search,
+            agent_id=agent_id, page=page, limit=limit, **params,
         )
 
     def _formatters(self):
