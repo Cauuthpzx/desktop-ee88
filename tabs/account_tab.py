@@ -455,9 +455,6 @@ class AccountTab(BaseTab):
         if not confirm(self.window(), t("account.confirm_logout")):
             return
         auth.logout()
-        # Restart app to show login window
-        from PyQt6.QtWidgets import QApplication
-        QApplication.quit()
 
     # ── Helpers ──────────────────────────────────────────────
 

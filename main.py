@@ -69,6 +69,13 @@ def main():
 
     login.login_success.connect(on_login_success)
 
+    def on_logout() -> None:
+        window.hide()
+        tray.hide()
+        login.show()
+
+    auth.logged_out.connect(on_logout)
+
     # Auto-login: neu co session luu tu truoc, vao thang AppWindow
     if settings.get_bool("login/remember") and api.restore_session():
         window.show()

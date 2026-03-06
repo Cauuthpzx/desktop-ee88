@@ -13,12 +13,16 @@ from __future__ import annotations
 
 import logging
 
+from PyQt6.QtCore import QObject, pyqtSignal
+
 from utils.api import api
 
 logger = logging.getLogger(__name__)
 
 
-class AuthService:
+class AuthService(QObject):
+    """Auth service with logout signal for UI navigation."""
+    logged_out = pyqtSignal()
     def init(self) -> None:
         """Health check server khi khoi dong app."""
         if not api.health():
@@ -33,8 +37,9 @@ class AuthService:
         return api.login(username, password)
 
     def logout(self) -> None:
-        """Xoa token local."""
+        """Xoa token local va emit signal de UI quay ve login."""
         api.logout()
+        self.logged_out.emit()
 
     @property
     def is_logged_in(self) -> bool:
