@@ -99,6 +99,9 @@ class _IconPath:
     SAVINGS = "icons/material/savings.svg"
     MONEY_OFF = "icons/material/money_off.svg"
     LIST_ALT = "icons/material/list_alt.svg"
+    SUPPORT_AGENT = "icons/material/support_agent.svg"
+    PERSON_ADD = "icons/material/person_add.svg"
+    LOGIN = "icons/layui/logout.svg"
 
 
 class _IconMeta(type):

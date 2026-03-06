@@ -38,6 +38,25 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at     TIMESTAMPTZ DEFAULT NOW(),
     deleted_at     TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS agents (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name            VARCHAR(100) NOT NULL,
+    ext_username    VARCHAR(100) NOT NULL,
+    ext_password    VARCHAR(500) NOT NULL DEFAULT '',
+    base_url        VARCHAR(500),
+    session_cookie  VARCHAR(500) DEFAULT '',
+    cookie_expires  TIMESTAMPTZ,
+    status          VARCHAR(20) DEFAULT 'offline',
+    is_active       BOOLEAN DEFAULT TRUE,
+    login_error     VARCHAR(500),
+    login_attempts  INT DEFAULT 0,
+    last_login_at   TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, ext_username)
+);
 """
 
 MIGRATIONS = [

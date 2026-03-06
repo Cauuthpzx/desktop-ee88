@@ -50,3 +50,28 @@ class UpdateProfileReq(BaseModel):
 class ChangePasswordReq(BaseModel):
     current_password: str
     new_password: str = Field(min_length=6, max_length=255)
+
+
+# ── Agent ────────────────────────────────────────────────────
+class AgentCreateReq(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    ext_username: str = Field(min_length=1, max_length=100)
+    ext_password: str = Field(default="", max_length=500)
+    base_url: str | None = Field(None, max_length=500)
+
+
+class AgentUpdateReq(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    ext_password: str | None = Field(None, max_length=500)
+    base_url: str | None = Field(None, max_length=500)
+
+
+class AgentResp(BaseModel):
+    ok: bool
+    agent: dict | None = None
+    agents: list[dict] | None = None
+    message: str | None = None
+
+
+class AgentLoginReq(BaseModel):
+    base_url: str | None = None

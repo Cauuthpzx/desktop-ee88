@@ -29,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from server.routes.auth_routes import router as auth_router
 from server.routes.user_routes import router as user_router
 from server.routes.system_routes import router as system_router
+from server.routes.agent_routes import router as agent_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,6 +59,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(system_router)
+app.include_router(agent_router)
 
 
 # ── Dev entry point ───────────────────────────────────────────

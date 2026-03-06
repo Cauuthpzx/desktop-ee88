@@ -1,7 +1,8 @@
 """
 tabs/account_tab.py — Trang tai khoan ca nhan.
 
-Hien thi thong tin user, cho phep cap nhat email va doi mat khau.
+Hien thi thong tin user, cho phep cap nhat email, doi mat khau,
+quan ly dai ly (agent) upstream.
 Uses expandable cards for compact, clean layout.
 """
 from __future__ import annotations
@@ -11,11 +12,13 @@ from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QWidget, QLineEdit, QPushButton, QLabel, QComboBox, QTextEdit,
+    QTableWidget, QTableWidgetItem, QHeaderView, QDialog,
+    QHBoxLayout, QVBoxLayout,
 )
 from PyQt6.QtCore import Qt
 
 from core import theme
-from core.base_widgets import BaseTab, vbox, hbox, form_layout, label, divider
+from core.base_widgets import BaseTab, BaseDialog, vbox, hbox, form_layout, label, divider
 from core.icon import Icon, IconPath
 from core.theme import theme_signals
 from core.i18n import t
@@ -46,8 +49,60 @@ def _add_eye_toggle(line_edit: QLineEdit) -> None:
     action.triggered.connect(toggle)
 
 
+# ── Agent Dialog ─────────────────────────────────────────────────
+
+class _AgentDialog(BaseDialog):
+    """Dialog to add/edit an agent."""
+
+    def __init__(self, parent=None, data: dict | None = None):
+        super().__init__(
+            parent,
+            title=t("account.agent_dialog_title"),
+            min_width=420,
+            data=data,
+        )
+
+    def _build_form(self, form) -> None:
+        self._name_edit = QLineEdit()
+        self._name_edit.setPlaceholderText(t("account.agent_name"))
+        form.addRow(t("account.agent_name") + ":", self._name_edit)
+
+        self._username_edit = QLineEdit()
+        self._username_edit.setPlaceholderText(t("account.agent_username"))
+        form.addRow(t("account.agent_username") + ":", self._username_edit)
+
+        self._password_edit = QLineEdit()
+        self._password_edit.setPlaceholderText(t("account.agent_password"))
+        self._password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        _add_eye_toggle(self._password_edit)
+        form.addRow(t("account.agent_password") + ":", self._password_edit)
+
+        self._url_edit = QLineEdit()
+        self._url_edit.setPlaceholderText("https://a2u4k.ee88dly.com")
+        form.addRow(t("account.agent_base_url") + ":", self._url_edit)
+
+    def _fill(self, data: dict) -> None:
+        self._name_edit.setText(data.get("name", ""))
+        self._username_edit.setText(data.get("ext_username", ""))
+        # Don't fill password on edit — user must re-enter
+        self._url_edit.setText(data.get("base_url", ""))
+        # Disable username edit on existing agent
+        self._username_edit.setReadOnly(True)
+        self._username_edit.setEnabled(False)
+
+    def get_data(self) -> dict:
+        return {
+            "name": self._name_edit.text().strip(),
+            "ext_username": self._username_edit.text().strip(),
+            "ext_password": self._password_edit.text(),
+            "base_url": self._url_edit.text().strip() or None,
+        }
+
+
+# ── Account Tab ──────────────────────────────────────────────────
+
 class AccountTab(BaseTab):
-    """Tab quan ly tai khoan: thong tin, cap nhat email, doi mat khau, dang xuat."""
+    """Tab quan ly tai khoan: thong tin, cap nhat email, doi mat khau, dai ly, dang xuat."""
 
     def _build(self, layout) -> None:
         self._title_lbl = label(t("account.title"), bold=True, size=theme.FONT_SIZE_LG)
@@ -70,6 +125,9 @@ class AccountTab(BaseTab):
         columns.addLayout(col_right, 1)
         layout.addLayout(columns)
 
+        # Agent card — full width below columns
+        layout.addWidget(self._build_agent_card())
+
         # Logout
         logout_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         logout_lay.addStretch()
@@ -91,6 +149,7 @@ class AccountTab(BaseTab):
         if not self._profile_loaded:
             self._profile_loaded = True
             self._load_profile()
+            self._load_agents()
 
     # ── Card builders ─────────────────────────────────────────
 
@@ -265,6 +324,255 @@ class AccountTab(BaseTab):
         self._card_pwd.add_widget(pwd_w)
         return self._card_pwd
 
+    # ── Agent card ─────────────────────────────────────────────
+
+    def _build_agent_card(self) -> ExpandCard:
+        self._card_agent = ExpandCard(
+            icon=IconPath.SUPPORT_AGENT,
+            title=t("account.my_agents"),
+        )
+
+        agent_w = QWidget()
+        agent_lay = vbox(margins=theme.MARGIN_ZERO)
+        agent_w.setLayout(agent_lay)
+
+        # Toolbar
+        tb = hbox(spacing=theme.SPACING_SM, margins=theme.MARGIN_ZERO)
+        self._btn_add_agent = QPushButton(t("account.agent_add"))
+        self._btn_add_agent.setIcon(Icon.ADD)
+        self._btn_add_agent.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_add_agent.clicked.connect(self._on_add_agent)
+        tb.addWidget(self._btn_add_agent)
+        tb.addStretch()
+        agent_lay.addLayout(tb)
+
+        # Table
+        self._agent_table = QTableWidget()
+        self._agent_table.setColumnCount(6)
+        self._agent_headers = [
+            t("account.agent_name"),
+            t("account.agent_username"),
+            t("account.agent_status"),
+            t("account.agent_last_login"),
+            t("account.agent_base_url"),
+            "",  # actions
+        ]
+        self._agent_table.setHorizontalHeaderLabels(self._agent_headers)
+        self._agent_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._agent_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._agent_table.setAlternatingRowColors(True)
+        self._agent_table.verticalHeader().setVisible(False)
+        header = self._agent_table.horizontalHeader()
+        for col in range(5):
+            header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+        self._agent_table.setColumnWidth(5, 220)
+        agent_lay.addWidget(self._agent_table)
+
+        # Message
+        self._agent_msg = QLabel()
+        self._agent_msg.setWordWrap(True)
+        self._agent_msg.hide()
+        agent_lay.addWidget(self._agent_msg)
+
+        # Cache
+        self._agents_data: list[dict] = []
+
+        self._card_agent.add_widget(agent_w)
+        return self._card_agent
+
+    def _populate_agent_table(self) -> None:
+        """Fill table from cached agents data."""
+        table = self._agent_table
+        table.setUpdatesEnabled(False)
+        table.setRowCount(len(self._agents_data))
+        center = Qt.AlignmentFlag.AlignCenter
+
+        for row, ag in enumerate(self._agents_data):
+            # Name
+            item = QTableWidgetItem(ag.get("name", ""))
+            item.setTextAlignment(center)
+            item.setData(Qt.ItemDataRole.UserRole, ag.get("id"))
+            table.setItem(row, 0, item)
+
+            # Username
+            item = QTableWidgetItem(ag.get("ext_username", ""))
+            item.setTextAlignment(center)
+            table.setItem(row, 1, item)
+
+            # Status
+            status = ag.get("status", "offline")
+            status_text = t(f"account.agent_status_{status}")
+            item = QTableWidgetItem(status_text)
+            item.setTextAlignment(center)
+            table.setItem(row, 2, item)
+
+            # Last login
+            item = QTableWidgetItem(self._format_datetime(ag.get("last_login_at")))
+            item.setTextAlignment(center)
+            table.setItem(row, 3, item)
+
+            # Base URL
+            item = QTableWidgetItem(ag.get("base_url", ""))
+            item.setTextAlignment(center)
+            table.setItem(row, 4, item)
+
+            # Action buttons
+            actions_w = QWidget()
+            actions_lay = QHBoxLayout(actions_w)
+            actions_lay.setContentsMargins(2, 2, 2, 2)
+            actions_lay.setSpacing(theme.SPACING_XS)
+
+            agent_id = ag.get("id")
+
+            btn_login = QPushButton(t("account.agent_login"))
+            btn_login.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_login.clicked.connect(lambda _, aid=agent_id: self._on_login_agent(aid))
+            actions_lay.addWidget(btn_login)
+
+            btn_edit = QPushButton(t("account.agent_edit"))
+            btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_edit.clicked.connect(lambda _, aid=agent_id: self._on_edit_agent(aid))
+            actions_lay.addWidget(btn_edit)
+
+            btn_del = QPushButton(t("crud.delete"))
+            btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_del.clicked.connect(lambda _, aid=agent_id: self._on_delete_agent(aid))
+            actions_lay.addWidget(btn_del)
+
+            table.setCellWidget(row, 5, actions_w)
+
+        table.setUpdatesEnabled(True)
+
+        count = len(self._agents_data)
+        self._card_agent.set_description(f"{count} agent{'s' if count != 1 else ''}")
+
+    # ── Agent CRUD ─────────────────────────────────────────────
+
+    def _load_agents(self) -> None:
+        run_in_thread(
+            lambda: api.get("/api/agents"),
+            on_result=self._on_agents_loaded,
+            on_error=lambda e: logger.error("Load agents failed: %s", e),
+        )
+
+    def _on_agents_loaded(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._agents_data = data.get("agents", [])
+            self._populate_agent_table()
+
+    def _on_add_agent(self) -> None:
+        dlg = _AgentDialog(self.window())
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        form_data = dlg.get_data()
+        errors = validate_all([
+            required(t("account.agent_name"), form_data["name"]),
+            required(t("account.agent_username"), form_data["ext_username"]),
+        ])
+        if errors:
+            from dialogs.confirm_dialog import warn
+            warn(self.window(), "\n".join(errors))
+            return
+
+        run_in_thread(
+            lambda: api.post("/api/agents", form_data),
+            on_result=self._on_agent_saved,
+            on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
+        )
+
+    def _on_edit_agent(self, agent_id: int) -> None:
+        agent = next((a for a in self._agents_data if a.get("id") == agent_id), None)
+        if not agent:
+            return
+        dlg = _AgentDialog(self.window(), data=agent)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        form_data = dlg.get_data()
+        # Only send changed fields
+        update: dict = {}
+        if form_data["name"] and form_data["name"] != agent.get("name"):
+            update["name"] = form_data["name"]
+        if form_data["ext_password"]:
+            update["ext_password"] = form_data["ext_password"]
+        if form_data["base_url"] != agent.get("base_url"):
+            update["base_url"] = form_data["base_url"]
+
+        if not update:
+            return
+
+        run_in_thread(
+            lambda: api.put(f"/api/agents/{agent_id}", update),
+            on_result=self._on_agent_saved,
+            on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
+        )
+
+    def _on_agent_saved(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._agent_msg, t("account.agent_saved"), error=False)
+            self._load_agents()
+        else:
+            self._show_msg(self._agent_msg, data.get("message", "Error"), error=True)
+
+    def _on_delete_agent(self, agent_id: int) -> None:
+        agent = next((a for a in self._agents_data if a.get("id") == agent_id), None)
+        if not agent:
+            return
+        from dialogs.confirm_dialog import confirm
+        name = agent.get("name", "")
+        if not confirm(self.window(), t("account.agent_delete_confirm", name=name)):
+            return
+        run_in_thread(
+            lambda: api.delete(f"/api/agents/{agent_id}"),
+            on_result=lambda r: self._on_agent_deleted(r),
+            on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
+        )
+
+    def _on_agent_deleted(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._agent_msg, t("account.agent_deleted"), error=False)
+            self._load_agents()
+        else:
+            self._show_msg(self._agent_msg, data.get("message", "Error"), error=True)
+
+    # ── Agent login/logout ─────────────────────────────────────
+
+    def _on_login_agent(self, agent_id: int) -> None:
+        agent = next((a for a in self._agents_data if a.get("id") == agent_id), None)
+        if not agent:
+            return
+
+        if not agent.get("has_password"):
+            self._show_msg(self._agent_msg, t("account.agent_no_password"), error=True)
+            return
+
+        name = agent.get("name", "")
+        self._loading.start(t("account.agent_logging_in", name=name))
+
+        run_in_thread(
+            lambda: api.post(f"/api/agents/{agent_id}/login"),
+            on_result=self._on_agent_login_result,
+            on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
+            on_finished=self._loading.stop,
+        )
+
+    def _on_agent_login_result(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._agent_msg, t("account.agent_login_success", n="?"), error=False)
+            self._load_agents()
+        else:
+            error_msg = data.get("message", "Unknown error")
+            self._show_msg(
+                self._agent_msg,
+                t("account.agent_login_failed", error=error_msg),
+                error=True,
+            )
+            self._load_agents()
+
     # ── Theme ─────────────────────────────────────────────────
 
     def _apply_logout_style(self) -> None:
@@ -317,6 +625,21 @@ class AccountTab(BaseTab):
         self._confirm_pwd.setPlaceholderText(t("account.confirm_password"))
         self._btn_change_pwd.setText(t("account.btn_change_password"))
         self._btn_logout.setText(t("account.btn_logout"))
+
+        # Agent card
+        self._card_agent.set_title(t("account.my_agents"))
+        self._btn_add_agent.setText(t("account.agent_add"))
+        self._agent_table.setHorizontalHeaderLabels([
+            t("account.agent_name"),
+            t("account.agent_username"),
+            t("account.agent_status"),
+            t("account.agent_last_login"),
+            t("account.agent_base_url"),
+            "",
+        ])
+        # Re-populate to update status texts and action buttons
+        if self._agents_data:
+            self._populate_agent_table()
 
     # ── Load profile ──────────────────────────────────────────
 
