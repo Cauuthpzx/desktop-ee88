@@ -71,6 +71,7 @@ class AgentResp(BaseModel):
     agent: dict | None = None
     agents: list[dict] | None = None
     message: str | None = None
+    captcha_attempts: int | None = None
 
 
 class AgentLoginReq(BaseModel):

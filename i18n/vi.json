@@ -238,6 +238,8 @@
         "agent_login_failed": "Đăng nhập thất bại: {error}",
         "agent_session_valid": "Session còn hiệu lực.",
         "agent_session_expired": "Session hết hạn.",
+        "agent_session_expired_msg": "Session hết hạn: {error}",
+        "agent_checking": "Đang kiểm tra {name}...",
         "agent_no_password": "Chưa cấu hình mật khẩu.",
         "agent_dialog_title": "Thêm / Sửa đại lý"
     },

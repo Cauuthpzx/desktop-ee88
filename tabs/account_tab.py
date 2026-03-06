@@ -366,7 +366,7 @@ class AccountTab(BaseTab):
         for col in range(5):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
-        self._agent_table.setColumnWidth(5, 220)
+        self._agent_table.setColumnWidth(5, 300)
         agent_lay.addWidget(self._agent_table)
 
         # Message
@@ -381,8 +381,18 @@ class AccountTab(BaseTab):
         self._card_agent.add_widget(agent_w)
         return self._card_agent
 
+    # Status color mapping
+    _STATUS_COLORS = {
+        "active": "#2e7d32",       # green
+        "logging_in": "#f57c00",   # orange
+        "error": "#d32f2f",        # red
+        "offline": "#757575",      # gray
+    }
+
     def _populate_agent_table(self) -> None:
         """Fill table from cached agents data."""
+        from PyQt6.QtGui import QColor, QBrush, QFont
+
         table = self._agent_table
         table.setUpdatesEnabled(False)
         table.setRowCount(len(self._agents_data))
@@ -400,11 +410,22 @@ class AccountTab(BaseTab):
             item.setTextAlignment(center)
             table.setItem(row, 1, item)
 
-            # Status
+            # Status — colored text
             status = ag.get("status", "offline")
             status_text = t(f"account.agent_status_{status}")
+            error_info = ag.get("login_error", "")
+            if status == "error" and error_info:
+                translated = t(error_info)
+                if translated != error_info:
+                    error_info = translated
+                status_text = f"{status_text} ({error_info})"
             item = QTableWidgetItem(status_text)
             item.setTextAlignment(center)
+            color = self._STATUS_COLORS.get(status, "#757575")
+            item.setForeground(QBrush(QColor(color)))
+            bold_font = QFont()
+            bold_font.setBold(True)
+            item.setFont(bold_font)
             table.setItem(row, 2, item)
 
             # Last login
@@ -425,10 +446,32 @@ class AccountTab(BaseTab):
 
             agent_id = ag.get("id")
 
+            # Login button — color based on status
             btn_login = QPushButton(t("account.agent_login"))
             btn_login.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_login.clicked.connect(lambda _, aid=agent_id: self._on_login_agent(aid))
+            if status == "active":
+                btn_login.setStyleSheet(
+                    "QPushButton { color: #2e7d32; border: 1px solid #2e7d32; }"
+                    "QPushButton:hover { background: #e8f5e9; }"
+                )
+                btn_login.setText(t("account.agent_login"))
+            elif status == "error":
+                btn_login.setStyleSheet(
+                    "QPushButton { color: #d32f2f; border: 1px solid #d32f2f; }"
+                    "QPushButton:hover { background: #fde8e8; }"
+                )
+            elif status == "logging_in":
+                btn_login.setEnabled(False)
+                btn_login.setText("...")
             actions_lay.addWidget(btn_login)
+
+            # Check session button
+            btn_check = QPushButton(t("account.agent_check"))
+            btn_check.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_check.clicked.connect(lambda _, aid=agent_id: self._on_check_agent(aid))
+            btn_check.setEnabled(status == "active")
+            actions_lay.addWidget(btn_check)
 
             btn_edit = QPushButton(t("account.agent_edit"))
             btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -445,7 +488,11 @@ class AccountTab(BaseTab):
         table.setUpdatesEnabled(True)
 
         count = len(self._agents_data)
-        self._card_agent.set_description(f"{count} agent{'s' if count != 1 else ''}")
+        active = sum(1 for a in self._agents_data if a.get("status") == "active")
+        desc = f"{count} agent{'s' if count != 1 else ''}"
+        if active:
+            desc += f" ({active} active)"
+        self._card_agent.set_description(desc)
 
     # ── Agent CRUD ─────────────────────────────────────────────
 
@@ -562,7 +609,12 @@ class AccountTab(BaseTab):
     def _on_agent_login_result(self, result: tuple[bool, dict]) -> None:
         ok, data = result
         if ok and data.get("ok"):
-            self._show_msg(self._agent_msg, t("account.agent_login_success", n="?"), error=False)
+            attempts = data.get("captcha_attempts", "?")
+            self._show_msg(
+                self._agent_msg,
+                t("account.agent_login_success", n=str(attempts)),
+                error=False,
+            )
             self._load_agents()
         else:
             error_msg = data.get("message", t("api.error_unknown"))
@@ -572,6 +624,31 @@ class AccountTab(BaseTab):
                 error=True,
             )
             self._load_agents()
+
+    # ── Agent check session ───────────────────────────────────
+
+    def _on_check_agent(self, agent_id: int) -> None:
+        agent = next((a for a in self._agents_data if a.get("id") == agent_id), None)
+        if not agent:
+            return
+
+        name = agent.get("name", "")
+        self._show_msg(self._agent_msg, t("account.agent_checking", name=name), error=False)
+
+        run_in_thread(
+            lambda: api.post(f"/api/agents/{agent_id}/check"),
+            on_result=self._on_check_result,
+            on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
+        )
+
+    def _on_check_result(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._agent_msg, t("account.agent_session_valid"), error=False)
+        else:
+            msg = data.get("message", t("api.error_unknown"))
+            self._show_msg(self._agent_msg, t("account.agent_session_expired_msg", error=msg), error=True)
+        self._load_agents()
 
     # ── Theme ─────────────────────────────────────────────────
 

@@ -238,6 +238,8 @@
         "agent_login_failed": "Login failed: {error}",
         "agent_session_valid": "Session is valid.",
         "agent_session_expired": "Session expired.",
+        "agent_session_expired_msg": "Session expired: {error}",
+        "agent_checking": "Checking {name}...",
         "agent_no_password": "No password configured.",
         "agent_dialog_title": "Add / Edit Agent"
     },

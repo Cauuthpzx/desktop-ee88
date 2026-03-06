@@ -186,8 +186,13 @@ def login_agent(
             (result["session_id"], cookie_expires, now, agent_id),
         )
         row = cur.fetchone()
-        logger.info("Agent %s logged in, captcha_attempts=%d", agent["name"], result["captcha_attempts"])
-        return AgentResp(ok=True, agent=_agent_row_to_dict(row))
+        attempts = result.get("captcha_attempts", 0)
+        logger.info("Agent %s logged in, captcha_attempts=%d", agent["name"], attempts)
+        return AgentResp(
+            ok=True,
+            agent=_agent_row_to_dict(row),
+            captcha_attempts=attempts,
+        )
 
     # Failed
     cur.execute(

@@ -238,6 +238,8 @@
         "agent_login_failed": "登录失败: {error}",
         "agent_session_valid": "会话有效。",
         "agent_session_expired": "会话已过期。",
+        "agent_session_expired_msg": "会话已过期: {error}",
+        "agent_checking": "正在检查 {name}...",
         "agent_no_password": "未配置密码。",
         "agent_dialog_title": "添加 / 编辑代理"
     },
