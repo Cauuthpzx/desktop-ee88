@@ -17,11 +17,13 @@ Usage:
 """
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QWidget, QApplication
+from PyQt6.QtWidgets import (
+    QWidget, QApplication, QHeaderView, QAbstractItemView, QTableWidget,
+)
 from PyQt6.QtCore import Qt, QPoint, QPointF, QRect, QObject, QEvent
 from PyQt6.QtGui import (
     QPainter, QColor, QPen, QPolygonF, QFontMetrics, QPainterPath,
-    QGuiApplication,
+    QGuiApplication, QHoverEvent,
 )
 
 from core import theme
@@ -254,43 +256,170 @@ class _TooltipFilter(QObject):
     QEvent.Type.ToolTip fires with OS delay (~700ms) — too slow.
     We also listen to HoverMove/HoverEnter for instant tooltips on
     widgets that have toolTip set.
+
+    Also handles QHeaderView sections — shows tooltip when column
+    title text is truncated (wider than section width).
     """
 
     def __init__(self) -> None:
         super().__init__()
         self._hover_widget: QWidget | None = None
+        self._hover_section: int = -1   # track header section index
+        self._hover_cell: tuple[int, int] = (-1, -1)  # track table cell (row, col)
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # type: ignore[override]
         etype = event.type()
 
         # Block the default QToolTip entirely
         if etype == QEvent.Type.ToolTip:
-            if isinstance(obj, QWidget) and obj.toolTip():
-                # Already shown via HoverEnter/Move — just block default
-                return True
+            if isinstance(obj, QWidget):
+                if obj.toolTip() or isinstance(obj, QHeaderView):
+                    return True
 
         # Show instantly on hover enter/move
         if etype in (QEvent.Type.HoverEnter, QEvent.Type.HoverMove):
+            if isinstance(obj, QHeaderView):
+                return self._handle_header_hover(obj, event)
+            # Table cell truncation — viewport is a child of QTableWidget
+            if isinstance(obj, QWidget) and self._is_table_viewport(obj):
+                return self._handle_table_cell_hover(obj, event)
             if isinstance(obj, QWidget) and obj.toolTip():
                 if self._hover_widget is not obj:
                     self._hover_widget = obj
+                    self._hover_section = -1
+                    self._hover_cell = (-1, -1)
                     Tooltip.show_at(obj, obj.toolTip(), "top")
                 return False
 
         # Hide on hover leave
         if etype == QEvent.Type.HoverLeave:
-            if isinstance(obj, QWidget) and obj is self._hover_widget:
+            if isinstance(obj, QWidget) and (obj is self._hover_widget or isinstance(obj, QHeaderView)):
                 self._hover_widget = None
+                self._hover_section = -1
+                self._hover_cell = (-1, -1)
                 Tooltip.hide()
             return False
 
         # Also hide on Leave (for widgets without hover tracking)
         if etype == QEvent.Type.Leave:
-            if isinstance(obj, QWidget) and obj.toolTip():
-                if obj is self._hover_widget:
+            if isinstance(obj, QWidget):
+                if obj is self._hover_widget or isinstance(obj, QHeaderView):
                     self._hover_widget = None
-                Tooltip.hide()
+                    self._hover_section = -1
+                    self._hover_cell = (-1, -1)
+                    Tooltip.hide()
 
+        return False
+
+    def _handle_header_hover(self, header: QHeaderView, event: QEvent) -> bool:
+        """Show tooltip for truncated header section text."""
+        hover = event  # type: QHoverEvent
+        pos = hover.position().toPoint()
+        idx = header.logicalIndexAt(pos)
+
+        if idx < 0:
+            if self._hover_section >= 0:
+                self._hover_section = -1
+                Tooltip.hide()
+            return False
+
+        if idx == self._hover_section:
+            return False  # same section, already showing
+
+        model = header.model()
+        if model is None:
+            return False
+
+        orient = header.orientation()
+        text = model.headerData(idx, orient, Qt.ItemDataRole.DisplayRole)
+        if not text:
+            self._hover_section = -1
+            Tooltip.hide()
+            return False
+
+        text = str(text)
+
+        # Check if text is truncated
+        fm = QFontMetrics(header.font())
+        text_width = fm.horizontalAdvance(text)
+        section_width = header.sectionSize(idx)
+        padding = 12  # header internal padding (left + right ~6px each)
+
+        if text_width + padding <= section_width:
+            # Text fits — hide any previous tooltip
+            if self._hover_section >= 0:
+                Tooltip.hide()
+            self._hover_section = idx
+            return False
+
+        # Text is truncated — show tooltip at the section rect
+        self._hover_section = idx
+        self._hover_widget = header
+
+        section_pos = header.sectionViewportPosition(idx)
+        section_rect = QRect(section_pos, 0, section_width, header.height())
+        global_rect = QRect(
+            header.mapToGlobal(section_rect.topLeft()),
+            section_rect.size(),
+        )
+        Tooltip.show_at_rect(header, global_rect, text, "top")
+        return False
+
+    @staticmethod
+    def _is_table_viewport(widget: QWidget) -> bool:
+        """Check if widget is a QTableWidget's viewport."""
+        parent = widget.parent()
+        return isinstance(parent, QTableWidget)
+
+    def _handle_table_cell_hover(self, viewport: QWidget, event: QEvent) -> bool:
+        """Show tooltip for truncated table cell text."""
+        table = viewport.parent()
+        if not isinstance(table, QTableWidget):
+            return False
+
+        hover = event  # type: QHoverEvent
+        pos = hover.position().toPoint()
+        idx = table.indexAt(pos)
+        if not idx.isValid():
+            if self._hover_cell != (-1, -1):
+                self._hover_cell = (-1, -1)
+                Tooltip.hide()
+            return False
+
+        row, col = idx.row(), idx.column()
+        if (row, col) == self._hover_cell:
+            return False  # same cell
+
+        item = table.item(row, col)
+        if not item or not item.text():
+            self._hover_cell = (row, col)
+            Tooltip.hide()
+            return False
+
+        text = item.text()
+
+        # Check if text is truncated
+        fm = QFontMetrics(table.font())
+        text_width = fm.horizontalAdvance(text)
+        col_width = table.columnWidth(col)
+        padding = 12
+
+        if text_width + padding <= col_width:
+            if self._hover_cell != (-1, -1):
+                Tooltip.hide()
+            self._hover_cell = (row, col)
+            return False
+
+        # Text is truncated — show tooltip
+        self._hover_cell = (row, col)
+        self._hover_widget = viewport
+
+        cell_rect = table.visualRect(idx)
+        global_rect = QRect(
+            viewport.mapToGlobal(cell_rect.topLeft()),
+            cell_rect.size(),
+        )
+        Tooltip.show_at_rect(viewport, global_rect, text, "top")
         return False
 
 

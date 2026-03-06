@@ -28,6 +28,12 @@ def setup_table(table: QTableWidget,
     table.setAlternatingRowColors(True)
     table.verticalHeader().setVisible(False)
 
+    table.setMouseTracking(True)
+    table.viewport().setMouseTracking(True)
+    table.viewport().setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+    table.horizontalHeader().setMouseTracking(True)
+    table.horizontalHeader().setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+
     if stretch_last:
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
     else:
