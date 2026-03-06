@@ -47,7 +47,8 @@ project/
     ├── validators.py    # required, email, phone, min_length, validate_all
     ├── formatters.py    # currency, number, date_str, phone_fmt, truncate
     ├── table_helper.py  # setup_table, load_table, get_selected_id
-    └── thread_worker.py # Worker, run_in_thread
+    ├── thread_worker.py # Worker, run_in_thread
+    └── updater.py       # Auto update: check_update, download_update, apply_update
 ```
 
 **Import flow mot chieu:**
@@ -170,6 +171,43 @@ created_at TIMESTAMPTZ DEFAULT NOW()
 updated_at TIMESTAMPTZ DEFAULT NOW()
 deleted_at TIMESTAMPTZ
 ```
+
+---
+
+## AUTO UPDATE — utils/updater.py
+
+App tu dong kiem tra phien ban moi khi khoi dong (background thread).
+Flow: `AppWindow.show()` → `check_update()` → hien dialog → `download_update()` → `apply_update()` → restart.
+
+```python
+from utils.updater import APP_VERSION, check_update, download_update, apply_update
+
+# Kiem tra (trong worker thread)
+info = check_update()  # GET /api/version, so sanh version
+# info = {"version": "1.1.0", "update_url": "https://...", "force": False} hoac None
+
+# Tai update (trong worker thread, co progress)
+exe_path = download_update(info["update_url"], progress_callback=lambda pct: ...)
+
+# Ap dung (main thread — se thoat app)
+apply_update(exe_path)  # luu JWT session → tao .bat → restart
+```
+
+**Session persistence khi update:**
+- `api.save_session()` luu JWT token vao QSettings truoc khi thoat
+- `api.restore_session()` doc token tu QSettings khi khoi dong lai
+- User KHONG bi logout sau khi update
+
+**Server config** (VPS `/opt/maxhub-api/.env`):
+```
+APP_VERSION=1.0.0
+UPDATE_URL=https://example.com/MaxHub_v1.1.0.exe
+```
+
+**Tang version khi release:**
+1. Tang `APP_VERSION` trong `utils/updater.py` (client)
+2. Tang `APP_VERSION` trong VPS `.env` (server) + dat `UPDATE_URL`
+3. Restart service: `systemctl restart maxhub-api`
 
 ---
 
@@ -297,6 +335,7 @@ Moi entry: `{icon, text, tab}`. `None` = separator. Thu tu = thu tu hien thi.
 | `table_helper.py` | `setup_table, load_table, get_selected_id, set_column_width` | Thao tac QTableWidget |
 | `settings.py` | `settings` | Luu/doc cau hinh app (QSettings) |
 | `thread_worker.py` | `Worker, run_in_thread` | Chay task nang khong do UI |
+| `updater.py` | `APP_VERSION, check_update, download_update, apply_update` | Auto update app |
 
 ---
 
