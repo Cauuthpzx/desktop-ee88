@@ -108,10 +108,15 @@ class Database:
         return row["ok"] if row else False
 
     def count(self, table: str, where: str = "", params: tuple = ()) -> int:
-        sql = f"SELECT COUNT(*) AS n FROM {table}"
+        if not table.isidentifier():
+            raise ValueError(f"Invalid table name: {table}")
+        from psycopg import sql as psql
+        query = psql.SQL("SELECT COUNT(*) AS n FROM {}").format(psql.Identifier(table))
         if where:
-            sql += f" WHERE {where}"
-        row = self.fetchone(sql, params)
+            query = query + psql.SQL(" WHERE ") + psql.SQL(where)
+        with self._conn.cursor() as cur:
+            cur.execute(query, params)
+            row = cur.fetchone()
         return row["n"] if row else 0
 
     # -- Lifecycle ----------------------------------------------------

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication as _QApp
 
 from core import theme
 from core.base_widgets import vbox, hbox, label, divider
@@ -98,7 +99,7 @@ class _LoginForm(QWidget):
         self._username.clear()
         self._password.clear()
         self._error_lbl.hide()
-        self.window().close()
+        _QApp.quit()
 
     def _on_login(self) -> None:
         username = self._username.text().strip()
@@ -117,6 +118,12 @@ class _LoginForm(QWidget):
         self.login_requested.emit(username, password, self._remember.isChecked())
 
     def _show_error(self, msg: str) -> None:
+        self._error_lbl.setStyleSheet("color: red;")
+        self._error_lbl.setText(msg)
+        self._error_lbl.show()
+
+    def _show_success(self, msg: str) -> None:
+        self._error_lbl.setStyleSheet("color: green;")
         self._error_lbl.setText(msg)
         self._error_lbl.show()
 
@@ -325,10 +332,7 @@ class LoginWindow(QWidget):
         ok, msg = result
         if ok:
             self._stack.setCurrentWidget(self._login_form)
-            self._login_form._show_error("")
-            self._login_form._error_lbl.setStyleSheet("color: green;")
-            self._login_form._error_lbl.setText("Đăng ký thành công! Hãy đăng nhập.")
-            self._login_form._error_lbl.show()
+            self._login_form._show_success("Đăng ký thành công! Hãy đăng nhập.")
         else:
             self._register_form._show_error(msg)
 

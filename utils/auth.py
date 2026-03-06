@@ -71,15 +71,23 @@ class AuthService:
         try:
             with Database() as db:
                 user = db.fetchone(
-                    "SELECT id, username, password_hash FROM users WHERE username = %s",
+                    "SELECT id, username, password_hash, status FROM users "
+                    "WHERE username = %s AND deleted_at IS NULL",
                     (username,),
                 )
                 if not user:
                     return False, "Tên đăng nhập không tồn tại."
 
+                if user["status"] != "active":
+                    return False, "Tài khoản đã bị khoá."
+
                 if not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
                     return False, "Mật khẩu không đúng."
 
+                db.execute(
+                    "UPDATE users SET last_login_at = NOW() WHERE id = %s",
+                    (user["id"],),
+                )
                 return True, user["username"]
         except Exception as e:
             logger.error("auth.login failed: %s", e, exc_info=True)

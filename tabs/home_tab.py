@@ -1,10 +1,10 @@
 """
 home_tab.py — Tab trang chủ mẫu
 """
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtCore import Qt
 from core.base_widgets import BaseTab, group, section_label, label, divider
-from core import theme
+from widgets.stat_card import StatCard
 
 
 class HomeTab(BaseTab):
@@ -22,8 +22,7 @@ class HomeTab(BaseTab):
             ("Đơn hàng",   "54"),
             ("Doanh thu",  "9.200"),
         ]:
-            card = _StatCard(title_text, value)
-            g.addWidget(card)
+            g.addWidget(StatCard(title_text, value))
         g.addStretch()
         layout.addWidget(grp)
 
@@ -38,20 +37,3 @@ class HomeTab(BaseTab):
         layout.addWidget(grp2)
 
         layout.addStretch()
-
-
-class _StatCard(QLabel):
-    """Widget thẻ thống kê nhỏ."""
-    def __init__(self, title: str, value: str):
-        super().__init__()
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(theme.SPACING_LG, theme.SPACING_MD,
-                               theme.SPACING_LG, theme.SPACING_MD)
-        lbl_title = label(title, size=theme.FONT_SIZE_SM)
-        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_value = label(value, bold=True, size=theme.FONT_SIZE_XL)
-        lbl_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(lbl_title)
-        lay.addWidget(lbl_value)
-        self.setFrameShape(self.Shape.Box)
-        self.setMinimumWidth(120)

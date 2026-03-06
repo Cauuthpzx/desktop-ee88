@@ -16,6 +16,7 @@ from core.app_window import AppWindow
 from dialogs.login_window import LoginWindow
 from widgets.tooltip import install as install_tooltip
 from utils.auth import auth
+from utils.thread_worker import run_in_thread
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -31,8 +32,8 @@ def main():
     theme.apply(app)
     install_tooltip(app)
 
-    # Tạo bảng users nếu chưa có
-    auth.init()
+    # Tạo bảng users nếu chưa có (background — không block UI)
+    run_in_thread(auth.init)
 
     icon_taskbar  = icon("icon-taskbar")   # Hex + M
     icon_titlebar = icon("icon-titlebar")  # Shield
