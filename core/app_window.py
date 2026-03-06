@@ -10,7 +10,6 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
 from core import theme
 from core.base_widgets import vbox
-from dialogs.about_dialog import AboutDialog
 from utils.settings import settings
 from widgets.sidebar import CollapsibleSidebar
 
@@ -39,7 +38,6 @@ class AppWindow(QMainWindow):
         self.setWindowTitle("My App")
         self.setMinimumSize(theme.WINDOW_MIN_W, theme.WINDOW_MIN_H)
 
-        self._build_menu()
         self._build_central()
         self._build_toolbar()   # after _build_central so self._sidebar exists
 
@@ -52,45 +50,6 @@ class AppWindow(QMainWindow):
     def closeEvent(self, event):
         settings.save_window(self)
         super().closeEvent(event)
-
-    # ── Menu ──────────────────────────────────────────────
-
-    def _build_menu(self):
-        mb = self.menuBar()
-
-        file_menu = mb.addMenu("File")
-        for label, shortcut, slot in [
-            ("New",   "Ctrl+N", None),
-            ("Open",  "Ctrl+O", None),
-            ("Save",  "Ctrl+S", None),
-        ]:
-            act = QAction(label, self)
-            act.setShortcut(shortcut)
-            if slot:
-                act.triggered.connect(slot)
-            file_menu.addAction(act)
-        file_menu.addSeparator()
-        act_exit = QAction("Exit", self)
-        act_exit.setShortcut("Ctrl+Q")
-        act_exit.triggered.connect(self.close)
-        file_menu.addAction(act_exit)
-
-        edit_menu = mb.addMenu("Edit")
-        for label, shortcut in [
-            ("Undo",  "Ctrl+Z"),
-            ("Redo",  "Ctrl+Y"),
-            ("Cut",   "Ctrl+X"),
-            ("Copy",  "Ctrl+C"),
-            ("Paste", "Ctrl+V"),
-        ]:
-            act = QAction(label, self)
-            act.setShortcut(shortcut)
-            edit_menu.addAction(act)
-
-        help_menu = mb.addMenu("Help")
-        act_about = QAction("About", self)
-        act_about.triggered.connect(self._on_about)
-        help_menu.addAction(act_about)
 
     # ── Toolbar ───────────────────────────────────────────
 
@@ -105,11 +64,20 @@ class AppWindow(QMainWindow):
         act_toggle.triggered.connect(self._sidebar.toggle)
         self.addAction(act_toggle)
 
+        tooltips = {
+            "New": "Tao moi (Ctrl+N)",
+            "Open": "Mo file (Ctrl+O)",
+            "Save": "Luu file (Ctrl+S)",
+            "Undo": "Hoan tac (Ctrl+Z)",
+            "Redo": "Lam lai (Ctrl+Y)",
+        }
         for label in ["New", "Open", "Save", "|", "Undo", "Redo"]:
             if label == "|":
                 tb.addSeparator()
             else:
-                tb.addAction(QAction(label, self))
+                act = QAction(label, self)
+                act.setToolTip(tooltips.get(label, label))
+                tb.addAction(act)
 
     # ── Central ───────────────────────────────────────────
 
@@ -135,13 +103,3 @@ class AppWindow(QMainWindow):
         lay.addWidget(self._stack, 1)
         self.setCentralWidget(central)
 
-    # ── Slots ─────────────────────────────────────────────
-
-    def _on_about(self):
-        AboutDialog(
-            self,
-            app_name="My App",
-            version="1.0.0",
-            description="PyQt6 Desktop Application Template",
-            author="Your Name",
-        ).exec()

@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon
 from core import theme
 from core.app_window import AppWindow
+from widgets.tooltip import install as install_tooltip
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,6 +27,7 @@ def icon(name: str) -> QIcon:
 def main():
     app = QApplication(sys.argv)
     theme.apply(app)
+    install_tooltip(app)
 
     icon_taskbar  = icon("icon-taskbar")   # Hex + M
     icon_titlebar = icon("icon-titlebar")  # Shield

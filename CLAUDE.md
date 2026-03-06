@@ -132,6 +132,7 @@ from dialogs.about_dialog   import AboutDialog
 | `form_widget.py` | `FormWidget` | Form nhúng trong tab (không phải dialog) |
 | `table_crud.py` | `TableCrud` | Table đầy đủ: toolbar + search + table + pagination + empty state |
 | `sidebar.py` | `CollapsibleSidebar` | Sidebar nav đóng/mở thay QTabWidget |
+| `tooltip.py` | `Tooltip`, `install` | Custom tooltip layui-vue style (arrow, shadow, fade) |
 
 ```python
 from widgets.stat_card      import StatCard
@@ -145,6 +146,7 @@ from widgets.toolbar_widget import ContentToolbar
 from widgets.form_widget    import FormWidget
 from widgets.table_crud     import TableCrud
 from widgets.sidebar        import CollapsibleSidebar
+from widgets.tooltip        import Tooltip, install  # gọi install(app) trong main.py
 ```
 
 ### Thêm menu item vào sidebar
@@ -526,6 +528,7 @@ for row_idx, row in enumerate(data_rows):
 | Unicode icon không hiện | Dùng file `.svg` từ `icons/layui/` hoặc `icons/material/` |
 | Thiếu `SetCurrentProcessExplicitAppUserModelID` | Đã có trong `main.py` — đừng xoá |
 | Dialog About dùng `QMessageBox.about()` | Dùng `AboutDialog` từ `dialogs/about_dialog.py` |
+| Dùng `QToolTip` mặc định xấu | Gọi `install(app)` trong `main.py` — tự override toàn bộ |
 
 ---
 
