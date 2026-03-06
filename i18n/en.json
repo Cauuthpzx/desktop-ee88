@@ -71,7 +71,10 @@
         "search": "Search..."
     },
     "pagination": {
-        "info": "Page {page} / {pages}  ({total} records)"
+        "info": "Page {page} / {pages}  ({total} records)",
+        "go_to": "Go to page",
+        "go": "Go",
+        "total_rows": "Total: {total} rows"
     },
     "empty": {
         "title": "No data",
@@ -142,13 +145,22 @@
     },
     "customer": {
         "title": "Customer Management",
-        "dialog_title": "Add / Edit Customer",
-        "staff": "Staff:",
-        "member": "Member:",
-        "member_type": "Member Type:",
-        "agent": "Agent Account:",
-        "balance": "Balance:",
-        "status": "Status:"
+        "agent_select": "Agent:",
+        "no_active_agent": "No active agents available",
+        "session_expired": "Agent session expired. Please login again.",
+        "error_load": "Cannot load customer data.",
+        "error_load_agents": "Cannot load agent list.",
+        "col_username": "Username",
+        "col_type": "Member Type",
+        "col_agent": "Agent",
+        "col_balance": "Balance",
+        "col_deposit_n": "Deposits",
+        "col_withdraw_n": "Withdrawals",
+        "col_deposit_amt": "Total Deposit",
+        "col_withdraw_amt": "Total Withdrawal",
+        "col_last_login": "Last Login",
+        "col_register": "Registered",
+        "col_status": "Status"
     },
     "lottery": {
         "title": "Lottery"

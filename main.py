@@ -77,6 +77,10 @@ def main():
         login.hide()
         window.show()
         tray.show()
+        # Sync agents + cookies tu DB xuong local (background, khong block)
+        from utils.upstream import upstream
+        from utils.thread_worker import run_in_thread
+        run_in_thread(lambda: upstream.sync_from_db(username))
 
     login.login_success.connect(on_login_success)
 
@@ -94,7 +98,12 @@ def main():
         tray.show()
 
         def _try_restore():
-            return api.restore_session()
+            ok = api.restore_session()
+            if ok and api.username:
+                # Sync agents trong cung worker thread (da o background)
+                from utils.upstream import upstream
+                upstream.sync_from_db(api.username)
+            return ok
 
         def _on_restore_result(ok):
             if not ok:

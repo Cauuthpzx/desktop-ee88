@@ -71,7 +71,10 @@
         "search": "搜索..."
     },
     "pagination": {
-        "info": "第 {page} / {pages} 页  (共 {total} 条记录)"
+        "info": "第 {page} / {pages} 页  (共 {total} 条记录)",
+        "go_to": "跳转到",
+        "go": "跳转",
+        "total_rows": "共 {total} 条"
     },
     "empty": {
         "title": "暂无数据",
@@ -142,13 +145,22 @@
     },
     "customer": {
         "title": "客户管理",
-        "dialog_title": "添加 / 编辑客户",
-        "staff": "员工：",
-        "member": "会员：",
-        "member_type": "会员类型：",
-        "agent": "代理账户：",
-        "balance": "余额：",
-        "status": "状态："
+        "agent_select": "代理：",
+        "no_active_agent": "没有可用的活跃代理",
+        "session_expired": "代理会话已过期，请重新登录。",
+        "error_load": "无法加载客户数据。",
+        "error_load_agents": "无法加载代理列表。",
+        "col_username": "用户名",
+        "col_type": "会员类型",
+        "col_agent": "代理",
+        "col_balance": "余额",
+        "col_deposit_n": "充值次数",
+        "col_withdraw_n": "提现次数",
+        "col_deposit_amt": "充值总额",
+        "col_withdraw_amt": "提现总额",
+        "col_last_login": "最后登录",
+        "col_register": "注册日期",
+        "col_status": "状态"
     },
     "lottery": {
         "title": "彩票"

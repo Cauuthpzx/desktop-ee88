@@ -1,184 +1,300 @@
 """
-tabs/customer_tab.py — Tab Quản lý khách hàng
+tabs/customer_tab.py — Tab Khach hang (local-first, infinite scroll).
+
+Flow:
+- showEvent → doc agents tu QSettings (0ms) → hien combo ngay
+- Neu co agent active + cookie → fetch upstream truc tiep (skip DB)
+- Scroll toi cuoi → tu dong load trang tiep theo (infinite scroll)
 """
-from PyQt6.QtWidgets import QLineEdit, QComboBox, QDoubleSpinBox, QDialog
-from core.base_widgets import BaseTab, BaseDialog, label, divider
+from PyQt6.QtWidgets import QComboBox, QTableWidgetItem
+from PyQt6.QtCore import Qt
+
+from core.base_widgets import BaseTab, label, divider, hbox
 from core import theme
 from core.i18n import t
-from widgets.table_crud import TableCrud
-from dialogs.confirm_dialog import confirm_delete, warn
-from utils.validators import validate_all, required
+from utils.upstream import upstream
 from utils.formatters import currency
+from utils.thread_worker import run_in_thread
+from widgets.table_crud import TableCrud
+from widgets.loading import LoadingOverlay
+from dialogs.confirm_dialog import error
 
-
-COLUMNS = [
-    "Nhân viên", "Hội viên", "Loại hình hội viên",
-    "Tài khoản đại lý", "Số dư", "Lần nạp", "Lần rút",
-    "Tổng tiền nạp", "Tổng tiền rút",
-    "TG đăng nhập cuối", "TG đăng ký", "Trạng thái",
+COLUMNS_KEYS = [
+    ("customer.col_username",    "username"),
+    ("customer.col_type",        "type_format"),
+    ("customer.col_agent",       "parent_user"),
+    ("customer.col_balance",     "money"),
+    ("customer.col_deposit_n",   "deposit_count"),
+    ("customer.col_withdraw_n",  "withdrawal_count"),
+    ("customer.col_deposit_amt", "deposit_amount"),
+    ("customer.col_withdraw_amt", "withdrawal_amount"),
+    ("customer.col_last_login",  "login_time"),
+    ("customer.col_register",    "register_time"),
+    ("customer.col_status",      "status_format"),
 ]
-KEYS = [
-    "staff", "member", "member_type",
-    "agent_account", "balance", "deposit_count", "withdraw_count",
-    "total_deposit", "total_withdraw",
-    "last_login", "registered_at", "status",
-]
 
-MEMBER_TYPES = ["VIP", "Gold", "Silver", "Standard"]
-STATUSES = ["Hoạt động", "Khoá", "Chờ duyệt"]
+PAGE_SIZE = 100
 
-
-# ═══════════════════════════════════════════════════════════
-#  DIALOG
-# ═══════════════════════════════════════════════════════════
-
-class CustomerDialog(BaseDialog):
-    def __init__(self, parent=None, data: dict | None = None):
-        super().__init__(parent, title=t("customer.dialog_title"),
-                         min_width=420, data=data)
-
-    def _build_form(self, form):
-        self.staff_edit = QLineEdit()
-        self.staff_edit.setPlaceholderText("Tên nhân viên phụ trách")
-        self.member_edit = QLineEdit()
-        self.member_edit.setPlaceholderText("Tên hội viên")
-        self.member_type_combo = QComboBox()
-        self.member_type_combo.addItems(MEMBER_TYPES)
-        self.agent_edit = QLineEdit()
-        self.agent_edit.setPlaceholderText("Tài khoản đại lý")
-        self.balance_spin = QDoubleSpinBox()
-        self.balance_spin.setRange(0, 999_999_999)
-        self.balance_spin.setDecimals(0)
-        self.status_combo = QComboBox()
-        self.status_combo.addItems(STATUSES)
-
-        form.addRow(t("customer.staff"),       self.staff_edit)
-        form.addRow(t("customer.member"),      self.member_edit)
-        form.addRow(t("customer.member_type"), self.member_type_combo)
-        form.addRow(t("customer.agent"),       self.agent_edit)
-        form.addRow(t("customer.balance"),     self.balance_spin)
-        form.addRow(t("customer.status"),      self.status_combo)
-
-    def _fill(self, data: dict):
-        self.staff_edit.setText(data.get("staff", ""))
-        self.member_edit.setText(data.get("member", ""))
-        self.member_type_combo.setCurrentText(data.get("member_type", MEMBER_TYPES[0]))
-        self.agent_edit.setText(data.get("agent_account", ""))
-        self.balance_spin.setValue(data.get("balance", 0))
-        self.status_combo.setCurrentText(data.get("status", STATUSES[0]))
-
-    def get_data(self) -> dict:
-        return {
-            "staff":        self.staff_edit.text().strip(),
-            "member":       self.member_edit.text().strip(),
-            "member_type":  self.member_type_combo.currentText(),
-            "agent_account": self.agent_edit.text().strip(),
-            "balance":      int(self.balance_spin.value()),
-            "status":       self.status_combo.currentText(),
-        }
-
-
-# ═══════════════════════════════════════════════════════════
-#  TAB
-# ═══════════════════════════════════════════════════════════
 
 class CustomerTab(BaseTab):
-    def _build(self, layout):
+    def _build(self, layout) -> None:
         self._title_lbl = label(t("customer.title"), bold=True, size=theme.FONT_SIZE_LG)
         layout.addWidget(self._title_lbl)
         layout.addWidget(divider())
 
+        # Agent selector
+        agent_row = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
+        self._agent_label = label(t("customer.agent_select"))
+        agent_row.addWidget(self._agent_label)
+        self._agent_combo = QComboBox()
+        self._agent_combo.setMinimumWidth(200)
+        self._agent_combo.currentIndexChanged.connect(self._on_agent_changed)
+        agent_row.addWidget(self._agent_combo)
+        agent_row.addStretch()
+        layout.addLayout(agent_row)
+
+        # Table + pagination + infinite scroll
+        columns = [t(ck[0]) for ck in COLUMNS_KEYS]
         self.crud = TableCrud(
-            columns=COLUMNS,
-            on_add=self._on_add,
-            on_edit=self._on_edit,
-            on_delete=self._on_delete,
+            columns=columns,
+            on_add=None, on_edit=None, on_delete=None,
             on_search=self._on_search,
+            on_page_change=self._on_page,
+            page_size=PAGE_SIZE,
         )
+        for btn in self.crud._toolbar._buttons.values():
+            btn.hide()
         layout.addWidget(self.crud)
 
-        # Seed data mẫu
-        self._next_id = 1
-        self._data: list[dict] = []
-        for row in [
-            ("Trần Minh",  "Nguyễn Văn A", "VIP",      "agent001", 5_000_000, 12, 3, 50_000_000, 8_000_000,  "2026-03-05 14:30", "2025-01-10 09:00", "Hoạt động"),
-            ("Lê Hương",   "Trần Thị B",   "Gold",     "agent002", 1_200_000, 5,  1, 10_000_000, 2_000_000,  "2026-03-04 08:15", "2025-06-20 11:30", "Hoạt động"),
-            ("Phạm Tuấn",  "Lê Văn C",     "Standard", "agent003", 0,         0,  0, 0,          0,           "2026-03-01 19:00", "2026-02-28 16:45", "Chờ duyệt"),
-        ]:
-            self._data.append({
-                "id": self._next_id,
-                "staff": row[0], "member": row[1], "member_type": row[2],
-                "agent_account": row[3], "balance": row[4],
-                "deposit_count": row[5], "withdraw_count": row[6],
-                "total_deposit": row[7], "total_withdraw": row[8],
-                "last_login": row[9], "registered_at": row[10], "status": row[11],
-            })
-            self._next_id += 1
-        self._reload()
+        # Infinite scroll: detect scroll to bottom
+        self._scrollbar = self.crud.table.verticalScrollBar()
+        self._scrollbar.valueChanged.connect(self._on_scroll)
 
-    # ── Helpers ───────────────────────────────────────────
+        self._loading = LoadingOverlay(self)
+        self._agents: list[dict] = []
+        self._current_agent_id: int | None = None
+        self._search_text = ""
+        self._first_show = True
 
-    def _reload(self, filter_text: str = ""):
-        data = self._data
-        if filter_text:
-            q = filter_text.lower()
-            data = [r for r in data
-                    if q in r["member"].lower()
-                    or q in r["staff"].lower()
-                    or q in r["agent_account"].lower()]
-        self.crud.load(data, keys=KEYS)
+        # Infinite scroll state
+        self._current_page = 0
+        self._total_count = 0
+        self._is_loading = False
+        self._all_rows: list[dict] = []
 
-    # ── Slots ─────────────────────────────────────────────
+    # ── Show — instant from local cache ──────────────────────
 
-    def _on_add(self):
-        dlg = CustomerDialog(self.window())
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-        data = dlg.get_data()
-        errors = validate_all([
-            required(t("customer.member"), data["member"]),
-        ])
-        if errors:
-            warn(self.window(), "\n".join(errors))
-            return
-        data.update({
-            "deposit_count": 0, "withdraw_count": 0,
-            "total_deposit": 0, "total_withdraw": 0,
-            "last_login": "", "registered_at": "",
-        })
-        self._data.append({"id": self._next_id, **data})
-        self._next_id += 1
-        self._reload()
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if self._first_show:
+            self._first_show = False
+            self._load_from_cache()
 
-    def _on_edit(self):
-        id_ = self.crud.selected_id()
-        if id_ is None:
-            return
-        rec = next((r for r in self._data if r["id"] == id_), None)
-        if rec is None:
-            return
-        dlg = CustomerDialog(self.window(), data=rec)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-        data = dlg.get_data()
-        errors = validate_all([required(t("customer.member"), data["member"])])
-        if errors:
-            warn(self.window(), "\n".join(errors))
-            return
-        rec.update(data)
-        self._reload()
+    def _load_from_cache(self) -> None:
+        """Doc agents tu QSettings (0ms) → populate combo → fetch data."""
+        agents = upstream.get_agents_local()
+        if agents:
+            self._apply_agents(agents)
+        else:
+            self._agent_combo.addItem(t("customer.no_active_agent"))
 
-    def _on_delete(self):
-        id_ = self.crud.selected_id()
-        if id_ is None:
-            return
-        rec = next((r for r in self._data if r["id"] == id_), None)
-        if rec and confirm_delete(self.window(), f"'{rec['member']}'"):
-            self._data = [r for r in self._data if r["id"] != id_]
-            self._reload()
+    # ── Agent combo ──────────────────────────────────────────
 
-    def _on_search(self, text: str):
-        self._reload(filter_text=text)
+    def _apply_agents(self, agents: list[dict]) -> None:
+        self._agents = [a for a in agents if a.get("status") == "active"]
+
+        self._agent_combo.blockSignals(True)
+        self._agent_combo.clear()
+        if not self._agents:
+            self._agent_combo.addItem(t("customer.no_active_agent"))
+            self._current_agent_id = None
+        else:
+            for ag in self._agents:
+                self._agent_combo.addItem(
+                    f"{ag['name']} ({ag['ext_username']})", ag["id"],
+                )
+            self._current_agent_id = self._agents[0]["id"]
+        self._agent_combo.blockSignals(False)
+
+        if self._current_agent_id:
+            self._reload_fresh()
+
+    def _on_agent_changed(self, index: int) -> None:
+        if index < 0 or not self._agents:
+            return
+        self._current_agent_id = self._agent_combo.currentData()
+        if self._current_agent_id:
+            self._reload_fresh()
+
+    # ── Data loading (infinite scroll) ───────────────────────
+
+    def _reload_fresh(self) -> None:
+        """Reset va load trang 1."""
+        self._current_page = 0
+        self._total_count = 0
+        self._all_rows = []
+        self._load_next_page()
+
+    def _load_next_page(self) -> None:
+        """Fetch trang tiep theo tu upstream."""
+        if not self._current_agent_id or self._is_loading:
+            return
+        # Da load het?
+        if self._current_page > 0 and len(self._all_rows) >= self._total_count:
+            return
+
+        self._is_loading = True
+        aid = self._current_agent_id
+        search = self._search_text
+        page = self._current_page + 1
+
+        run_in_thread(
+            lambda: upstream.fetch_customers(
+                agent_id=aid, page=page, limit=PAGE_SIZE, username=search,
+            ),
+            on_result=lambda data: self._on_page_data(data, page),
+            on_error=self._on_error,
+            on_finished=self._on_load_finished,
+        )
+        if self._current_page == 0:
+            self._loading.start(t("loading.loading_data"))
+
+    def _on_page_data(self, data: dict, page: int) -> None:
+        rows = data.get("data", [])
+        self._total_count = data.get("count", 0)
+        self._current_page = page
+
+        if page == 1:
+            # Trang dau: replace table
+            self._all_rows = rows
+            self._render_table(self._all_rows)
+        else:
+            # Trang tiep: append rows
+            self._all_rows.extend(rows)
+            self._append_rows(rows)
+
+        # Update pagination widget
+        self.crud.set_total(self._total_count, reset_page=False)
+        if self.crud._pager:
+            self.crud._pager._current = page
+            self.crud._pager._refresh()
+
+    def _render_table(self, rows: list[dict]) -> None:
+        """Render toan bo table (dung cho trang 1)."""
+        keys = [ck[1] for ck in COLUMNS_KEYS]
+        formatters = {
+            "money": lambda v: currency(float(v)) if v else "0",
+            "deposit_amount": lambda v: currency(float(v)) if v else "0",
+            "withdrawal_amount": lambda v: currency(float(v)) if v else "0",
+        }
+        self.crud.load(rows, keys=keys, id_key="id", formatters=formatters)
+
+    def _append_rows(self, rows: list[dict]) -> None:
+        """Append them rows vao cuoi table (khong xoa rows cu)."""
+        keys = [ck[1] for ck in COLUMNS_KEYS]
+        formatters = {
+            "money": lambda v: currency(float(v)) if v else "0",
+            "deposit_amount": lambda v: currency(float(v)) if v else "0",
+            "withdrawal_amount": lambda v: currency(float(v)) if v else "0",
+        }
+        table = self.crud.table
+        center = Qt.AlignmentFlag.AlignCenter
+        start_row = table.rowCount()
+
+        table.setUpdatesEnabled(False)
+        table.setRowCount(start_row + len(rows))
+
+        for i, rec in enumerate(rows):
+            row = start_row + i
+            for col, key in enumerate(keys):
+                val = rec.get(key, "")
+                if key in formatters:
+                    display = formatters[key](val)
+                else:
+                    display = str(val) if val is not None else ""
+                item = QTableWidgetItem(display)
+                item.setTextAlignment(center)
+                if col == 0:
+                    item.setData(Qt.ItemDataRole.UserRole, rec.get("id"))
+                table.setItem(row, col, item)
+
+        table.setUpdatesEnabled(True)
+
+    def _on_jump_data(self, data: dict, page: int) -> None:
+        """Khi user click pagination nhay trang."""
+        rows = data.get("data", [])
+        self._total_count = data.get("count", 0)
+        self._current_page = page
+        self._all_rows = rows
+        self._render_table(rows)
+        self.crud.set_total(self._total_count, reset_page=False)
+        if self.crud._pager:
+            self.crud._pager._current = page
+            self.crud._pager._refresh()
+
+    def _on_load_finished(self) -> None:
+        self._is_loading = False
+        self._loading.stop()
+
+    def _on_error(self, exc: Exception) -> None:
+        if isinstance(exc, (PermissionError, ValueError)):
+            error(self.window(), t("customer.session_expired"))
+        else:
+            error(self.window(), t("customer.error_load"))
+
+    # ── Infinite scroll detection ────────────────────────────
+
+    def _on_scroll(self, value: int) -> None:
+        sb = self._scrollbar
+        # Khi scroll gan cuoi (con 20% viewport height)
+        if sb.maximum() == 0:
+            return
+        remaining = sb.maximum() - value
+        threshold = max(50, self.crud.table.viewport().height() // 5)
+        if remaining <= threshold:
+            self._load_next_page()
+
+    # ── Search & Pagination click ────────────────────────────
+
+    def _on_search(self, text: str) -> None:
+        self._search_text = text.strip()
+        self._reload_fresh()
+
+    def _on_page(self, page: int) -> None:
+        """User click pagination → load trang do, reset table."""
+        if self._is_loading:
+            return
+        self._current_page = page - 1  # _load_next_page se +1
+        self._all_rows = []
+        self._is_loading = False
+
+        # Load trang duoc chon, replace table
+        self._is_loading = True
+        aid = self._current_agent_id
+        search = self._search_text
+
+        run_in_thread(
+            lambda: upstream.fetch_customers(
+                agent_id=aid, page=page, limit=PAGE_SIZE, username=search,
+            ),
+            on_result=lambda data: self._on_jump_data(data, page),
+            on_error=self._on_error,
+            on_finished=self._on_load_finished,
+        )
+        self._loading.start(t("loading.loading_data"))
+
+    # ── Public: reload from outside (e.g. after agent login) ─
+
+    def refresh_agents(self) -> None:
+        """Goi khi agents thay doi (login/logout agent)."""
+        agents = upstream.get_agents_local()
+        if agents:
+            self._apply_agents(agents)
+
+    # ── Retranslate ──────────────────────────────────────────
 
     def retranslate(self) -> None:
         self._title_lbl.setText(t("customer.title"))
+        self._agent_label.setText(t("customer.agent_select"))
+        columns = [t(ck[0]) for ck in COLUMNS_KEYS]
+        self.crud.table.setHorizontalHeaderLabels(columns)

@@ -111,10 +111,10 @@ class TableCrud(QWidget):
         self._empty.setVisible(not has_data)
         self._on_select()   # reset button state
 
-    def set_total(self, total: int):
+    def set_total(self, total: int, reset_page: bool = True):
         """Cập nhật tổng số bản ghi cho pagination."""
         if self._pager:
-            self._pager.set_total(total)
+            self._pager.set_total(total, reset_page=reset_page)
 
     def selected_id(self):
         """Lấy ID dòng đang chọn (UserRole cột 0). None nếu không chọn."""

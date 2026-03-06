@@ -71,7 +71,10 @@
         "search": "Tìm kiếm..."
     },
     "pagination": {
-        "info": "Trang {page} / {pages}  ({total} bản ghi)"
+        "info": "Trang {page} / {pages}  ({total} bản ghi)",
+        "go_to": "Đến trang",
+        "go": "Đi",
+        "total_rows": "Tổng: {total} dòng"
     },
     "empty": {
         "title": "Không có dữ liệu",
@@ -142,13 +145,22 @@
     },
     "customer": {
         "title": "Quản lý khách hàng",
-        "dialog_title": "Thêm / Sửa khách hàng",
-        "staff": "Nhân viên:",
-        "member": "Hội viên:",
-        "member_type": "Loại hình hội viên:",
-        "agent": "Tài khoản đại lý:",
-        "balance": "Số dư:",
-        "status": "Trạng thái:"
+        "agent_select": "Đại lý:",
+        "no_active_agent": "Không có đại lý nào đang hoạt động",
+        "session_expired": "Phiên đại lý đã hết hạn. Vui lòng đăng nhập lại.",
+        "error_load": "Không thể tải dữ liệu khách hàng.",
+        "error_load_agents": "Không thể tải danh sách đại lý.",
+        "col_username": "Tên đăng nhập",
+        "col_type": "Loại hội viên",
+        "col_agent": "Đại lý",
+        "col_balance": "Số dư",
+        "col_deposit_n": "Lần nạp",
+        "col_withdraw_n": "Lần rút",
+        "col_deposit_amt": "Tổng nạp",
+        "col_withdraw_amt": "Tổng rút",
+        "col_last_login": "Đăng nhập cuối",
+        "col_register": "Ngày đăng ký",
+        "col_status": "Trạng thái"
     },
     "lottery": {
         "title": "Xổ số"
