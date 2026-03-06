@@ -16,6 +16,7 @@ from core.theme import theme_signals
 from core.base_widgets import vbox
 from utils.settings import settings
 from widgets.sidebar import CollapsibleSidebar
+from widgets.notification_bell import NotificationBell
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class AppWindow(QMainWindow):
         settings.save_window(self)
         i18n_signals.language_changed.disconnect(self._retranslate)
         theme_signals.changed.disconnect(self._on_theme_changed)
+        self._bell.cleanup()
         self._sidebar.cleanup()
         super().closeEvent(event)
 
@@ -120,7 +122,11 @@ class AppWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         tb.addWidget(spacer)
 
-        # Theme toggle button — top-right
+        # Notification bell
+        self._bell = NotificationBell()
+        tb.addWidget(self._bell)
+
+        # Theme toggle button
         self._act_theme = QAction(self)
         self._update_theme_icon()
         self._act_theme.setToolTip(t("settings.theme_toggle"))
@@ -176,6 +182,7 @@ class AppWindow(QMainWindow):
         """Update all UI text when language changes."""
         self.setWindowTitle(t("app.title"))
         self._act_theme.setToolTip(t("settings.theme_toggle"))
+        self._bell.setToolTip(t("notification.title"))
 
         # Sidebar nav texts
         text_map = {page: t(key) for page, key in self._pages}

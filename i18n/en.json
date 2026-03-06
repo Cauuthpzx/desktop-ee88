@@ -191,5 +191,15 @@
         "version_label": "Version:",
         "author_label": "Author:",
         "license_label": "License:"
+    },
+    "notification": {
+        "title": "Notifications",
+        "empty": "No notifications",
+        "mark_all_read": "Mark all as read",
+        "clear_all": "Clear all",
+        "just_now": "Just now",
+        "minutes_ago": "{n} min ago",
+        "hours_ago": "{n}h ago",
+        "days_ago": "{n}d ago"
     }
 }

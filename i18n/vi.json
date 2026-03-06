@@ -191,5 +191,15 @@
         "version_label": "Phiên bản:",
         "author_label": "Tác giả:",
         "license_label": "Giấy phép:"
+    },
+    "notification": {
+        "title": "Thông báo",
+        "empty": "Không có thông báo",
+        "mark_all_read": "Đánh dấu đã đọc",
+        "clear_all": "Xoá tất cả",
+        "just_now": "Vừa xong",
+        "minutes_ago": "{n} phút trước",
+        "hours_ago": "{n} giờ trước",
+        "days_ago": "{n} ngày trước"
     }
 }
