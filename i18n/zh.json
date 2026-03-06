@@ -57,6 +57,9 @@
         "delete": "删除",
         "search": "搜索..."
     },
+    "pagination": {
+        "info": "第 {page} / {pages} 页  (共 {total} 条记录)"
+    },
     "empty": {
         "title": "暂无数据",
         "add_hint": "点击「添加」创建新记录。"

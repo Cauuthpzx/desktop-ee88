@@ -23,15 +23,12 @@ Luu y:
 from __future__ import annotations
 
 import os
-import logging
 
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 
 load_dotenv()
-
-logger = logging.getLogger(__name__)
 
 
 def _get_dsn() -> str:

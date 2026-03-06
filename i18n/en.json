@@ -57,6 +57,9 @@
         "delete": "Delete",
         "search": "Search..."
     },
+    "pagination": {
+        "info": "Page {page} / {pages}  ({total} records)"
+    },
     "empty": {
         "title": "No data",
         "add_hint": "Click 'Add' to create a new record."

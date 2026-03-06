@@ -57,6 +57,9 @@
         "delete": "Xoá",
         "search": "Tìm kiếm..."
     },
+    "pagination": {
+        "info": "Trang {page} / {pages}  ({total} bản ghi)"
+    },
     "empty": {
         "title": "Không có dữ liệu",
         "add_hint": "Nhấn 'Thêm' để tạo bản ghi mới."

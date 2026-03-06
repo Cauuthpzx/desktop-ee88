@@ -68,20 +68,20 @@ def download_update(url: str, progress_callback=None) -> str:
     dest = os.path.join(tmp_dir, filename)
 
     req = urllib.request.Request(url)
-    resp = urllib.request.urlopen(req, timeout=120)
-    total = int(resp.headers.get("Content-Length", 0))
-    downloaded = 0
-    chunk_size = 64 * 1024  # 64KB
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        total = int(resp.headers.get("Content-Length", 0))
+        downloaded = 0
+        chunk_size = 64 * 1024  # 64KB
 
-    with open(dest, "wb") as f:
-        while True:
-            chunk = resp.read(chunk_size)
-            if not chunk:
-                break
-            f.write(chunk)
-            downloaded += len(chunk)
-            if progress_callback and total > 0:
-                progress_callback(int(downloaded * 100 / total))
+        with open(dest, "wb") as f:
+            while True:
+                chunk = resp.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+                downloaded += len(chunk)
+                if progress_callback and total > 0:
+                    progress_callback(int(downloaded * 100 / total))
 
     logger.info("Update downloaded: %s (%d bytes)", dest, downloaded)
     return dest

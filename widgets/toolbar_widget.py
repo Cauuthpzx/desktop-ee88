@@ -16,7 +16,6 @@ Dùng:
     tb.set_enabled("Sửa", True)
 """
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QFrame
-from PyQt6.QtCore import pyqtSignal
 from widgets.search_bar import SearchBar
 from core import theme
 

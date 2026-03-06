@@ -115,13 +115,13 @@ class ApiClient:
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
 
         try:
-            resp = urllib.request.urlopen(req, timeout=timeout)
-            result = json.loads(resp.read().decode())
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                result = json.loads(resp.read().decode())
             return True, result
         except urllib.error.HTTPError as e:
             try:
                 detail = json.loads(e.read().decode())
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 detail = {"message": f"HTTP {e.code}"}
             logger.error("API %s %s → %s: %s", method, path, e.code, detail)
             return False, detail

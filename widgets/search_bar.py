@@ -1,20 +1,22 @@
 """
 widgets/search_bar.py
-Thanh tìm kiếm dùng chung — QLineEdit + nút Clear.
+Thanh tìm kiếm dùng chung — QLineEdit + nút Clear + debounce 300ms.
 
 Dùng:
     from widgets.search_bar import SearchBar
     bar = SearchBar(placeholder="Tìm theo tên...")
-    bar.search_changed.connect(self._on_search)   # emit str khi gõ
+    bar.search_changed.connect(self._on_search)   # emit str sau 300ms debounce
     layout.addWidget(bar)
 """
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton, QLabel
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from core import theme
+
+_DEBOUNCE_MS = 300
 
 
 class SearchBar(QWidget):
-    search_changed = pyqtSignal(str)   # emit mỗi khi text thay đổi
+    search_changed = pyqtSignal(str)   # emit sau debounce khi text thay đổi
 
     def __init__(self, placeholder: str = "Tìm kiếm...",
                  label: str = "", min_width: int = 220):
@@ -41,15 +43,24 @@ class SearchBar(QWidget):
         self._btn_clear.clicked.connect(self.clear)
         lay.addWidget(self._btn_clear)
 
-    def _on_changed(self, text: str):
-        self._btn_clear.setVisible(bool(text))
-        self.search_changed.emit(text)
+        # Debounce timer
+        self._debounce = QTimer(self)
+        self._debounce.setSingleShot(True)
+        self._debounce.setInterval(_DEBOUNCE_MS)
+        self._debounce.timeout.connect(self._emit_search)
 
-    def clear(self):
+    def _on_changed(self, text: str) -> None:
+        self._btn_clear.setVisible(bool(text))
+        self._debounce.start()
+
+    def _emit_search(self) -> None:
+        self.search_changed.emit(self._edit.text())
+
+    def clear(self) -> None:
         self._edit.clear()
 
     def text(self) -> str:
         return self._edit.text()
 
-    def set_focus(self):
+    def set_focus(self) -> None:
         self._edit.setFocus()

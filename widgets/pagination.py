@@ -11,9 +11,12 @@ Dùng:
     # Cập nhật tổng số:
     pager.set_total(250)
 """
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QSpinBox
+import math
+
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt
 from core import theme
+from core.i18n import t
 
 
 class Pagination(QWidget):
@@ -54,7 +57,6 @@ class Pagination(QWidget):
     def _total_pages(self) -> int:
         if self._total == 0 or self._page_size == 0:
             return 1
-        import math
         return math.ceil(self._total / self._page_size)
 
     def _go(self, page: int):
@@ -67,7 +69,7 @@ class Pagination(QWidget):
 
     def _refresh(self):
         tp = self._total_pages()
-        self._lbl_info.setText(f"Trang {self._current} / {tp}  ({self._total} bản ghi)")
+        self._lbl_info.setText(t("pagination.info", page=self._current, pages=tp, total=self._total))
         self._btn_first.setEnabled(self._current > 1)
         self._btn_prev.setEnabled(self._current > 1)
         self._btn_next.setEnabled(self._current < tp)

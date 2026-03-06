@@ -7,6 +7,7 @@ Uses expandable cards for compact, clean layout.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QWidget, QLineEdit, QPushButton, QLabel, QComboBox, QTextEdit,
@@ -34,7 +35,7 @@ def _add_eye_toggle(line_edit: QLineEdit) -> None:
     icon_show = QIcon("icons/layui/eye.svg")
     action = line_edit.addAction(icon_hide, QLineEdit.ActionPosition.TrailingPosition)
 
-    def toggle():
+    def toggle() -> None:
         if line_edit.echoMode() == QLineEdit.EchoMode.Password:
             line_edit.setEchoMode(QLineEdit.EchoMode.Normal)
             action.setIcon(icon_show)
@@ -49,12 +50,10 @@ class AccountTab(BaseTab):
     """Tab quan ly tai khoan: thong tin, cap nhat email, doi mat khau, dang xuat."""
 
     def _build(self, layout) -> None:
-        # Title
         self._title_lbl = label(t("account.title"), bold=True, size=theme.FONT_SIZE_LG)
         layout.addWidget(self._title_lbl)
         layout.addWidget(divider())
 
-        # ── Two independent columns ─────────────────────────
         columns = hbox(spacing=theme.SPACING_LG, margins=theme.MARGIN_ZERO)
 
         col_left = vbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
@@ -62,7 +61,34 @@ class AccountTab(BaseTab):
         col_right = vbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         col_right.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # ── Card 1: Profile Info (left) ──────────────────────
+        col_left.addWidget(self._build_profile_card())
+        col_left.addWidget(self._build_status_card())
+        col_right.addWidget(self._build_email_card())
+        col_right.addWidget(self._build_password_card())
+
+        columns.addLayout(col_left, 1)
+        columns.addLayout(col_right, 1)
+        layout.addLayout(columns)
+
+        # Logout
+        logout_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
+        logout_lay.addStretch()
+        self._btn_logout = QPushButton(t("account.btn_logout"))
+        self._btn_logout.setIcon(QIcon("icons/layui/logout.svg"))
+        self._btn_logout.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_logout.clicked.connect(self._on_logout)
+        logout_lay.addWidget(self._btn_logout)
+        layout.addLayout(logout_lay)
+
+        self._apply_logout_style()
+        theme_signals.changed.connect(self._on_theme_changed)
+
+        self._loading = LoadingOverlay(self)
+        self._load_profile()
+
+    # ── Card builders ─────────────────────────────────────────
+
+    def _build_profile_card(self) -> ExpandCard:
         self._card_info = ExpandCard(
             icon="icons/layui/user.svg",
             title=t("account.profile_info"),
@@ -90,9 +116,9 @@ class AccountTab(BaseTab):
         info_w = QWidget()
         info_w.setLayout(info_form)
         self._card_info.add_widget(info_w)
-        col_left.addWidget(self._card_info)
+        return self._card_info
 
-        # ── Card 2: Status & Bio (left) ──────────────────────
+    def _build_status_card(self) -> ExpandCard:
         self._card_status = ExpandCard(
             icon="icons/layui/face-smile.svg",
             title=t("account.status_section"),
@@ -140,9 +166,9 @@ class AccountTab(BaseTab):
         status_lay.addWidget(self._status_msg)
 
         self._card_status.add_widget(status_w)
-        col_left.addWidget(self._card_status)
+        return self._card_status
 
-        # ── Card 3: Email (right) ────────────────────────────
+    def _build_email_card(self) -> ExpandCard:
         self._card_email = ExpandCard(
             icon="icons/layui/email.svg",
             title=t("account.update_email"),
@@ -174,9 +200,9 @@ class AccountTab(BaseTab):
         email_lay.addWidget(self._email_msg)
 
         self._card_email.add_widget(email_w)
-        col_right.addWidget(self._card_email)
+        return self._card_email
 
-        # ── Card 4: Change Password (right) ──────────────────
+    def _build_password_card(self) -> ExpandCard:
         self._card_pwd = ExpandCard(
             icon="icons/layui/key.svg",
             title=t("account.change_password"),
@@ -231,33 +257,11 @@ class AccountTab(BaseTab):
         pwd_lay.addWidget(self._pwd_msg)
 
         self._card_pwd.add_widget(pwd_w)
-        col_right.addWidget(self._card_pwd)
+        return self._card_pwd
 
-        columns.addLayout(col_left, 1)
-        columns.addLayout(col_right, 1)
-        layout.addLayout(columns)
-
-        # ── Logout — theme-aware ────────────────────────────
-        logout_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
-        logout_lay.addStretch()
-        self._btn_logout = QPushButton(t("account.btn_logout"))
-        self._btn_logout.setIcon(QIcon("icons/layui/logout.svg"))
-        self._btn_logout.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_logout.clicked.connect(self._on_logout)
-        logout_lay.addWidget(self._btn_logout)
-        layout.addLayout(logout_lay)
-
-        self._apply_logout_style()
-        theme_signals.changed.connect(self._on_theme_changed)
-
-        # Loading overlay
-        self._loading = LoadingOverlay(self)
-
-        # Load profile on show
-        self._load_profile()
+    # ── Theme ─────────────────────────────────────────────────
 
     def _apply_logout_style(self) -> None:
-        """Style nut dang xuat theo theme sang/toi."""
         if theme.is_dark():
             self._btn_logout.setStyleSheet(
                 "QPushButton { color: #ef5350; } "
@@ -272,6 +276,8 @@ class AccountTab(BaseTab):
     def _on_theme_changed(self, _dark: bool) -> None:
         self._apply_logout_style()
 
+    # ── Retranslate ───────────────────────────────────────────
+
     def retranslate(self) -> None:
         self._title_lbl.setText(t("account.title"))
         self._card_info.set_title(t("account.profile_info"))
@@ -281,7 +287,6 @@ class AccountTab(BaseTab):
         self._flbl_last_login.setText(t("account.last_login"))
         self._card_status.set_title(t("account.status_section"))
         self._lbl_presence.setText(t("account.presence"))
-        # Presence combo items
         self._presence_combo.blockSignals(True)
         idx = self._presence_combo.currentIndex()
         self._presence_combo.clear()
@@ -307,7 +312,7 @@ class AccountTab(BaseTab):
         self._btn_change_pwd.setText(t("account.btn_change_password"))
         self._btn_logout.setText(t("account.btn_logout"))
 
-    # ── Load profile ────────────────────────────────────────
+    # ── Load profile ──────────────────────────────────────────
 
     def _load_profile(self) -> None:
         self._loading.start(t("loading.loading"))
@@ -331,25 +336,19 @@ class AccountTab(BaseTab):
         self._lbl_role.setText(role_str)
         self._lbl_created.setText(self._format_datetime(data.get("created_at")))
         self._lbl_last_login.setText(self._format_datetime(data.get("last_login_at")))
-
-        # Update card descriptions with summary info
         self._card_info.set_description(f"{username} ({role_str})")
 
         email_val = data.get("email", "")
         self._email_edit.setText(email_val)
         self._card_email.set_description(email_val or "—")
 
-        # Presence
         presence = data.get("presence", "online")
         if presence in self._presence_keys:
             self._presence_combo.blockSignals(True)
             self._presence_combo.setCurrentIndex(self._presence_keys.index(presence))
             self._presence_combo.blockSignals(False)
-            self._card_status.set_description(
-                self._presence_combo.currentText()
-            )
+            self._card_status.set_description(self._presence_combo.currentText())
 
-        # Bio
         self._bio_edit.setPlainText(data.get("bio", ""))
 
     def _on_profile_error(self, err: str) -> None:
@@ -384,12 +383,10 @@ class AccountTab(BaseTab):
         else:
             self._show_msg(self._status_msg, data.get("message", "Error"), error=True)
 
-    # ── Save email ──────────────────────────────────────────
+    # ── Save email ────────────────────────────────────────────
 
     def _on_save_email(self) -> None:
         email_val = self._email_edit.text().strip()
-
-        # Email is optional, but if provided must be valid
         if email_val:
             errors = validate_all([validate_email(t("account.email_label"), email_val)])
             if errors:
@@ -414,7 +411,7 @@ class AccountTab(BaseTab):
         else:
             self._show_msg(self._email_msg, msg or t("account.error_save"), error=True)
 
-    # ── Change password ─────────────────────────────────────
+    # ── Change password ───────────────────────────────────────
 
     def _on_change_password(self) -> None:
         current = self._current_pwd.text()
@@ -458,7 +455,7 @@ class AccountTab(BaseTab):
         else:
             self._show_msg(self._pwd_msg, msg or t("account.error_change_pwd"), error=True)
 
-    # ── Logout ──────────────────────────────────────────────
+    # ── Logout ────────────────────────────────────────────────
 
     def _on_logout(self) -> None:
         from dialogs.confirm_dialog import confirm
@@ -466,7 +463,7 @@ class AccountTab(BaseTab):
             return
         auth.logout()
 
-    # ── Helpers ──────────────────────────────────────────────
+    # ── Helpers ───────────────────────────────────────────────
 
     @staticmethod
     def _show_msg(lbl: QLabel, text: str, error: bool = True) -> None:
@@ -486,7 +483,6 @@ class AccountTab(BaseTab):
         if not dt_str:
             return "—"
         try:
-            from datetime import datetime
             dt = datetime.fromisoformat(dt_str)
             return dt.strftime("%Y-%m-%d %H:%M")
         except (ValueError, AttributeError):
