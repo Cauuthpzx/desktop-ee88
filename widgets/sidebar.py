@@ -109,7 +109,7 @@ class CollapsibleSidebar(QWidget):
         self._entries: list[_Entry] = []
         self._page_map: dict[str, QWidget] = {}  # identifier → widget
         self._hover_index: int = -1               # -2 = hover trên toggle btn
-        self._rects_cache: list[tuple[_Entry, QRect]] | None = None
+        self._rects_cache: list[tuple[_Entry, QRect, bool]] | None = None
         self._rects_cache_w: int = -1             # width khi cache được tạo
 
         # Toggle button icons
