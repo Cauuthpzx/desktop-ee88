@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QTextEdit, QSizePolicy,
 )
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
 
 from core import theme
@@ -75,9 +75,8 @@ class UpdateDialog(QDialog):
         header.setSpacing(theme.SPACING_LG)
 
         icon_lbl = QLabel()
-        icon_lbl.setPixmap(
-            QIcon("icons/layui/refresh.svg").pixmap(40, 40)
-        )
+        from core.icon import Icon
+        icon_lbl.setPixmap(Icon.REFRESH.pixmap(40, 40))
         icon_lbl.setFixedSize(40, 40)
         header.addWidget(icon_lbl, 0, Qt.AlignmentFlag.AlignTop)
 

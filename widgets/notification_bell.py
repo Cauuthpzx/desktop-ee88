@@ -11,8 +11,9 @@ Dung:
     toolbar.addWidget(bell)
 
     # Them thong bao
-    bell.add_notification("Nguoi dung moi dang ky", icon="icons/layui/user.svg")
-    bell.add_notification("Phien ban moi 2.0", icon="icons/layui/refresh.svg")
+    from core.icon import IconPath
+    bell.add_notification("Nguoi dung moi dang ky", icon=IconPath.USER)
+    bell.add_notification("Phien ban moi 2.0", icon=IconPath.REFRESH)
 """
 from __future__ import annotations
 
@@ -85,7 +86,8 @@ class NotificationBell(QWidget):
 
         self._items: list[NotificationItem] = []
         self._popup: _NotificationPopup | None = None
-        self._icon_path = "icons/material/notifications.svg"
+        from core.icon import IconPath
+        self._icon_path = IconPath.NOTIFICATIONS
 
         theme_signals.changed.connect(self._on_theme_changed)
 

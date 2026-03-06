@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QComboBox, QLabel, QCheckBox
 from PyQt6.QtCore import Qt
 from core.base_widgets import BaseTab, hbox, vbox, label, divider, form_layout
 from core import theme
+from core.icon import IconPath
 from core.i18n import t, set_language, get_language, get_languages
 from core.theme import theme_signals
 from widgets.expand_card import ExpandCard
@@ -29,7 +30,7 @@ class SettingsTab(BaseTab):
 
         # Card 1: Appearance (left col)
         self._card_appearance = ExpandCard(
-            icon="icons/layui/template.svg",
+            icon=IconPath.TEMPLATE,
             title=t("settings.appearance"),
             description=t("settings.appearance_desc"),
         )
@@ -45,7 +46,7 @@ class SettingsTab(BaseTab):
 
         # Card 2: Notifications (left col)
         self._card_notif = ExpandCard(
-            icon="icons/layui/notice.svg",
+            icon=IconPath.NOTICE,
             title=t("settings.notifications"),
             description=t("settings.notifications_desc"),
         )
@@ -61,7 +62,7 @@ class SettingsTab(BaseTab):
 
         # Card 3: Language (right col)
         self._card_language = ExpandCard(
-            icon="icons/layui/website.svg",
+            icon=IconPath.WEBSITE,
             title=t("settings.language_card"),
             description=t("settings.language_desc"),
         )
@@ -83,7 +84,7 @@ class SettingsTab(BaseTab):
 
         # Card 4: About (right col)
         self._card_about = ExpandCard(
-            icon="icons/layui/about.svg",
+            icon=IconPath.ABOUT,
             title=t("settings.about"),
             description=t("settings.about_desc"),
         )

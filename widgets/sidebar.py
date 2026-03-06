@@ -7,11 +7,12 @@ dịch chuyển dù animation đang chạy.
 
 Usage:
     sidebar = CollapsibleSidebar()
-    sidebar.add_button("home", "Trang chu", "icons/layui/home.svg")
-    sidebar.add_button("nhanvien", "Nhan vien", "icons/layui/user.svg")
+    from core.icon import IconPath
+    sidebar.add_button("home", "Trang chu", IconPath.HOME)
+    sidebar.add_button("nhanvien", "Nhan vien", IconPath.USER)
     sidebar.button_clicked.connect(lambda key: ...)
     # hoặc dùng page_changed với QStackedWidget:
-    sidebar.add_item("icons/layui/home.svg", "Trang chu", home_widget)
+    sidebar.add_item(IconPath.HOME, "Trang chu", home_widget)
     sidebar.page_changed.connect(stack.setCurrentWidget)
 """
 from __future__ import annotations
@@ -133,8 +134,9 @@ class CollapsibleSidebar(QWidget):
         self._rects_cache_h: int = -1             # height khi cache được tạo
 
         # Toggle button icons
-        self._px_menu = _load_pixmap("icons/material/menu.svg")
-        self._px_menu_open = _load_pixmap("icons/material/menu_open.svg")
+        from core.icon import IconPath
+        self._px_menu = _load_pixmap(IconPath.MENU)
+        self._px_menu_open = _load_pixmap(IconPath.MENU_OPEN)
 
         self.setFixedWidth(_W_EXPANDED)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)

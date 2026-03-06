@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
 from core import theme
+from core.icon import Icon, IconPath, GalleryIcon, tinted
 from core.i18n import t, i18n_signals
 from core.theme import theme_signals
 from core.base_widgets import vbox
@@ -32,15 +33,15 @@ from tabs.settings_tab import SettingsTab
 # Icon sources: icons/layui/, icons/material/, icons/gallery/
 # None = separator
 MENU: list[dict | None] = [
-    {"icon": "icons/layui/home.svg",            "text_key": "sidebar.home",    "tab": HomeTab},
+    {"icon": IconPath.HOME,                        "text_key": "sidebar.home",    "tab": HomeTab},
     None,  # separator
-    {"icon": "icons/gallery/Grid_black.svg",    "text_key": "sidebar.example",  "tab": ExampleTab},
+    {"icon": GalleryIcon.GRID.path(),              "text_key": "sidebar.example",  "tab": ExampleTab},
 ]
 
 # Items ghim dưới cùng sidebar
 MENU_BOTTOM: list[dict] = [
-    {"icon": "icons/layui/user.svg", "text_key": "sidebar.account",  "tab": AccountTab},
-    {"icon": "icons/layui/set.svg",  "text_key": "sidebar.settings", "tab": SettingsTab},
+    {"icon": IconPath.USER,     "text_key": "sidebar.account",  "tab": AccountTab},
+    {"icon": IconPath.SETTINGS, "text_key": "sidebar.settings", "tab": SettingsTab},
 ]
 
 
@@ -136,9 +137,9 @@ class AppWindow(QMainWindow):
 
     def _update_theme_icon(self) -> None:
         if theme.is_dark():
-            self._act_theme.setIcon(theme.tinted_icon("icons/material/light_mode.svg"))
+            self._act_theme.setIcon(tinted(IconPath.LIGHT_MODE))
         else:
-            self._act_theme.setIcon(theme.tinted_icon("icons/material/dark_mode.svg"))
+            self._act_theme.setIcon(tinted(IconPath.DARK_MODE))
 
     def _on_theme_changed(self, _dark: bool) -> None:
         self._update_theme_icon()

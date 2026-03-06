@@ -12,11 +12,11 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QWidget, QLineEdit, QPushButton, QLabel, QComboBox, QTextEdit,
 )
-from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt
 
 from core import theme
 from core.base_widgets import BaseTab, vbox, hbox, form_layout, label, divider
+from core.icon import Icon, IconPath
 from core.theme import theme_signals
 from core.i18n import t
 from utils.api import api
@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 def _add_eye_toggle(line_edit: QLineEdit) -> None:
     """Toggle show/hide password."""
-    icon_hide = QIcon("icons/layui/eye-invisible.svg")
-    icon_show = QIcon("icons/layui/eye.svg")
+    icon_hide = Icon.EYE_INVISIBLE
+    icon_show = Icon.EYE
     action = line_edit.addAction(icon_hide, QLineEdit.ActionPosition.TrailingPosition)
 
     def toggle() -> None:
@@ -74,7 +74,7 @@ class AccountTab(BaseTab):
         logout_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         logout_lay.addStretch()
         self._btn_logout = QPushButton(t("account.btn_logout"))
-        self._btn_logout.setIcon(QIcon("icons/layui/logout.svg"))
+        self._btn_logout.setIcon(Icon.LOGOUT)
         self._btn_logout.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_logout.clicked.connect(self._on_logout)
         logout_lay.addWidget(self._btn_logout)
@@ -96,7 +96,7 @@ class AccountTab(BaseTab):
 
     def _build_profile_card(self) -> ExpandCard:
         self._card_info = ExpandCard(
-            icon="icons/layui/user.svg",
+            icon=IconPath.USER,
             title=t("account.profile_info"),
         )
 
@@ -126,7 +126,7 @@ class AccountTab(BaseTab):
 
     def _build_status_card(self) -> ExpandCard:
         self._card_status = ExpandCard(
-            icon="icons/layui/face-smile.svg",
+            icon=IconPath.FACE_SMILE,
             title=t("account.status_section"),
         )
 
@@ -160,7 +160,7 @@ class AccountTab(BaseTab):
         bio_btn_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         bio_btn_lay.addStretch()
         self._btn_save_bio = QPushButton(t("account.btn_save_bio"))
-        self._btn_save_bio.setIcon(QIcon("icons/layui/ok-circle.svg"))
+        self._btn_save_bio.setIcon(Icon.SAVE)
         self._btn_save_bio.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_save_bio.clicked.connect(self._on_save_bio)
         bio_btn_lay.addWidget(self._btn_save_bio)
@@ -176,7 +176,7 @@ class AccountTab(BaseTab):
 
     def _build_email_card(self) -> ExpandCard:
         self._card_email = ExpandCard(
-            icon="icons/layui/email.svg",
+            icon=IconPath.EMAIL,
             title=t("account.update_email"),
         )
 
@@ -188,13 +188,13 @@ class AccountTab(BaseTab):
         self._email_edit = QLineEdit()
         self._email_edit.setPlaceholderText(t("account.email_placeholder"))
         self._email_edit.addAction(
-            QIcon("icons/layui/email.svg"),
+            Icon.EMAIL,
             QLineEdit.ActionPosition.LeadingPosition,
         )
         email_form.addWidget(self._email_edit, 1)
 
         self._btn_save_email = QPushButton(t("account.btn_save"))
-        self._btn_save_email.setIcon(QIcon("icons/layui/ok-circle.svg"))
+        self._btn_save_email.setIcon(Icon.SAVE)
         self._btn_save_email.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_save_email.clicked.connect(self._on_save_email)
         email_form.addWidget(self._btn_save_email)
@@ -210,7 +210,7 @@ class AccountTab(BaseTab):
 
     def _build_password_card(self) -> ExpandCard:
         self._card_pwd = ExpandCard(
-            icon="icons/layui/key.svg",
+            icon=IconPath.KEY,
             title=t("account.change_password"),
         )
 
@@ -222,7 +222,7 @@ class AccountTab(BaseTab):
         self._current_pwd.setPlaceholderText(t("account.current_password"))
         self._current_pwd.setEchoMode(QLineEdit.EchoMode.Password)
         self._current_pwd.addAction(
-            QIcon("icons/layui/password.svg"),
+            Icon.PASSWORD,
             QLineEdit.ActionPosition.LeadingPosition,
         )
         _add_eye_toggle(self._current_pwd)
@@ -232,7 +232,7 @@ class AccountTab(BaseTab):
         self._new_pwd.setPlaceholderText(t("account.new_password"))
         self._new_pwd.setEchoMode(QLineEdit.EchoMode.Password)
         self._new_pwd.addAction(
-            QIcon("icons/layui/key.svg"),
+            Icon.KEY,
             QLineEdit.ActionPosition.LeadingPosition,
         )
         _add_eye_toggle(self._new_pwd)
@@ -242,7 +242,7 @@ class AccountTab(BaseTab):
         self._confirm_pwd.setPlaceholderText(t("account.confirm_password"))
         self._confirm_pwd.setEchoMode(QLineEdit.EchoMode.Password)
         self._confirm_pwd.addAction(
-            QIcon("icons/layui/key.svg"),
+            Icon.KEY,
             QLineEdit.ActionPosition.LeadingPosition,
         )
         _add_eye_toggle(self._confirm_pwd)
@@ -251,7 +251,7 @@ class AccountTab(BaseTab):
         btn_pwd_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         btn_pwd_lay.addStretch()
         self._btn_change_pwd = QPushButton(t("account.btn_change_password"))
-        self._btn_change_pwd.setIcon(QIcon("icons/layui/key.svg"))
+        self._btn_change_pwd.setIcon(Icon.KEY)
         self._btn_change_pwd.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_change_pwd.clicked.connect(self._on_change_password)
         btn_pwd_lay.addWidget(self._btn_change_pwd)
