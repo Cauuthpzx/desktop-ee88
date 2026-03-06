@@ -29,3 +29,6 @@ UPDATE_SHA256 = os.getenv("UPDATE_SHA256", "")
 UPDATE_CHANGELOG = os.getenv("UPDATE_CHANGELOG", "")
 UPDATE_FORCE = os.getenv("UPDATE_FORCE", "false").lower() == "true"
 UPDATE_FILE_SIZE = int(os.getenv("UPDATE_FILE_SIZE", "0"))
+
+# ── Upstream (EE88) ──────────────────────────────────────────
+UPSTREAM_BASE_URL = os.getenv("UPSTREAM_BASE_URL", "https://a2u4k.ee88dly.com")

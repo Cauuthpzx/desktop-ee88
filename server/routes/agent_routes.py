@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from server.config import UPSTREAM_BASE_URL
 from server.database import get_db
 from server.auth import get_current_user
 from server.models import (
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 
-DEFAULT_UPSTREAM_URL = "https://a2u4k.ee88dly.com"
+DEFAULT_UPSTREAM_URL = UPSTREAM_BASE_URL
 
 
 def _agent_row_to_dict(row: dict) -> dict:

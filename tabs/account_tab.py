@@ -78,7 +78,7 @@ class _AgentDialog(BaseDialog):
         form.addRow(t("account.agent_password") + ":", self._password_edit)
 
         self._url_edit = QLineEdit()
-        self._url_edit.setPlaceholderText("https://a2u4k.ee88dly.com")
+        self._url_edit.setPlaceholderText("Mặc định: https://a2u4k.ee88dly.com")
         form.addRow(t("account.agent_base_url") + ":", self._url_edit)
 
     def _fill(self, data: dict) -> None:
