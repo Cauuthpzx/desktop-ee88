@@ -231,6 +231,25 @@ QIcon("icons/material/menu.svg")
 QIcon("icons/material/settings.svg")
 ```
 
+### `icons/gallery/` — Gallery custom icons
+Ported từ gallery project. Mỗi icon có 2 variant: `_black.svg` (light theme) và `_white.svg` (dark theme).
+Thư mục `controls/` chứa 98 PNG thumbnail của các widget control.
+
+**Dùng trực tiếp:**
+```python
+QIcon("icons/gallery/Grid_black.svg")
+```
+
+**Dùng qua Enum registry (`core/icon.py`):**
+```python
+from core.icon import GalleryIcon
+
+btn.setIcon(GalleryIcon.GRID.icon())          # light theme (black)
+btn.setIcon(GalleryIcon.GRID.icon(dark=True)) # dark theme (white)
+```
+
+Gallery icons có sẵn: `GRID`, `MENU`, `TEXT`, `PRICE`, `EMOJI_TAB_SYMBOLS`
+
 ---
 
 ## THREADING — QUY TẮC QUAN TRỌNG NHẤT

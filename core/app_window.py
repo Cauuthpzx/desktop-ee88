@@ -20,12 +20,13 @@ from tabs.example_tab import ExampleTab
 
 
 # ── Menu config — them/xoa/reorder tai day ────────────────────────────────────
-# Moi entry: {"icon": "icons/layui/<name>.svg", "text": "Ten hien thi", "tab": TabClass}
+# Moi entry: {"icon": "<path>.svg", "text": "Ten hien thi", "tab": TabClass}
+# Icon sources: icons/layui/, icons/material/, icons/gallery/
 # None = separator
 MENU: list[dict | None] = [
-    {"icon": "icons/layui/home.svg",  "text": "Trang chu", "tab": HomeTab},
+    {"icon": "icons/layui/home.svg",            "text": "Trang chu", "tab": HomeTab},
     None,  # separator
-    {"icon": "icons/layui/table.svg", "text": "Vi du",     "tab": ExampleTab},
+    {"icon": "icons/gallery/Grid_black.svg",    "text": "Vi du",     "tab": ExampleTab},
     # Them muc moi:
     # {"icon": "icons/layui/user.svg",  "text": "Nhan vien", "tab": NhanVienTab},
     # {"icon": "icons/layui/set.svg",   "text": "Cai dat",   "tab": CaiDatTab},
