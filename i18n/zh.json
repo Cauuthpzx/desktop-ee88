@@ -263,6 +263,49 @@
         "author_label": "作者：",
         "license_label": "许可证："
     },
+    "api": {
+        "error_connect": "无法连接服务器。",
+        "error_unknown": "未知错误。",
+        "error_login": "登录失败。",
+        "error_generic": "错误"
+    },
+    "badge": {
+        "active": "正常",
+        "inactive": "未激活",
+        "pending": "待处理",
+        "error": "错误",
+        "success": "成功",
+        "warning": "警告"
+    },
+    "server": {
+        "no_changes": "没有更改。",
+        "update_success": "更新成功。",
+        "wrong_password": "当前密码不正确。",
+        "password_changed": "密码修改成功。",
+        "username_exists": "用户名已存在。",
+        "register_success": "注册成功。",
+        "username_not_found": "用户名不存在。",
+        "account_locked": "账户已被锁定。",
+        "wrong_login_password": "密码不正确。",
+        "agent_username_exists": "该用户名的代理已存在。",
+        "agent_deleted": "代理已删除。",
+        "agent_no_password": "代理未配置上游密码。",
+        "agent_logged_out": "代理已登出。",
+        "agent_no_session": "没有会话。",
+        "agent_session_expired": "会话已过期。"
+    },
+    "upstream": {
+        "init_failed": "初始化请求失败：{error}",
+        "init_invalid": "初始化响应无效：{detail}",
+        "no_rsa_key": "无法从上游获取RSA公钥。",
+        "rsa_failed": "RSA加密失败：{error}",
+        "login_request_failed": "登录请求失败：{error}",
+        "login_response_invalid": "登录响应无效：{detail}",
+        "wrong_password": "密码错误：{msg}",
+        "login_error": "登录错误：{msg}",
+        "captcha_exhausted": "验证码识别失败，已尝试 {n} 次。",
+        "concurrent_lock": "代理正在登录中（并发锁定）。"
+    },
     "notification": {
         "title": "通知",
         "empty": "暂无通知",

@@ -263,6 +263,49 @@
         "author_label": "Author:",
         "license_label": "License:"
     },
+    "api": {
+        "error_connect": "Cannot connect to server.",
+        "error_unknown": "Unknown error.",
+        "error_login": "Login error.",
+        "error_generic": "Error"
+    },
+    "badge": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending",
+        "error": "Error",
+        "success": "Success",
+        "warning": "Warning"
+    },
+    "server": {
+        "no_changes": "No changes.",
+        "update_success": "Updated successfully.",
+        "wrong_password": "Current password is incorrect.",
+        "password_changed": "Password changed successfully.",
+        "username_exists": "Username already exists.",
+        "register_success": "Registration successful.",
+        "username_not_found": "Username does not exist.",
+        "account_locked": "Account has been locked.",
+        "wrong_login_password": "Incorrect password.",
+        "agent_username_exists": "Agent with this username already exists.",
+        "agent_deleted": "Agent deleted.",
+        "agent_no_password": "Agent has no upstream password configured.",
+        "agent_logged_out": "Agent logged out.",
+        "agent_no_session": "No session.",
+        "agent_session_expired": "Session expired."
+    },
+    "upstream": {
+        "init_failed": "Init request failed: {error}",
+        "init_invalid": "Init response invalid: {detail}",
+        "no_rsa_key": "Cannot get RSA public key from upstream.",
+        "rsa_failed": "RSA encryption failed: {error}",
+        "login_request_failed": "Login request failed: {error}",
+        "login_response_invalid": "Login response invalid: {detail}",
+        "wrong_password": "Wrong password: {msg}",
+        "login_error": "Login error: {msg}",
+        "captcha_exhausted": "Captcha solving failed after {n} attempts.",
+        "concurrent_lock": "Agent is already logging in (concurrent lock)."
+    },
     "notification": {
         "title": "Notifications",
         "empty": "No notifications",

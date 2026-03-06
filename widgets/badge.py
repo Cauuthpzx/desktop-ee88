@@ -12,17 +12,23 @@ Dùng:
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtCore import Qt
 from core import theme
+from core.i18n import t
 
 
-# Map trạng thái → text hiển thị
-STATUS_TEXT = {
-    "active":   "Hoạt động",
-    "inactive": "Không hoạt động",
-    "pending":  "Chờ xử lý",
-    "error":    "Lỗi",
-    "success":  "Thành công",
-    "warning":  "Cảnh báo",
+# Map trạng thái → i18n key
+_STATUS_KEYS = {
+    "active":   "badge.active",
+    "inactive": "badge.inactive",
+    "pending":  "badge.pending",
+    "error":    "badge.error",
+    "success":  "badge.success",
+    "warning":  "badge.warning",
 }
+
+
+def _status_text(status: str) -> str:
+    key = _STATUS_KEYS.get(status)
+    return t(key) if key else status
 
 
 class Badge(QLabel):
@@ -45,9 +51,7 @@ class StatusBadge(Badge):
     status: "active" | "inactive" | "pending" | "error" | "success" | "warning"
     """
     def __init__(self, status: str):
-        text = STATUS_TEXT.get(status, status)
-        super().__init__(text)
+        super().__init__(_status_text(status))
 
     def set_status(self, status: str):
-        text = STATUS_TEXT.get(status, status)
-        self.setText(f" {text} ")
+        self.setText(f" {_status_text(status)} ")

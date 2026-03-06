@@ -24,6 +24,7 @@ import urllib.request
 import urllib.error
 
 from dotenv import load_dotenv
+from core.i18n import t
 
 # Tim .env ca khi chay tu PyInstaller bundle
 if getattr(sys, "frozen", False):
@@ -134,7 +135,7 @@ class ApiClient:
             return False, detail
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             logger.error("API %s %s → network error: %s", method, path, e)
-            return False, {"message": "Khong the ket noi may chu."}
+            return False, {"message": t("api.error_connect")}
 
     def get(self, path: str, **kw) -> tuple[bool, dict]:
         return self._request("GET", path, **kw)
@@ -152,7 +153,7 @@ class ApiClient:
     def register(self, username: str, password: str) -> tuple[bool, str]:
         """Dang ky. Tra ve (ok, message)."""
         ok, data = self.post("/api/register", {"username": username, "password": password}, auth=False)
-        msg = data.get("message", "Loi khong xac dinh.")
+        msg = data.get("message", t("api.error_unknown"))
         return data.get("ok", False), msg
 
     def login(self, username: str, password: str) -> tuple[bool, str]:
@@ -163,7 +164,7 @@ class ApiClient:
             self._username = data.get("username")
             self._role = data.get("role")
             return True, data.get("username", "")
-        return False, data.get("message", "Loi dang nhap.")
+        return False, data.get("message", t("api.error_login"))
 
     def logout(self) -> None:
         """Xoa token local + QSettings."""

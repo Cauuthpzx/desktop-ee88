@@ -263,6 +263,49 @@
         "author_label": "Tác giả:",
         "license_label": "Giấy phép:"
     },
+    "api": {
+        "error_connect": "Không thể kết nối máy chủ.",
+        "error_unknown": "Lỗi không xác định.",
+        "error_login": "Lỗi đăng nhập.",
+        "error_generic": "Lỗi"
+    },
+    "badge": {
+        "active": "Hoạt động",
+        "inactive": "Không hoạt động",
+        "pending": "Chờ xử lý",
+        "error": "Lỗi",
+        "success": "Thành công",
+        "warning": "Cảnh báo"
+    },
+    "server": {
+        "no_changes": "Không có thay đổi.",
+        "update_success": "Cập nhật thành công.",
+        "wrong_password": "Mật khẩu hiện tại không đúng.",
+        "password_changed": "Đổi mật khẩu thành công.",
+        "username_exists": "Tên đăng nhập đã tồn tại.",
+        "register_success": "Đăng ký thành công.",
+        "username_not_found": "Tên đăng nhập không tồn tại.",
+        "account_locked": "Tài khoản đã bị khóa.",
+        "wrong_login_password": "Mật khẩu không đúng.",
+        "agent_username_exists": "Đại lý với tên đăng nhập này đã tồn tại.",
+        "agent_deleted": "Đã xóa đại lý.",
+        "agent_no_password": "Đại lý chưa cấu hình mật khẩu upstream.",
+        "agent_logged_out": "Đã đăng xuất đại lý.",
+        "agent_no_session": "Không có phiên.",
+        "agent_session_expired": "Phiên đã hết hạn."
+    },
+    "upstream": {
+        "init_failed": "Yêu cầu khởi tạo thất bại: {error}",
+        "init_invalid": "Phản hồi khởi tạo không hợp lệ: {detail}",
+        "no_rsa_key": "Không thể lấy khóa RSA công khai từ upstream.",
+        "rsa_failed": "Mã hóa RSA thất bại: {error}",
+        "login_request_failed": "Yêu cầu đăng nhập thất bại: {error}",
+        "login_response_invalid": "Phản hồi đăng nhập không hợp lệ: {detail}",
+        "wrong_password": "Sai mật khẩu: {msg}",
+        "login_error": "Lỗi đăng nhập: {msg}",
+        "captcha_exhausted": "Giải captcha thất bại sau {n} lần thử.",
+        "concurrent_lock": "Đại lý đang đăng nhập (khóa đồng thời)."
+    },
     "notification": {
         "title": "Thông báo",
         "empty": "Không có thông báo",

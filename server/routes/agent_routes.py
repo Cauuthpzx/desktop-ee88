@@ -62,7 +62,7 @@ def create_agent(
         (user["id"], req.ext_username),
     )
     if cur.fetchone():
-        return AgentResp(ok=False, message="Agent with this username already exists.")
+        return AgentResp(ok=False, message="server.agent_username_exists")
 
     cur.execute(
         """INSERT INTO agents (user_id, name, ext_username, ext_password, base_url)
@@ -131,7 +131,7 @@ def delete_agent(
     )
     if cur.rowcount == 0:
         raise HTTPException(status_code=404, detail="Agent not found.")
-    return MsgResp(ok=True, message="Agent deleted.")
+    return MsgResp(ok=True, message="server.agent_deleted")
 
 
 @router.post("/{agent_id}/login", response_model=AgentResp)
@@ -154,7 +154,7 @@ def login_agent(
         raise HTTPException(status_code=404, detail="Agent not found.")
 
     if not agent["ext_password"]:
-        return AgentResp(ok=False, message="Agent has no upstream password configured.")
+        return AgentResp(ok=False, message="server.agent_no_password")
 
     base_url = (req and req.base_url) or agent.get("base_url") or DEFAULT_UPSTREAM_URL
 
@@ -232,7 +232,7 @@ def logout_agent(
            WHERE id = %s""",
         (agent_id,),
     )
-    return MsgResp(ok=True, message="Agent logged out.")
+    return MsgResp(ok=True, message="server.agent_logged_out")
 
 
 @router.post("/{agent_id}/check", response_model=AgentResp)
@@ -254,7 +254,7 @@ def check_agent(
         raise HTTPException(status_code=404, detail="Agent not found.")
 
     if not agent["session_cookie"]:
-        return AgentResp(ok=False, message="No session.", agent=_agent_row_to_dict(agent))
+        return AgentResp(ok=False, message="server.agent_no_session", agent=_agent_row_to_dict(agent))
 
     base_url = agent.get("base_url") or DEFAULT_UPSTREAM_URL
     valid = check_session(agent["session_cookie"], base_url)
@@ -269,9 +269,9 @@ def check_agent(
         return AgentResp(ok=True, agent=_agent_row_to_dict(agent))
 
     cur.execute(
-        "UPDATE agents SET status = 'error', login_error = 'Session expired' WHERE id = %s",
+        "UPDATE agents SET status = 'error', login_error = 'server.agent_session_expired' WHERE id = %s",
         (agent_id,),
     )
     agent["status"] = "error"
-    agent["login_error"] = "Session expired"
-    return AgentResp(ok=False, message="Session expired.", agent=_agent_row_to_dict(agent))
+    agent["login_error"] = "server.agent_session_expired"
+    return AgentResp(ok=False, message="server.agent_session_expired", agent=_agent_row_to_dict(agent))

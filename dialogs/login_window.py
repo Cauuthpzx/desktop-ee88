@@ -784,7 +784,7 @@ class LoginWindow(QWidget):
                 api.clear_session()
             self.login_success.emit(msg)
         else:
-            self._login_form._show_error(msg)
+            self._login_form._show_error(t(msg) if "." in msg else msg)
 
     def _handle_register(self, username: str, password: str) -> None:
         self._set_busy(True)
@@ -801,7 +801,7 @@ class LoginWindow(QWidget):
             self._stack.setCurrentWidget(self._login_form)
             self._login_form._show_success(t("register.success"))
         else:
-            self._register_form._show_error(msg)
+            self._register_form._show_error(t(msg) if "." in msg else msg)
 
     def _on_auth_error(self, error_msg: str, is_login: bool) -> None:
         form = self._login_form if is_login else self._register_form

@@ -514,7 +514,7 @@ class AccountTab(BaseTab):
             self._show_msg(self._agent_msg, t("account.agent_saved"), error=False)
             self._load_agents()
         else:
-            self._show_msg(self._agent_msg, data.get("message", "Error"), error=True)
+            self._show_msg(self._agent_msg, data.get("message", t("api.error_generic")), error=True)
 
     def _on_delete_agent(self, agent_id: int) -> None:
         agent = next((a for a in self._agents_data if a.get("id") == agent_id), None)
@@ -536,7 +536,7 @@ class AccountTab(BaseTab):
             self._show_msg(self._agent_msg, t("account.agent_deleted"), error=False)
             self._load_agents()
         else:
-            self._show_msg(self._agent_msg, data.get("message", "Error"), error=True)
+            self._show_msg(self._agent_msg, data.get("message", t("api.error_generic")), error=True)
 
     # ── Agent login/logout ─────────────────────────────────────
 
@@ -565,7 +565,7 @@ class AccountTab(BaseTab):
             self._show_msg(self._agent_msg, t("account.agent_login_success", n="?"), error=False)
             self._load_agents()
         else:
-            error_msg = data.get("message", "Unknown error")
+            error_msg = data.get("message", t("api.error_unknown"))
             self._show_msg(
                 self._agent_msg,
                 t("account.agent_login_failed", error=error_msg),
@@ -655,7 +655,7 @@ class AccountTab(BaseTab):
     def _on_profile_loaded(self, result: tuple[bool, dict]) -> None:
         ok, data = result
         if not ok:
-            self._show_msg(self._email_msg, data.get("message", "Error"), error=True)
+            self._show_msg(self._email_msg, data.get("message", t("api.error_generic")), error=True)
             return
 
         username = data.get("username", "—")
@@ -710,7 +710,7 @@ class AccountTab(BaseTab):
         if ok and data.get("ok", False):
             self._show_msg(self._status_msg, t("account.status_saved"), error=False)
         else:
-            self._show_msg(self._status_msg, data.get("message", "Error"), error=True)
+            self._show_msg(self._status_msg, data.get("message", t("api.error_generic")), error=True)
 
     # ── Save email ────────────────────────────────────────────
 
@@ -797,6 +797,11 @@ class AccountTab(BaseTab):
 
     @staticmethod
     def _show_msg(lbl: QLabel, text: str, error: bool = True) -> None:
+        # Auto-translate server i18n keys (e.g. "server.wrong_password")
+        if text and "." in text:
+            translated = t(text)
+            if translated != text:
+                text = translated
         color = "#d32f2f" if error else "#2e7d32"
         bg = "#fde8e8" if error else "#e8f5e9"
         lbl.setStyleSheet(f"color: {color}; background: {bg}; padding: 6px; border-radius: 4px;")
