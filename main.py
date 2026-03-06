@@ -5,6 +5,11 @@ import sys
 import os
 import ctypes
 
+# PyInstaller --onedir: chuyen working dir ve thu muc chua exe
+# de tat ca relative path (icons/, i18n/) hoat dong dung
+if getattr(sys, "frozen", False):
+    os.chdir(getattr(sys, "_MEIPASS", os.path.dirname(sys.executable)))
+
 # PHẢI set trước khi tạo QApplication — icon taskbar Windows
 myappid = "maxhub.app.1.0"
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
@@ -21,7 +26,10 @@ from utils.auth import auth
 from utils.settings import settings
 from utils.thread_worker import run_in_thread
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def icon(name: str) -> QIcon:

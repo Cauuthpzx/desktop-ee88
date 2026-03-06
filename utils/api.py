@@ -19,12 +19,19 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import urllib.request
 import urllib.error
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# Tim .env ca khi chay tu PyInstaller bundle
+if getattr(sys, "frozen", False):
+    # PyInstaller --onedir: data nam trong _MEIPASS (_internal/)
+    _base_dir = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+else:
+    _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_base_dir, ".env"))
 
 logger = logging.getLogger(__name__)
 

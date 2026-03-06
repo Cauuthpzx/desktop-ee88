@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -48,7 +49,10 @@ LANGUAGES = {
 }
 DEFAULT_LANG = "vi"
 
-_I18N_DIR = Path(__file__).resolve().parent.parent / "i18n"
+if getattr(sys, "frozen", False):
+    _I18N_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "i18n"
+else:
+    _I18N_DIR = Path(__file__).resolve().parent.parent / "i18n"
 _translations: dict[str, dict[str, Any]] = {}
 _current_lang: str = DEFAULT_LANG
 
