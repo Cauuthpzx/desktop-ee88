@@ -6,7 +6,7 @@ import logging
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QStackedWidget, QSizePolicy,
-    QToolBar, QHBoxLayout, QMessageBox, QProgressDialog,
+    QToolBar, QHBoxLayout,
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
@@ -83,61 +83,9 @@ class AppWindow(QMainWindow):
     def _on_update_check(self, info: dict | None) -> None:
         if not info:
             return
-
-        from utils.updater import APP_VERSION
-        version = info["version"]
-        force = info.get("force", False)
-
-        if force:
-            buttons = QMessageBox.StandardButton.Ok
-        else:
-            buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-
-        msg = t("update.new_version", version=version, current=APP_VERSION)
-        reply = QMessageBox.question(
-            self, t("update.title"), msg, buttons,
-        )
-
-        if force or reply == QMessageBox.StandardButton.Yes:
-            self._start_download(info["update_url"])
-
-    def _start_download(self, url: str) -> None:
-        from utils.thread_worker import Worker
-        from utils.updater import download_update
-
-        self._progress = QProgressDialog(
-            t("update.downloading"), t("update.cancel"), 0, 100, self
-        )
-        self._progress.setWindowTitle(t("update.download_title"))
-        self._progress.setWindowModality(Qt.WindowModality.WindowModal)
-        self._progress.setMinimumDuration(0)
-        self._progress.setValue(0)
-
-        worker = Worker(download_update, url, use_progress=True)
-        worker.signals.progress.connect(self._progress.setValue)
-        worker.signals.result.connect(self._on_download_done)
-        worker.signals.error.connect(self._on_download_error)
-        self._update_worker = worker
-        worker.start()
-
-    def _on_download_done(self, exe_path: str) -> None:
-        self._progress.close()
-        QMessageBox.information(
-            self,
-            t("update.download_title"),
-            t("update.download_success"),
-            QMessageBox.StandardButton.Ok,
-        )
-        from utils.updater import apply_update
-        apply_update(exe_path)
-
-    def _on_download_error(self, err: str) -> None:
-        self._progress.close()
-        logger.error("Download update failed: %s", err)
-        QMessageBox.warning(
-            self, t("update.download_error_title"),
-            t("update.download_error"),
-        )
+        from dialogs.update_dialog import UpdateDialog
+        dlg = UpdateDialog(self, info)
+        dlg.exec()
 
     # ── Toolbar ───────────────────────────────────────────
 
