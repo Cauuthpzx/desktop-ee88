@@ -1,14 +1,22 @@
 """
 utils/upstream_auth.py — EE88 upstream login engine.
 
-Port from MAXHUB backend login-engine.ts + captcha-solver.ts.
-Handles automated login to upstream EE88 platform with captcha OCR solving.
+Port from EE88-SyncTool login_service.py + MAXHUB login-engine.ts.
 
-Usage:
-    from utils.upstream_auth import login_upstream, check_session
+Login flow:
+1. POST /agent/login {scene: 'init'} → get public_key, captcha_url
+2. GET captcha_url → captcha image
+3. ddddocr solve captcha (raw + preprocessed, pick best)
+4. RSA encrypt password with public_key (PKCS1v15)
+5. POST /agent/login {username, password: encrypted, captcha, scene: 'login'}
+6. Response: {code: 1, msg, url} = success
 
-    result = login_upstream(username, password, base_url)
-    # result: {"success": True, "session_id": "...", "captcha_attempts": 3}
+Key design:
+- Fresh session per login attempt (avoid stale cookie jar)
+- Dual captcha OCR: raw + preprocessed, pick result with more digits
+- Merge cookies from session jar + Set-Cookie headers
+- Login lock prevents concurrent login for same agent
+- check_cookies_live with redirect detection
 """
 from __future__ import annotations
 
@@ -19,6 +27,10 @@ import threading
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from core.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +46,8 @@ DEFAULT_USER_AGENT = (
 
 DEFAULT_HEADERS = {
     "User-Agent": DEFAULT_USER_AGENT,
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9,vi;q=0.8",
     "X-Requested-With": "XMLHttpRequest",
 }
 
@@ -62,15 +76,18 @@ def _release_lock(agent_key: str) -> None:
 
 
 # ── Captcha Solver ───────────────────────────────────────────
-# Character confusion fixes (common OCR mistakes for numeric captchas)
-_CHAR_FIX = {
-    "o": "0", "O": "0",
-    "l": "1", "I": "1",
+# Extended char map from EE88-SyncTool (covers more OCR confusion cases)
+_OCR_CHAR_MAP: dict[str, str] = {
+    "o": "0", "O": "0", "D": "0", "Q": "0", "\u53e3": "0",
+    "l": "1", "I": "1", "i": "1", "|": "1",
     "z": "2", "Z": "2",
+    "e": "3", "E": "3",
+    "A": "4", "a": "4",
     "s": "5", "S": "5",
-    "b": "6",
+    "b": "6", "G": "6",
+    "T": "7", "t": "7",
     "B": "8",
-    "g": "9", "q": "9",
+    "g": "9", "q": "9", "p": "9", "P": "9",
 }
 
 # Lazy-loaded OCR instance (ddddocr is heavy to import)
@@ -94,25 +111,72 @@ def _get_ocr():
     return _ocr_instance
 
 
+def _clean_ocr(raw: str) -> str:
+    """Clean OCR result — map confused chars to digits, keep alnum ASCII."""
+    cleaned = ""
+    for c in raw:
+        if c.isdigit() and c.isascii():
+            cleaned += c
+        elif c in _OCR_CHAR_MAP:
+            cleaned += _OCR_CHAR_MAP[c]
+        elif c.isascii() and c.isalnum():
+            cleaned += c
+    return cleaned
+
+
+def _preprocess_image(image_bytes: bytes) -> bytes:
+    """Preprocess captcha: grayscale + upscale + contrast + sharpen."""
+    try:
+        import io
+        from PIL import Image, ImageEnhance, ImageFilter
+
+        img = Image.open(io.BytesIO(image_bytes)).convert("L")
+        w, h = img.size
+        if w < 120:
+            img = img.resize((w * 2, h * 2), Image.LANCZOS)
+        img = ImageEnhance.Contrast(img).enhance(2.5)
+        img = img.filter(ImageFilter.SHARPEN)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return image_bytes
+
+
 def _solve_captcha(image_data: bytes) -> str | None:
     """
-    Solve captcha image using ddddocr directly.
-    Returns 4-char captcha code or None on failure.
+    Solve captcha with dual OCR: raw + preprocessed image.
+    Picks result with more digit characters for better accuracy.
+    Returns 4-char code or None on failure.
     """
     try:
         ocr = _get_ocr()
-        result = ocr.classification(image_data)
 
-        if not result:
+        # Try raw image
+        raw1 = ocr.classification(image_data)
+        cleaned1 = _clean_ocr(raw1)
+
+        # Try preprocessed image (grayscale + contrast + sharpen)
+        processed = _preprocess_image(image_data)
+        raw2 = ocr.classification(processed)
+        cleaned2 = _clean_ocr(raw2)
+
+        # Pick result with more digit chars (captchas are numeric)
+        digits1 = sum(1 for c in cleaned1 if c.isdigit())
+        digits2 = sum(1 for c in cleaned2 if c.isdigit())
+        cleaned = cleaned1 if digits1 >= digits2 else cleaned2
+
+        if not cleaned:
+            logger.warning("OCR returned empty: raw1=%r, raw2=%r", raw1, raw2)
             return None
 
-        # Apply character fixes (captchas are typically numeric)
-        cleaned = "".join(_CHAR_FIX.get(c, c) for c in result)
-        # Only keep alphanumeric
-        cleaned = "".join(c for c in cleaned if c.isalnum())
+        logger.info(
+            "Captcha OCR: raw1=%s->%s, raw2=%s->%s, picked=%s",
+            raw1, cleaned1, raw2, cleaned2, cleaned,
+        )
 
         if len(cleaned) < 3 or len(cleaned) > 6:
-            logger.warning("OCR result invalid length: %r -> %r", result, cleaned)
+            logger.warning("OCR result invalid length: %r", cleaned)
             return None
 
         return cleaned[:4]
@@ -129,7 +193,20 @@ def _rsa_encrypt(password: str, public_key_pem: str) -> str:
         from cryptography.hazmat.primitives.asymmetric import padding
         import base64
 
-        pub_key = serialization.load_pem_public_key(public_key_pem.encode())
+        # Normalize PEM format (upstream may return messy PEM)
+        key_data = public_key_pem
+        key_data = key_data.replace("-----BEGIN PUBLIC KEY-----", "")
+        key_data = key_data.replace("-----END PUBLIC KEY-----", "")
+        key_data = key_data.replace("\n", "").replace("\r", "").strip()
+
+        lines = [key_data[i:i + 64] for i in range(0, len(key_data), 64)]
+        pem_formatted = (
+            "-----BEGIN PUBLIC KEY-----\n"
+            + "\n".join(lines)
+            + "\n-----END PUBLIC KEY-----"
+        )
+
+        pub_key = serialization.load_pem_public_key(pem_formatted.encode())
         encrypted = pub_key.encrypt(
             password.encode("utf-8"),
             padding.PKCS1v15(),
@@ -143,18 +220,38 @@ def _rsa_encrypt(password: str, public_key_pem: str) -> str:
         raise
 
 
-# ── HTTP Session Helper ──────────────────────────────────────
-def _extract_phpsessid(response: requests.Response) -> str | None:
-    """Extract PHPSESSID from response cookies."""
-    session_id = response.cookies.get("PHPSESSID")
-    if session_id:
-        return session_id
-    # Fallback: parse Set-Cookie header manually
-    for val in response.headers.get("Set-Cookie", "").split(","):
-        match = re.search(r"PHPSESSID=([^;]+)", val)
-        if match:
-            return match.group(1)
-    return None
+# ── HTTP Session Factory ─────────────────────────────────────
+def _create_session() -> requests.Session:
+    """Create HTTP session with retry strategy."""
+    session = requests.Session()
+
+    retry_strategy = Retry(
+        total=2,
+        backoff_factor=0.5,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET", "POST"],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=5, pool_maxsize=5)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    session.headers.update(DEFAULT_HEADERS)
+    session.verify = False
+
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    return session
+
+
+def _extract_response_cookies(response: requests.Response) -> dict[str, str]:
+    """Extract cookies from Set-Cookie headers (not just session jar)."""
+    cookies: dict[str, str] = {}
+    for raw in response.headers.get("Set-Cookie", "").split(","):
+        part = raw.split(";", 1)[0].strip()
+        if "=" in part:
+            k, v = part.split("=", 1)
+            cookies[k.strip()] = v.strip()
+    return cookies
 
 
 def _make_result(
@@ -180,24 +277,16 @@ def login_upstream(
     """
     Login to upstream EE88 platform.
 
-    Flow: init (RSA key) → captcha loop (OCR + submit) → session cookie
+    Flow: init (RSA key + captcha URL) → captcha loop (dual OCR + submit) → session cookie
 
     Returns:
-        {
-            "success": bool,
-            "session_id": str | None,
-            "captcha_attempts": int,
-            "error": str | None,
-        }
+        {"success": bool, "session_id": str|None, "captcha_attempts": int, "error": str|None}
     """
     base_url = base_url.rstrip("/")
     agent_key = f"{username}@{base_url}"
 
-    # Acquire login lock
     if not _acquire_lock(agent_key):
-        return _make_result(
-            False, error="Agent is already logging in (concurrent lock).",
-        )
+        return _make_result(False, error=t("upstream.concurrent_lock"))
 
     try:
         return _login_flow(username, password, base_url)
@@ -206,146 +295,196 @@ def login_upstream(
 
 
 def _login_flow(username: str, password: str, base_url: str) -> dict[str, Any]:
-    """Internal login flow (called with lock held)."""
-    session = requests.Session()
-    session.headers.update(DEFAULT_HEADERS)
-    session.verify = False  # Some upstream certs may be self-signed
+    """Internal login flow with per-attempt fresh session."""
+    login_url = f"{base_url}/agent/login"
 
-    # Suppress InsecureRequestWarning
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    # ── Step 1: INIT — get RSA public key + PHPSESSID ────────
-    init_url = f"{base_url}/agent/login?scene=init"
-
-    try:
-        resp = session.post(
-            init_url,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=DEFAULT_TIMEOUT,
-        )
-    except requests.RequestException as e:
-        return _make_result(False, error=f"Init request failed: {e}")
-
-    try:
-        init_data = resp.json()
-    except ValueError:
-        return _make_result(
-            False, error=f"Init response invalid: {resp.text[:200]}",
-        )
-
-    public_key = (init_data.get("data") or {}).get("public_key")
-    if not public_key:
-        return _make_result(
-            False, error="Cannot get RSA public key from upstream",
-        )
-
-    # Session cookies are managed automatically by requests.Session
-    logger.info("Init OK, got RSA key, PHPSESSID=%s", session.cookies.get("PHPSESSID"))
-
-    # ── Step 2: Captcha loop ─────────────────────────────────
     for attempt in range(1, MAX_CAPTCHA_ATTEMPTS + 1):
         if attempt > 1:
             time.sleep(CAPTCHA_RETRY_DELAY)
 
-        # Fetch captcha image
-        captcha_url = f"{base_url}/agent/captcha?t={int(time.time() * 1000)}"
+        # Fresh session each attempt (clear cookie jar to avoid conflicts)
+        session = _create_session()
+
         try:
-            cap_resp = session.get(captcha_url, timeout=DEFAULT_TIMEOUT)
-        except requests.RequestException as e:
-            logger.warning("Captcha fetch failed attempt %d: %s", attempt, e)
-            continue
-
-        cap_image = cap_resp.content
-        if not cap_image or len(cap_image) < 100:
-            logger.warning("Captcha image too small (%d bytes), retrying", len(cap_image))
-            continue
-
-        # OCR solve
-        captcha_code = _solve_captcha(cap_image)
-        if not captcha_code:
-            logger.warning("OCR failed attempt %d, retrying...", attempt)
-            continue
-
-        logger.debug("Captcha attempt %d: OCR=%s", attempt, captcha_code)
-
-        # RSA encrypt password
-        try:
-            encrypted_password = _rsa_encrypt(password, public_key)
+            result = _single_attempt(session, username, password, base_url, login_url, attempt)
         except Exception as e:
-            return _make_result(
-                False, captcha_attempts=attempt,
-                error=f"RSA encryption failed: {e}",
-            )
-
-        # POST /agent/login with credentials
-        login_url = f"{base_url}/agent/login"
-        login_data = {
-            "username": username,
-            "password": encrypted_password,
-            "captcha": captcha_code,
-            "scene": "login",
-        }
-
-        try:
-            login_resp = session.post(
-                login_url,
-                data=login_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=DEFAULT_TIMEOUT,
-            )
-        except requests.RequestException as e:
-            return _make_result(
-                False, captcha_attempts=attempt,
-                error=f"Login request failed: {e}",
-            )
-
-        try:
-            login_result = login_resp.json()
-        except ValueError:
-            return _make_result(
-                False, captcha_attempts=attempt,
-                error=f"Login response invalid: {login_resp.text[:200]}",
-            )
-
-        msg = (login_result.get("msg") or "").lower()
-
-        # Success
-        if "thành công" in msg or "success" in msg:
-            final_session = session.cookies.get("PHPSESSID")
-            logger.info(
-                "Upstream login OK for %s, attempts=%d, session=%s",
-                username, attempt, final_session[:8] if final_session else "?",
-            )
-            return _make_result(
-                True, session_id=final_session, captcha_attempts=attempt,
-            )
-
-        # Captcha wrong → retry
-        if "xác nhận" in msg or "验证码" in msg or "captcha" in msg:
-            logger.warning(
-                "Captcha wrong attempt %d: %s", attempt, login_result.get("msg"),
-            )
+            logger.error("Attempt %d unexpected error: %s", attempt, e)
+            session.close()
             continue
 
-        # Password wrong → stop
-        if "mật khẩu" in msg or "密码" in msg or "password" in msg:
-            return _make_result(
-                False, captcha_attempts=attempt,
-                error=f"Wrong password: {login_result.get('msg')}",
-            )
+        if result is None:
+            # OCR/fetch failed, retry
+            session.close()
+            continue
 
-        # Other error → stop
-        return _make_result(
-            False, captcha_attempts=attempt,
-            error=f"Login error: {login_result.get('msg', 'Unknown')}",
-        )
+        if result.get("success"):
+            return result
 
-    # Exhausted all attempts
+        if result.pop("_retry", False):
+            # Captcha wrong or unknown, retry
+            session.close()
+            continue
+
+        # Non-retryable error (wrong password, account error, etc.)
+        session.close()
+        return result
+
     return _make_result(
         False,
         captcha_attempts=MAX_CAPTCHA_ATTEMPTS,
-        error=f"Captcha solving failed after {MAX_CAPTCHA_ATTEMPTS} attempts",
+        error=t("upstream.captcha_exhausted", n=MAX_CAPTCHA_ATTEMPTS),
+    )
+
+
+def _single_attempt(
+    session: requests.Session,
+    username: str,
+    password: str,
+    base_url: str,
+    login_url: str,
+    attempt: int,
+) -> dict[str, Any] | None:
+    """Single login attempt: init → captcha → login. Returns result or None (retry)."""
+    logger.info("Login attempt %d/%d for %s", attempt, MAX_CAPTCHA_ATTEMPTS, username)
+
+    # ── Step 1: INIT — get RSA public key + captcha URL ──────
+    try:
+        resp = session.post(
+            login_url,
+            json={"scene": "init"},
+            timeout=DEFAULT_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        logger.warning("Init failed attempt %d: %s", attempt, e)
+        return None
+
+    try:
+        init_data = resp.json()
+    except ValueError:
+        logger.warning("Init response invalid: %s", resp.text[:200])
+        return None
+
+    data = init_data.get("data") or {}
+    public_key = data.get("public_key")
+    captcha_url_path = data.get("captcha_url", "")
+
+    if not public_key:
+        return _make_result(False, captcha_attempts=attempt, error=t("upstream.no_rsa_key"))
+
+    # Build full captcha URL
+    if captcha_url_path.startswith("/"):
+        captcha_url = f"{base_url}{captcha_url_path}"
+    elif captcha_url_path.startswith("http"):
+        captcha_url = captcha_url_path
+    else:
+        captcha_url = f"{base_url}/agent/captcha?t={int(time.time() * 1000)}"
+
+    logger.info("Init OK, captcha_url=%s", captcha_url)
+
+    # ── Step 2: Fetch captcha image ──────────────────────────
+    try:
+        cap_resp = session.get(captcha_url, timeout=DEFAULT_TIMEOUT)
+    except requests.RequestException as e:
+        logger.warning("Captcha fetch failed attempt %d: %s", attempt, e)
+        return None
+
+    cap_image = cap_resp.content
+    if not cap_image or len(cap_image) < 100:
+        logger.warning("Captcha image too small (%d bytes)", len(cap_image) if cap_image else 0)
+        return None
+
+    # ── Step 3: Dual OCR solve ───────────────────────────────
+    captcha_code = _solve_captcha(cap_image)
+    if not captcha_code:
+        return None
+
+    # ── Step 4: RSA encrypt password ─────────────────────────
+    try:
+        encrypted_password = _rsa_encrypt(password, public_key)
+    except Exception as e:
+        return _make_result(
+            False, captcha_attempts=attempt,
+            error=t("upstream.rsa_failed", error=str(e)),
+        )
+
+    # ── Step 5: POST login ───────────────────────────────────
+    login_data = {
+        "username": username,
+        "password": encrypted_password,
+        "captcha": captcha_code,
+        "scene": "login",
+    }
+
+    try:
+        login_resp = session.post(
+            login_url,
+            json=login_data,
+            timeout=DEFAULT_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        return _make_result(
+            False, captcha_attempts=attempt,
+            error=t("upstream.login_request_failed", error=str(e)),
+        )
+
+    # ── Step 6: Parse response ───────────────────────────────
+    try:
+        login_result = login_resp.json()
+    except ValueError:
+        return _make_result(
+            False, captcha_attempts=attempt,
+            error=t("upstream.login_response_invalid", detail=login_resp.text[:200]),
+        )
+
+    code = login_result.get("code", -1)
+    msg = login_result.get("msg") or ""
+    msg_lower = msg.lower()
+
+    # Success: code == 1 OR message contains success keywords
+    if code == 1 or "thành công" in msg_lower or "success" in msg_lower:
+        # Merge cookies from session jar + Set-Cookie headers
+        jar_cookies = dict(session.cookies)
+        resp_cookies = _extract_response_cookies(login_resp)
+        all_cookies = {**jar_cookies, **resp_cookies}
+        final_session = all_cookies.get("PHPSESSID") or session.cookies.get("PHPSESSID")
+
+        logger.info(
+            "Upstream login OK for %s, attempts=%d, cookies=%d, session=%s",
+            username, attempt, len(all_cookies),
+            final_session[:8] if final_session else "?",
+        )
+        return _make_result(True, session_id=final_session, captcha_attempts=attempt)
+
+    # Captcha wrong → retry
+    captcha_kw = ("captcha", "xac nhan", "xác nhận", "ma xac", "mã xác", "verify", "验证码")
+    if any(kw in msg_lower for kw in captcha_kw):
+        logger.warning("Captcha wrong attempt %d: %s", attempt, msg)
+        return {"_retry": True, **_make_result(False, captcha_attempts=attempt)}
+
+    # Password wrong → stop
+    password_kw = ("password", "mat khau", "mật khẩu", "密码", "pwd")
+    if any(kw in msg_lower for kw in password_kw):
+        return _make_result(
+            False, captcha_attempts=attempt,
+            error=t("upstream.wrong_password", msg=msg),
+        )
+
+    # Account error → stop
+    account_kw = ("account", "tai khoan", "tài khoản", "用户", "user", "khong ton tai", "không chính xác")
+    if any(kw in msg_lower for kw in account_kw):
+        return _make_result(
+            False, captcha_attempts=attempt,
+            error=t("upstream.login_error", msg=msg),
+        )
+
+    # Unknown error — retry
+    if attempt < MAX_CAPTCHA_ATTEMPTS:
+        logger.warning("Unknown response attempt %d: code=%s msg=%s", attempt, code, msg)
+        return {"_retry": True, **_make_result(False, captcha_attempts=attempt)}
+
+    return _make_result(
+        False, captcha_attempts=attempt,
+        error=t("upstream.login_error", msg=msg or f"code={code}"),
     )
 
 
@@ -353,7 +492,7 @@ def _login_flow(username: str, password: str, base_url: str) -> dict[str, Any]:
 def check_session(session_id: str, base_url: str) -> bool:
     """
     Check if upstream session is still valid.
-    Calls /agent/user.html with limit=1 — if it returns data, session is valid.
+    Uses POST /agent/user.html — handles redirects and various response formats.
     """
     base_url = base_url.rstrip("/")
     url = f"{base_url}/agent/user.html"
@@ -364,16 +503,54 @@ def check_session(session_id: str, base_url: str) -> bool:
             data="page=1&limit=1",
             headers={
                 **DEFAULT_HEADERS,
-                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                 "Cookie": f"PHPSESSID={session_id}",
             },
             timeout=15,
             verify=False,
+            allow_redirects=False,
         )
+
+        # 301/302 redirect to login → expired
+        if resp.status_code in (301, 302):
+            location = resp.headers.get("Location", "").lower()
+            if "login" in location:
+                return False
+
         if resp.status_code != 200:
             return False
-        data = resp.json()
-        return data.get("code") in (0, 1)
+
+        try:
+            data = resp.json()
+            code = data.get("code")
+
+            # code == 0 with actual data list = valid
+            if code == 0 and isinstance(data.get("data"), list):
+                return True
+
+            # code in (0, 1) = generally valid
+            if code in (0, 1):
+                return True
+
+            # Check for login redirect in message
+            msg_text = str(data.get("msg", "")).lower()
+            if "login" in msg_text or "đăng nhập" in msg_text:
+                return False
+
+            # "jump" in data = redirect to login
+            resp_data = data.get("data", {})
+            if isinstance(resp_data, dict) and "jump" in resp_data:
+                return False
+
+            return True
+
+        except ValueError:
+            # Response is HTML (login page)
+            text = resp.text[:200].lower()
+            if "login" in text or "đăng nhập" in text:
+                return False
+            return True
+
     except Exception:
         return False
 
