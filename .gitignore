@@ -8,3 +8,4 @@ server/.env
 *.egg-info/
 dist/
 build/
+deploy_vps.py
