@@ -84,7 +84,13 @@ class AccountTab(BaseTab):
         theme_signals.changed.connect(self._on_theme_changed)
 
         self._loading = LoadingOverlay(self)
-        self._load_profile()
+        self._profile_loaded = False
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._profile_loaded:
+            self._profile_loaded = True
+            self._load_profile()
 
     # ── Card builders ─────────────────────────────────────────
 
@@ -461,6 +467,7 @@ class AccountTab(BaseTab):
         from dialogs.confirm_dialog import confirm
         if not confirm(self.window(), t("account.confirm_logout")):
             return
+        self._profile_loaded = False
         auth.logout()
 
     # ── Helpers ───────────────────────────────────────────────
