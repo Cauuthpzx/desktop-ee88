@@ -22,7 +22,18 @@
     },
     "sidebar": {
         "home": "Home",
-        "example": "Example",
+        "customer": "Customer",
+        "referral": "Referral",
+        "game": "Games",
+        "lottery": "Lottery",
+        "transaction": "Transaction",
+        "provider": "Provider",
+        "bet_list": "Bet List",
+        "bet_lottery": "Lottery",
+        "bet_provider": "Provider",
+        "deposit_withdraw": "Deposit - Withdraw",
+        "deposit": "Deposit",
+        "withdraw": "Withdraw",
         "account": "Account",
         "settings": "Settings"
     },
@@ -127,12 +138,44 @@
         "revenue": "Revenue",
         "notifications": "Recent Notifications"
     },
-    "example": {
-        "title": "User Management",
-        "dialog_title": "Add / Edit User",
-        "name": "Name:",
-        "age": "Age:",
-        "role": "Role:"
+    "customer": {
+        "title": "Customer Management",
+        "dialog_title": "Add / Edit Customer",
+        "staff": "Staff:",
+        "member": "Member:",
+        "member_type": "Member Type:",
+        "agent": "Agent Account:",
+        "balance": "Balance:",
+        "status": "Status:"
+    },
+    "lottery": {
+        "title": "Lottery"
+    },
+    "transaction": {
+        "title": "Transaction"
+    },
+    "provider": {
+        "title": "Provider"
+    },
+    "deposit": {
+        "title": "Deposit"
+    },
+    "withdraw": {
+        "title": "Withdraw"
+    },
+    "bet_lottery": {
+        "title": "Lottery Bets"
+    },
+    "bet_provider": {
+        "title": "Provider Bets"
+    },
+    "referral": {
+        "title": "Referral Codes",
+        "dialog_title": "Add / Edit Referral Code",
+        "staff": "Staff:",
+        "code": "Referral Code:",
+        "referral_type": "Referral Type:",
+        "note": "Note:"
     },
     "account": {
         "title": "Account",

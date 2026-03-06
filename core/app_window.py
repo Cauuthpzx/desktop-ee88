@@ -6,9 +6,9 @@ import logging
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QStackedWidget, QSizePolicy,
-    QToolBar, QHBoxLayout,
+    QToolBar, QHBoxLayout, QTabBar,
 )
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtCore import Qt
 from core import theme
 from core.icon import Icon, IconPath, GalleryIcon, tinted
@@ -22,20 +22,44 @@ from widgets.notification_bell import NotificationBell
 logger = logging.getLogger(__name__)
 
 # Import cac tab cua du an
-from tabs.home_tab     import HomeTab
-from tabs.example_tab  import ExampleTab
-from tabs.account_tab  import AccountTab
-from tabs.settings_tab import SettingsTab
+from tabs.home_tab        import HomeTab
+from tabs.customer_tab    import CustomerTab
+from tabs.referral_tab    import ReferralTab
+from tabs.lottery_tab     import LotteryTab
+from tabs.transaction_tab import TransactionTab
+from tabs.provider_tab    import ProviderTab
+from tabs.deposit_tab     import DepositTab
+from tabs.withdraw_tab    import WithdrawTab
+from tabs.bet_lottery_tab  import BetLotteryTab
+from tabs.bet_provider_tab import BetProviderTab
+from tabs.account_tab     import AccountTab
+from tabs.settings_tab    import SettingsTab
 
 
 # ── Menu config — them/xoa/reorder tai day ────────────────────────────────────
 # Moi entry: {"icon": "<path>.svg", "text_key": "sidebar.xxx", "tab": TabClass}
+# Group entry: {"icon": ..., "text_key": ..., "children": [child items]}
 # Icon sources: icons/layui/, icons/material/, icons/gallery/
 # None = separator
 MENU: list[dict | None] = [
-    {"icon": IconPath.HOME,                        "text_key": "sidebar.home",    "tab": HomeTab},
+    {"icon": IconPath.HOME,                        "text_key": "sidebar.home",     "tab": HomeTab},
     None,  # separator
-    {"icon": GalleryIcon.GRID.path(),              "text_key": "sidebar.example",  "tab": ExampleTab},
+    {"icon": IconPath.GROUPS,                      "text_key": "sidebar.customer", "tab": CustomerTab},
+    {"icon": IconPath.TEMPLATE,                    "text_key": "sidebar.referral", "tab": ReferralTab},
+    None,  # separator
+    {"icon": IconPath.CASINO, "text_key": "sidebar.game", "children": [
+        {"icon": IconPath.CHART,    "text_key": "sidebar.lottery",     "tab": LotteryTab},
+        {"icon": IconPath.RECEIPT,  "text_key": "sidebar.transaction", "tab": TransactionTab},
+        {"icon": IconPath.STORE,    "text_key": "sidebar.provider",    "tab": ProviderTab},
+    ]},
+    {"icon": IconPath.LIST_ALT, "text_key": "sidebar.bet_list", "children": [
+        {"icon": IconPath.CHART,    "text_key": "sidebar.bet_lottery",  "tab": BetLotteryTab},
+        {"icon": IconPath.STORE,    "text_key": "sidebar.bet_provider", "tab": BetProviderTab},
+    ]},
+    {"icon": IconPath.WALLET, "text_key": "sidebar.deposit_withdraw", "children": [
+        {"icon": IconPath.SAVINGS,   "text_key": "sidebar.deposit",  "tab": DepositTab},
+        {"icon": IconPath.MONEY_OFF, "text_key": "sidebar.withdraw", "tab": WithdrawTab},
+    ]},
 ]
 
 # Items ghim dưới cùng sidebar
@@ -50,6 +74,7 @@ class AppWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(t("app.title"))
         self.setMinimumSize(theme.WINDOW_MIN_W, theme.WINDOW_MIN_H)
+        self.resize(theme.WINDOW_DEFAULT_W, theme.WINDOW_DEFAULT_H)
 
         self._build_central()
         self._build_toolbar()   # after _build_central so self._sidebar exists
@@ -103,22 +128,18 @@ class AppWindow(QMainWindow):
         act_toggle.triggered.connect(self._sidebar.toggle)
         self.addAction(act_toggle)
 
-        tooltips = {
-            "New": t("toolbar.tip_new"),
-            "Open": t("toolbar.tip_open"),
-            "Save": t("toolbar.tip_save"),
-            "Undo": t("toolbar.tip_undo"),
-            "Redo": t("toolbar.tip_redo"),
-        }
-        for lbl in ["New", "Open", "Save", "|", "Undo", "Redo"]:
-            if lbl == "|":
-                tb.addSeparator()
-            else:
-                act = QAction(lbl, self)
-                act.setToolTip(tooltips.get(lbl, lbl))
-                tb.addAction(act)
+        # Tab bar — chi hien tab header, noi dung hien trong _stack
+        self._tab_bar = QTabBar()
+        self._tab_bar.setTabsClosable(True)
+        self._tab_bar.setMovable(True)
+        self._tab_bar.setDocumentMode(True)
+        self._tab_bar.setExpanding(False)
+        self._tab_bar.tabCloseRequested.connect(self._on_tab_close)
+        self._tab_bar.currentChanged.connect(self._on_tab_changed)
+        tb.addWidget(self._tab_bar)
+        self._tab_pages: list[QWidget] = []  # map tab index -> page widget
 
-        # Spacer — đẩy theme toggle sang phải
+        # Spacer — day theme toggle sang phai
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         tb.addWidget(spacer)
@@ -134,6 +155,34 @@ class AppWindow(QMainWindow):
         self._act_theme.triggered.connect(self._on_toggle_theme)
         tb.addAction(self._act_theme)
         theme_signals.changed.connect(self._on_theme_changed)
+
+    # ── Tab management ────────────────────────────────────
+
+    def open_tab(self, page: QWidget, title: str, icon: QIcon | None = None) -> None:
+        """Mo tab moi hoac chuyen sang tab da mo neu trung page."""
+        for i, pg in enumerate(self._tab_pages):
+            if pg is page:
+                self._tab_bar.setCurrentIndex(i)
+                return
+        if self._stack.indexOf(page) == -1:
+            self._stack.addWidget(page)
+        idx = self._tab_bar.addTab(title)
+        if icon:
+            self._tab_bar.setTabIcon(idx, icon)
+        self._tab_pages.append(page)
+        self._tab_bar.setCurrentIndex(idx)
+
+    def _on_tab_close(self, index: int) -> None:
+        """Dong tab — khong dong tab cuoi cung."""
+        if self._tab_bar.count() <= 1:
+            return
+        self._tab_bar.removeTab(index)
+        self._tab_pages.pop(index)
+
+    def _on_tab_changed(self, index: int) -> None:
+        """Chuyen stack theo tab dang chon."""
+        if 0 <= index < len(self._tab_pages):
+            self._stack.setCurrentWidget(self._tab_pages[index])
 
     def _update_theme_icon(self) -> None:
         if theme.is_dark():
@@ -153,10 +202,20 @@ class AppWindow(QMainWindow):
         self._stack   = QStackedWidget()
         self._sidebar = CollapsibleSidebar()
         self._pages: list[tuple[QWidget, str]] = []  # (page, text_key)
+        self._groups: list[tuple[str, str]] = []      # (group_id, text_key)
 
         for item in MENU:
             if item is None:
                 self._sidebar.add_separator()
+            elif "children" in item:
+                # Group with children
+                grp_id = self._sidebar.add_group(item["icon"], t(item["text_key"]))
+                self._groups.append((grp_id, item["text_key"]))
+                for child in item["children"]:
+                    page = child["tab"]()
+                    self._stack.addWidget(page)
+                    self._sidebar.add_group_item(grp_id, child["icon"], t(child["text_key"]), page)
+                    self._pages.append((page, child["text_key"]))
             else:
                 page = item["tab"]()
                 self._stack.addWidget(page)
@@ -188,6 +247,11 @@ class AppWindow(QMainWindow):
         # Sidebar nav texts
         text_map = {page: t(key) for page, key in self._pages}
         self._sidebar.update_texts(text_map)
+
+        # Sidebar group header texts
+        if self._groups:
+            grp_map = {grp_id: t(key) for grp_id, key in self._groups}
+            self._sidebar.update_group_texts(grp_map)
 
         # Retranslate each tab that supports it
         for i in range(self._stack.count()):

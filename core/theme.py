@@ -35,6 +35,8 @@ SIDEBAR_ANIM_MS         = 150   # animation duration in milliseconds
 HEADER_HEIGHT           = 48
 
 # ── Window defaults ───────────────────────────────────────
+WINDOW_DEFAULT_W = 1500
+WINDOW_DEFAULT_H = 850
 WINDOW_MIN_W  = 960
 WINDOW_MIN_H  = 640
 
@@ -126,6 +128,7 @@ def set_theme(dark: bool) -> None:
         return
     _is_dark = dark
     settings.set("app/dark_theme", dark)
+    _tinted_icon_cache.clear()  # palette color changed
     app = QApplication.instance()
     if app:
         if dark:
@@ -143,6 +146,9 @@ def toggle_theme() -> bool:
     return _is_dark
 
 
+_tinted_icon_cache: dict[tuple[str, int, int], QIcon] = {}
+
+
 def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon:
     """Load SVG icon and tint it. If color is None, uses palette text color."""
     from PyQt6.QtGui import QPixmap, QPainter
@@ -150,6 +156,11 @@ def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon
     if color is None:
         app = QApplication.instance()
         color = app.palette().color(QPalette.ColorRole.WindowText) if app else QColor(0, 0, 0)
+
+    key = (path, size, color.rgba())
+    cached = _tinted_icon_cache.get(key)
+    if cached is not None:
+        return cached
 
     try:
         from PyQt6.QtSvg import QSvgRenderer
@@ -160,16 +171,27 @@ def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon
         p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
         p.fillRect(px.rect(), color)
         p.end()
-        return QIcon(px)
+        icon = QIcon(px)
     except Exception:  # noqa: BLE001 — fallback to untinted icon
-        return QIcon(path)
+        icon = QIcon(path)
+
+    _tinted_icon_cache[key] = icon
+    return icon
+
+
+_font_cache: dict[tuple[int, bool, bool], QFont] = {}
 
 
 def font(size: int = FONT_SIZE, bold: bool = False, italic: bool = False) -> QFont:
-    """Tạo QFont chuẩn theo theme."""
+    """Tạo QFont chuẩn theo theme. Cached — returns same QFont for same params."""
+    key = (size, bold, italic)
+    cached = _font_cache.get(key)
+    if cached is not None:
+        return cached
     f = QFont(FONT_FAMILY, size)
     f.setBold(bold)
     f.setItalic(italic)
+    _font_cache[key] = f
     return f
 
 

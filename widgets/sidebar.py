@@ -26,6 +26,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen, QCursor, QMouseEvent
 from core import theme
+from core.theme import theme_signals
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -70,8 +71,15 @@ def _load_pixmap(path: str | Path, size: int = _ICON_SIZE) -> QPixmap | None:
     return None
 
 
+_tinted_cache: dict[tuple[int, int], QPixmap] = {}
+
+
 def _tinted_pixmap(src: QPixmap, color: QColor) -> QPixmap:
-    """Tô màu pixmap theo color (giữ alpha channel). Dùng để icon theo palette."""
+    """Tô màu pixmap theo color (giữ alpha channel). Cached by (pixmap key, color)."""
+    key = (src.cacheKey(), color.rgba())
+    cached = _tinted_cache.get(key)
+    if cached is not None:
+        return cached
     tinted = QPixmap(src.size())
     tinted.fill(Qt.GlobalColor.transparent)
     p = QPainter(tinted)
@@ -79,7 +87,13 @@ def _tinted_pixmap(src: QPixmap, color: QColor) -> QPixmap:
     p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
     p.fillRect(tinted.rect(), color)
     p.end()
+    _tinted_cache[key] = tinted
     return tinted
+
+
+def _clear_tinted_cache() -> None:
+    """Clear tinted pixmap cache — call on theme change."""
+    _tinted_cache.clear()
 
 
 # ── Data models ───────────────────────────────────────────────────────────────
@@ -91,6 +105,21 @@ class _NavItem:
     text: str
     pixmap: QPixmap | None = None
     checked: bool = False
+    indent: int = 0  # 0 = top-level, 1 = child of group
+
+
+@dataclass
+class _NavGroup:
+    """Menu cha có children — click để expand/collapse."""
+    identifier: str
+    text: str
+    pixmap: QPixmap | None = None
+    expanded: bool = False
+    children: list[_NavItem] | None = None
+
+    def __post_init__(self):
+        if self.children is None:
+            self.children = []
 
 
 @dataclass
@@ -100,7 +129,7 @@ class _Separator:
 
 
 # Union type cho các phần tử trong sidebar
-_Entry = _NavItem | _Separator
+_Entry = _NavItem | _NavGroup | _Separator
 
 
 class CollapsibleSidebar(QWidget):
@@ -138,11 +167,17 @@ class CollapsibleSidebar(QWidget):
         self._px_menu = _load_pixmap(IconPath.MENU)
         self._px_menu_open = _load_pixmap(IconPath.MENU_OPEN)
 
+        # Group chevron icons
+        _CHEV_SIZE = 17
+        self._px_chevron_down = _load_pixmap("icons/layui/triangle-d.svg", _CHEV_SIZE)
+        self._px_chevron_right = _load_pixmap("icons/layui/triangle-r.svg", _CHEV_SIZE)
+
         self.setFixedWidth(_W_EXPANDED)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.setMouseTracking(True)
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
+        theme_signals.changed.connect(self._on_theme_changed)
         self._setup_animation()
 
     # ── Animation ─────────────────────────────────────────────────────────────
@@ -184,6 +219,33 @@ class CollapsibleSidebar(QWidget):
         if len(nav_items) == 1:
             nav_items[0].checked = True
             self.page_changed.emit(widget)
+
+    def add_group(self, icon: str, text: str) -> str:
+        """Thêm menu cha (expand/collapse). Trả về group_id để add_group_item."""
+        ident = f"_grp_{self._next_id}"
+        self._next_id += 1
+        pixmap = _load_pixmap(icon, _NAV_ICON_SIZE) if icon else None
+        group = _NavGroup(identifier=ident, text=text, pixmap=pixmap)
+        self._entries.append(group)
+        self._invalidate_rects()
+        self.update()
+        return ident
+
+    def add_group_item(self, group_id: str, icon: str, text: str, widget: QWidget) -> None:
+        """Thêm child item vào group. group_id từ add_group()."""
+        grp = next((e for e in self._entries if isinstance(e, _NavGroup)
+                     and e.identifier == group_id), None)
+        if grp is None:
+            _logger.warning("Group %s not found", group_id)
+            return
+        ident = f"_nav_{self._next_id}"
+        self._next_id += 1
+        pixmap = _load_pixmap(icon, _NAV_ICON_SIZE) if icon else None
+        child = _NavItem(identifier=ident, text=text, pixmap=pixmap, indent=1)
+        grp.children.append(child)
+        self._page_map[ident] = widget
+        self._invalidate_rects()
+        self.update()
 
     def add_item_bottom(self, icon: str, text: str, widget: QWidget) -> None:
         """Thêm item ghim dưới cùng sidebar (ví dụ: Settings)."""
@@ -228,10 +290,19 @@ class CollapsibleSidebar(QWidget):
     def is_expanded(self) -> bool:
         return self._is_expanded
 
-    def set_active_button(self, identifier: str) -> None:
+    def _all_nav_items(self) -> list[_NavItem]:
+        """Trả về tất cả NavItem, bao gồm children trong groups."""
+        items: list[_NavItem] = []
         for entry in self._entries + self._bottom_entries:
             if isinstance(entry, _NavItem):
-                entry.checked = (entry.identifier == identifier)
+                items.append(entry)
+            elif isinstance(entry, _NavGroup):
+                items.extend(entry.children)
+        return items
+
+    def set_active_button(self, identifier: str) -> None:
+        for item in self._all_nav_items():
+            item.checked = (item.identifier == identifier)
         self.update()
 
     def set_current(self, widget: QWidget) -> None:
@@ -243,16 +314,29 @@ class CollapsibleSidebar(QWidget):
     def update_texts(self, widget_text_map: dict[QWidget, str]) -> None:
         """Update display text of nav items by their associated widget.
         Identifiers remain stable — only display text changes."""
-        for entry in self._entries + self._bottom_entries:
-            if not isinstance(entry, _NavItem):
-                continue
-            widget = self._page_map.get(entry.identifier)
+        for item in self._all_nav_items():
+            widget = self._page_map.get(item.identifier)
             if widget and widget in widget_text_map:
-                entry.text = widget_text_map[widget]
+                item.text = widget_text_map[widget]
+        self.update()
+
+    def update_group_texts(self, group_text_map: dict[str, str]) -> None:
+        """Update display text of group headers by group_id."""
+        for entry in self._entries:
+            if isinstance(entry, _NavGroup) and entry.identifier in group_text_map:
+                entry.text = group_text_map[entry.identifier]
+        self.update()
+
+    def _on_theme_changed(self, _dark: bool) -> None:
+        _clear_tinted_cache()
         self.update()
 
     def cleanup(self) -> None:
         self._anim_group.stop()
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     # ── Geometry helpers ──────────────────────────────────────────────────────
 
@@ -267,6 +351,7 @@ class CollapsibleSidebar(QWidget):
         còn NavItem (dùng để quyết định vẽ separator line hay không).
 
         Top entries flow top-down, bottom entries flow bottom-up.
+        Groups are flattened: group header + visible children.
         """
         w = self.width()
         h = self.height()
@@ -274,19 +359,31 @@ class CollapsibleSidebar(QWidget):
             return self._rects_cache
         result: list[tuple[_Entry, QRect, bool]] = []
 
-        # Top entries
+        # Top entries — flatten groups
         y = _NAV_PAD + _BTN_H + _TOGGLE_GAP
         for entry in self._entries:
             if isinstance(entry, _Separator):
                 rect = QRect(0, y, w, _SEP_H + _ITEM_GAP * 2)
                 result.append((entry, rect, False))
                 y += _SEP_H + _ITEM_GAP * 2
+            elif isinstance(entry, _NavGroup):
+                # Group header
+                rect = QRect(0, y, w, _BTN_H)
+                result.append((entry, rect, False))
+                y += _BTN_H + _ITEM_GAP
+                # Children (only if expanded)
+                if entry.expanded:
+                    for child in entry.children:
+                        rect = QRect(0, y, w, _BTN_H)
+                        result.append((child, rect, False))
+                        y += _BTN_H + _ITEM_GAP
             else:
                 rect = QRect(0, y, w, _BTN_H)
                 result.append((entry, rect, False))
                 y += _BTN_H + _ITEM_GAP
 
         # Bottom entries — positioned from bottom up
+        top_count = len(result)
         if self._bottom_entries:
             by = h - _NAV_PAD
             for entry in reversed(self._bottom_entries):
@@ -296,7 +393,6 @@ class CollapsibleSidebar(QWidget):
                 by -= _ITEM_GAP
 
         # Pre-compute has_next_nav for top entries only
-        top_count = len(self._entries)
         seen_nav_after = False
         for j in range(top_count - 1, -1, -1):
             entry, rect, _ = result[j]
@@ -306,6 +402,7 @@ class CollapsibleSidebar(QWidget):
         self._rects_cache = result
         self._rects_cache_w = w
         self._rects_cache_h = h
+        self._rects_top_count = top_count
         return result
 
     def _invalidate_rects(self) -> None:
@@ -317,11 +414,11 @@ class CollapsibleSidebar(QWidget):
         super().resizeEvent(event)
 
     def _hit_test(self, y: int) -> int:
-        """Trả về index: -2 = toggle button, >=0 = NavItem index, -1 = nothing."""
+        """Trả về index: -2 = toggle button, >=0 = NavItem/NavGroup index, -1 = nothing."""
         if self._toggle_rect().contains(0, y):
             return -2
         for i, (entry, rect, _) in enumerate(self._item_rects()):
-            if isinstance(entry, _NavItem) and rect.contains(0, y):
+            if isinstance(entry, (_NavItem, _NavGroup)) and rect.contains(0, y):
                 return i
         return -1
 
@@ -336,7 +433,17 @@ class CollapsibleSidebar(QWidget):
                 self.toggle()
             elif idx >= 0:
                 entry, _, _ = self._item_rects()[idx]
-                if isinstance(entry, _NavItem):
+                if isinstance(entry, _NavGroup):
+                    will_expand = not entry.expanded
+                    entry.expanded = will_expand
+                    # Accordion: collapse all other groups
+                    if will_expand:
+                        for e in self._entries:
+                            if isinstance(e, _NavGroup) and e is not entry:
+                                e.expanded = False
+                    self._invalidate_rects()
+                    self.update()
+                elif isinstance(entry, _NavItem):
                     self._select(entry.identifier)
         super().mousePressEvent(event)
 
@@ -411,24 +518,55 @@ class CollapsibleSidebar(QWidget):
         hover_idx = self._hover_index
 
         p.setFont(theme.font(bold=True))
+        child_indent = _NAV_PAD + 12  # extra left indent for group children
 
         for i, (entry, rect, has_next) in enumerate(item_rects):
             if isinstance(entry, _Separator):
                 continue  # _Separator từ MENU vẫn tạo khoảng cách, không vẽ thêm
 
             ry = rect.y()
+            is_group = isinstance(entry, _NavGroup)
+            is_child = isinstance(entry, _NavItem) and entry.indent > 0
+            pad_left = child_indent if is_child else _NAV_PAD
 
             # ── Hover / Active background ─────────────────────────────
-            is_hover = (i == hover_idx and not entry.checked)
-            if is_hover or entry.checked:
+            if is_group:
+                is_hover = (i == hover_idx)
+                show_bg = is_hover
+            else:
+                is_hover = (i == hover_idx and not entry.checked)
+                show_bg = is_hover or entry.checked
+            if show_bg:
                 p.setRenderHint(QPainter.RenderHint.Antialiasing)
                 p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(hover_bg if is_hover else active_bg)
                 p.drawRoundedRect(
-                    _NAV_PAD, ry, w - _NAV_PAD * 2, _BTN_H,
+                    pad_left, ry, w - pad_left - _NAV_PAD, _BTN_H,
                     _HOVER_RADIUS, _HOVER_RADIUS,
                 )
                 p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+
+            if is_group:
+                # ── Group header: icon + text + chevron ────────────────
+                if entry.pixmap:
+                    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                    p.drawPixmap(_NAV_ICON_LEFT, ry + (_BTN_H - _NAV_ICON_SIZE) // 2,
+                                 _tinted_pixmap(entry.pixmap, icon_tint))
+                if draw_text:
+                    p.setPen(text_color)
+                    p.drawText(
+                        _TEXT_LEFT, ry, w - _TEXT_LEFT - _NAV_PAD - 20, _BTN_H,
+                        Qt.AlignmentFlag.AlignVCenter, entry.text.upper(),
+                    )
+                    # Chevron icon (expand_more ▾ / chevron_right ▸)
+                    chev_px = self._px_chevron_down if entry.expanded else self._px_chevron_right
+                    if chev_px:
+                        chev_size = chev_px.width()
+                        chev_x = w - _NAV_PAD - chev_size - 4
+                        chev_y = ry + (_BTN_H - chev_size) // 2
+                        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                        p.drawPixmap(chev_x, chev_y, _tinted_pixmap(chev_px, icon_tint))
+                continue
 
             # ── Accent bar bên trái (chỉ khi active) ─────────────────
             if entry.checked:
@@ -437,23 +575,25 @@ class CollapsibleSidebar(QWidget):
                 p.setRenderHint(QPainter.RenderHint.Antialiasing)
                 p.setBrush(accent_color)
                 p.drawRoundedRect(
-                    QRectF(_NAV_PAD, bar_y, _ACCENT_W, bar_h),
+                    QRectF(pad_left, bar_y, _ACCENT_W, bar_h),
                     _ACCENT_W / 2, _ACCENT_W / 2,
                 )
                 p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
             # ── Icon (vị trí tuyệt đối — không bao giờ thay đổi) ─────
+            icon_left = (_NAV_ICON_LEFT + child_indent - _NAV_PAD) if is_child else _NAV_ICON_LEFT
             if entry.pixmap:
                 p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 ic_color = accent_color if entry.checked else icon_tint
-                p.drawPixmap(_NAV_ICON_LEFT, ry + (_BTN_H - _NAV_ICON_SIZE) // 2,
+                p.drawPixmap(icon_left, ry + (_BTN_H - _NAV_ICON_SIZE) // 2,
                              _tinted_pixmap(entry.pixmap, ic_color))
 
             # ── Text (chỉ vẽ khi đủ rộng) ────────────────────────────
+            text_left = (_TEXT_LEFT + child_indent - _NAV_PAD) if is_child else _TEXT_LEFT
             if draw_text:
                 p.setPen(accent_color if entry.checked else text_color)
                 p.drawText(
-                    _TEXT_LEFT, ry, w - _TEXT_LEFT - _NAV_PAD, _BTN_H,
+                    text_left, ry, w - text_left - _NAV_PAD, _BTN_H,
                     Qt.AlignmentFlag.AlignVCenter, entry.text.upper(),
                 )
 
@@ -467,14 +607,12 @@ class CollapsibleSidebar(QWidget):
 
         # ── Separator trên bottom entries ──────────────────────────
         if self._bottom_entries:
-            top_count = len(self._entries)
-            # Find first bottom entry rect
-            for i, (entry, rect, _) in enumerate(item_rects):
-                if i >= top_count and isinstance(entry, _NavItem):
-                    sep_by = rect.y() - _TOGGLE_GAP // 2 - _ITEM_GAP
-                    p.setPen(sep_pen)
-                    p.drawLine(_NAV_PAD, sep_by, w - _NAV_PAD, sep_by)
-                    break
+            tc = getattr(self, '_rects_top_count', len(item_rects))
+            if tc < len(item_rects):
+                _, first_bottom_rect, _ = item_rects[tc]
+                sep_by = first_bottom_rect.y() - _TOGGLE_GAP // 2 - _ITEM_GAP
+                p.setPen(sep_pen)
+                p.drawLine(_NAV_PAD, sep_by, w - _NAV_PAD, sep_by)
 
         p.end()
 
@@ -500,7 +638,7 @@ class CollapsibleSidebar(QWidget):
             return
 
         entry, rect, _ = self._item_rects()[idx]
-        if not isinstance(entry, _NavItem):
+        if not isinstance(entry, (_NavItem, _NavGroup)):
             Tooltip.hide_immediate()
             return
 
@@ -514,9 +652,8 @@ class CollapsibleSidebar(QWidget):
 
     def _select(self, identifier: str) -> None:
         """Chọn một item theo identifier."""
-        for entry in self._entries + self._bottom_entries:
-            if isinstance(entry, _NavItem):
-                entry.checked = (entry.identifier == identifier)
+        for item in self._all_nav_items():
+            item.checked = (item.identifier == identifier)
         self.update()
         self.button_clicked.emit(identifier)
         # Emit page_changed nếu có widget tương ứng

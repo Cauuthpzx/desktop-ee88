@@ -22,7 +22,18 @@
     },
     "sidebar": {
         "home": "首页",
-        "example": "示例",
+        "customer": "客户",
+        "referral": "推荐码",
+        "game": "游戏",
+        "lottery": "彩票",
+        "transaction": "交易",
+        "provider": "供应商",
+        "bet_list": "投注列表",
+        "bet_lottery": "彩票",
+        "bet_provider": "供应商",
+        "deposit_withdraw": "充值 - 提现",
+        "deposit": "充值",
+        "withdraw": "提现",
         "account": "账户",
         "settings": "设置"
     },
@@ -127,12 +138,44 @@
         "revenue": "营收",
         "notifications": "最近通知"
     },
-    "example": {
-        "title": "用户管理",
-        "dialog_title": "添加 / 编辑用户",
-        "name": "姓名：",
-        "age": "年龄：",
-        "role": "角色："
+    "customer": {
+        "title": "客户管理",
+        "dialog_title": "添加 / 编辑客户",
+        "staff": "员工：",
+        "member": "会员：",
+        "member_type": "会员类型：",
+        "agent": "代理账户：",
+        "balance": "余额：",
+        "status": "状态："
+    },
+    "lottery": {
+        "title": "彩票"
+    },
+    "transaction": {
+        "title": "交易"
+    },
+    "provider": {
+        "title": "供应商"
+    },
+    "deposit": {
+        "title": "充值"
+    },
+    "withdraw": {
+        "title": "提现"
+    },
+    "bet_lottery": {
+        "title": "彩票投注单"
+    },
+    "bet_provider": {
+        "title": "供应商投注单"
+    },
+    "referral": {
+        "title": "推荐码列表",
+        "dialog_title": "添加 / 编辑推荐码",
+        "staff": "员工：",
+        "code": "推荐码：",
+        "referral_type": "推荐类型：",
+        "note": "备注："
     },
     "account": {
         "title": "账户",

@@ -84,10 +84,27 @@ def main():
 
     auth.logged_out.connect(on_logout)
 
-    # Auto-login: neu co session luu tu truoc, vao thang AppWindow
-    if settings.get_bool("login/remember") and api.restore_session():
+    # Auto-login: neu co session luu tu truoc, verify token trong background
+    if settings.get_bool("login/remember") and settings.get_str("session/token"):
+        # Show window ngay (khong block), verify token trong background
         window.show()
         tray.show()
+
+        def _try_restore():
+            return api.restore_session()
+
+        def _on_restore_result(ok):
+            if not ok:
+                # Token het han — quay ve login
+                window.hide()
+                tray.hide()
+                login.show()
+
+        run_in_thread(
+            _try_restore,
+            on_result=_on_restore_result,
+            on_error=lambda e: (window.hide(), tray.hide(), login.show()),
+        )
     else:
         login.show()
 

@@ -22,7 +22,18 @@
     },
     "sidebar": {
         "home": "Trang chủ",
-        "example": "Ví dụ",
+        "customer": "Khách hàng",
+        "referral": "Mã giới thiệu",
+        "game": "Trò chơi",
+        "lottery": "Xổ số",
+        "transaction": "Giao dịch",
+        "provider": "Nhà cung cấp",
+        "bet_list": "Danh sách Cược",
+        "bet_lottery": "Xổ số",
+        "bet_provider": "Nhà cung cấp",
+        "deposit_withdraw": "Nạp - Rút",
+        "deposit": "Nạp tiền",
+        "withdraw": "Rút tiền",
         "account": "Tài khoản",
         "settings": "Cài đặt"
     },
@@ -127,12 +138,44 @@
         "revenue": "Doanh thu",
         "notifications": "Thông báo gần đây"
     },
-    "example": {
-        "title": "Quản lý người dùng",
-        "dialog_title": "Thêm / Sửa người dùng",
-        "name": "Tên:",
-        "age": "Tuổi:",
-        "role": "Vai trò:"
+    "customer": {
+        "title": "Quản lý khách hàng",
+        "dialog_title": "Thêm / Sửa khách hàng",
+        "staff": "Nhân viên:",
+        "member": "Hội viên:",
+        "member_type": "Loại hình hội viên:",
+        "agent": "Tài khoản đại lý:",
+        "balance": "Số dư:",
+        "status": "Trạng thái:"
+    },
+    "lottery": {
+        "title": "Xổ số"
+    },
+    "transaction": {
+        "title": "Giao dịch"
+    },
+    "provider": {
+        "title": "Nhà cung cấp"
+    },
+    "deposit": {
+        "title": "Nạp tiền"
+    },
+    "withdraw": {
+        "title": "Rút tiền"
+    },
+    "bet_lottery": {
+        "title": "Đơn cược xổ số"
+    },
+    "bet_provider": {
+        "title": "Đơn cược nhà cung cấp"
+    },
+    "referral": {
+        "title": "Danh sách mã giới thiệu",
+        "dialog_title": "Thêm / Sửa mã giới thiệu",
+        "staff": "Nhân viên:",
+        "code": "Mã giới thiệu:",
+        "referral_type": "Loại hình giới thiệu:",
+        "note": "Ghi chú:"
     },
     "account": {
         "title": "Tài khoản",

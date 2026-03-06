@@ -88,6 +88,7 @@ class NotificationBell(QWidget):
         self._popup: _NotificationPopup | None = None
         from core.icon import IconPath
         self._icon_path = IconPath.NOTIFICATIONS
+        self._cached_icon: QIcon | None = None
 
         theme_signals.changed.connect(self._on_theme_changed)
 
@@ -124,10 +125,11 @@ class NotificationBell(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Ve icon chuong (tinted theo palette)
-        icon = theme.tinted_icon(self._icon_path, size=20)
+        # Ve icon chuong (tinted theo palette, cached)
+        if self._cached_icon is None:
+            self._cached_icon = theme.tinted_icon(self._icon_path, size=20)
         icon_rect = QRect(8, 8, 20, 20)
-        icon.paint(p, icon_rect)
+        self._cached_icon.paint(p, icon_rect)
 
         # Badge
         count = self.unread_count()
@@ -204,6 +206,7 @@ class NotificationBell(QWidget):
         self.notification_clicked.emit(notif_id)
 
     def _on_theme_changed(self, _dark: bool) -> None:
+        self._cached_icon = None  # rebuild on next paint
         self.update()
         if self._popup and self._popup.isVisible():
             self._popup.refresh(self._items)

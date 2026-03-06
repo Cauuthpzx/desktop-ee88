@@ -90,65 +90,45 @@ class _IconPath:
     ABOUT = "icons/layui/about.svg"
     FACE_SMILE = "icons/layui/face-smile.svg"
 
+    # ── Material extended ────────────────────────────────────
+    GROUPS = "icons/material/groups.svg"
+    CASINO = "icons/material/casino.svg"
+    RECEIPT = "icons/material/receipt_long.svg"
+    STORE = "icons/material/store.svg"
+    WALLET = "icons/material/account_balance_wallet.svg"
+    SAVINGS = "icons/material/savings.svg"
+    MONEY_OFF = "icons/material/money_off.svg"
+    LIST_ALT = "icons/material/list_alt.svg"
 
-class Icon:
+
+class _IconMeta(type):
+    """Metaclass: lazy-load QIcon on first attribute access."""
+
+    _cache: dict[str, QIcon] = {}
+
+    def __getattr__(cls, name: str) -> QIcon:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        cached = cls._cache.get(name)
+        if cached is not None:
+            return cached
+        path = getattr(_IconPath, name, None)
+        if path is None:
+            raise AttributeError(f"Icon.{name} not found in IconPath")
+        icon = QIcon(path)
+        cls._cache[name] = icon
+        return icon
+
+
+class Icon(metaclass=_IconMeta):
     """
-    Central icon constants — returns QIcon on access.
+    Central icon constants — lazy-loaded QIcon on first access.
 
     Usage:
         btn.setIcon(Icon.HOME)
         action = QAction(Icon.EDIT, "Sua", self)
     """
-
-    # ── Sidebar / Navigation ──────────────────────────────────
-    HOME = QIcon(_IconPath.HOME)
-    USER = QIcon(_IconPath.USER)
-    SETTINGS = QIcon(_IconPath.SETTINGS)
-    MENU = QIcon(_IconPath.MENU)
-    MENU_OPEN = QIcon(_IconPath.MENU_OPEN)
-
-    # ── Actions ───────────────────────────────────────────────
-    ADD = QIcon(_IconPath.ADD)
-    EDIT = QIcon(_IconPath.EDIT)
-    DELETE = QIcon(_IconPath.DELETE)
-    SAVE = QIcon(_IconPath.SAVE)
-    REFRESH = QIcon(_IconPath.REFRESH)
-    SEARCH = QIcon(_IconPath.SEARCH)
-    EXPORT = QIcon(_IconPath.EXPORT)
-    IMPORT = QIcon(_IconPath.IMPORT)
-    DOWNLOAD = QIcon(_IconPath.DOWNLOAD)
-    PRINT = QIcon(_IconPath.PRINT)
-    LOGOUT = QIcon(_IconPath.LOGOUT)
-
-    # ── Input / Form ──────────────────────────────────────────
-    EYE = QIcon(_IconPath.EYE)
-    EYE_INVISIBLE = QIcon(_IconPath.EYE_INVISIBLE)
-    KEY = QIcon(_IconPath.KEY)
-    PASSWORD = QIcon(_IconPath.PASSWORD)
-    EMAIL = QIcon(_IconPath.EMAIL)
-
-    # ── Status / Feedback ─────────────────────────────────────
-    OK = QIcon(_IconPath.OK)
-    CLOSE = QIcon(_IconPath.CLOSE)
-    NOTICE = QIcon(_IconPath.NOTICE)
-    WARNING = QIcon(_IconPath.WARNING)
-    TIPS = QIcon(_IconPath.TIPS)
-
-    # ── Theme ─────────────────────────────────────────────────
-    LIGHT_MODE = QIcon(_IconPath.LIGHT_MODE)
-    DARK_MODE = QIcon(_IconPath.DARK_MODE)
-
-    # ── Notification ──────────────────────────────────────────
-    NOTIFICATIONS = QIcon(_IconPath.NOTIFICATIONS)
-
-    # ── Content ───────────────────────────────────────────────
-    CHART = QIcon(_IconPath.CHART)
-    TABLE = QIcon(_IconPath.TABLE)
-    LOG = QIcon(_IconPath.LOG)
-    TEMPLATE = QIcon(_IconPath.TEMPLATE)
-    WEBSITE = QIcon(_IconPath.WEBSITE)
-    ABOUT = QIcon(_IconPath.ABOUT)
-    FACE_SMILE = QIcon(_IconPath.FACE_SMILE)
+    pass
 
 
 # ── Gallery icons (black/white variant) ────────────────────────
