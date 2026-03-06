@@ -162,34 +162,112 @@
         "col_register": "Ngày đăng ký",
         "col_status": "Trạng thái"
     },
-    "lottery": {
-        "title": "Xổ số"
-    },
-    "transaction": {
-        "title": "Giao dịch"
-    },
-    "provider": {
-        "title": "Nhà cung cấp"
-    },
     "deposit": {
-        "title": "Nạp tiền"
+        "title": "Nạp tiền",
+        "col_agent": "Đại lý",
+        "col_account": "Tài khoản",
+        "col_parent": "Đơn vị quản lý",
+        "col_amount": "Số tiền",
+        "col_type": "Loại giao dịch",
+        "col_status": "Trạng thái",
+        "col_time": "Thời gian"
     },
     "withdraw": {
-        "title": "Rút tiền"
+        "title": "Rút tiền",
+        "col_agent": "Đại lý",
+        "col_serial": "Số serial",
+        "col_time": "Thời gian tạo",
+        "col_account": "Tài khoản",
+        "col_parent": "Đơn vị quản lý",
+        "col_amount": "Số tiền yêu cầu",
+        "col_fee": "Phí dịch vụ",
+        "col_actual": "Số tiền thực",
+        "col_status": "Trạng thái",
+        "col_action": "Hành động"
+    },
+    "transaction": {
+        "title": "Giao dịch",
+        "col_agent": "Đại lý",
+        "col_account": "Tài khoản",
+        "col_parent": "Đơn vị quản lý",
+        "col_deposit_n": "Số lần nạp",
+        "col_deposit_amt": "Tổng nạp",
+        "col_withdraw_n": "Số lần rút",
+        "col_withdraw_amt": "Tổng rút",
+        "col_fee": "Phí dịch vụ",
+        "col_commission": "Hoa hồng đại lý",
+        "col_promo": "Khuyến mãi",
+        "col_3rd_rebate": "Hoàn trả bên thứ 3",
+        "col_3rd_bonus": "Thưởng bên thứ 3",
+        "col_date": "Ngày"
     },
     "bet_lottery": {
-        "title": "Đơn cược xổ số"
+        "title": "Đơn cược xổ số",
+        "col_agent": "Đại lý",
+        "col_serial": "Số serial",
+        "col_user": "Người dùng",
+        "col_time": "Thời gian cược",
+        "col_game": "Trò chơi",
+        "col_type": "Loại trò chơi",
+        "col_method": "Hình thức cược",
+        "col_period": "Kỳ",
+        "col_info": "Thông tin cược",
+        "col_amount": "Tiền cược",
+        "col_rebate": "Tiền hoàn trả",
+        "col_result": "Thắng thua",
+        "col_status": "Trạng thái"
     },
     "bet_provider": {
-        "title": "Đơn cược nhà cung cấp"
+        "title": "Đơn cược nhà cung cấp",
+        "col_agent": "Đại lý",
+        "col_serial": "Số serial",
+        "col_provider": "Nhà cung cấp",
+        "col_platform": "Tài khoản nền tảng",
+        "col_game_type": "Loại trò chơi",
+        "col_game_name": "Tên trò chơi",
+        "col_bet": "Tiền cược",
+        "col_valid": "Cược hợp lệ",
+        "col_prize": "Giải thưởng",
+        "col_result": "Thắng thua",
+        "col_time": "Thời gian cược"
+    },
+    "lottery": {
+        "title": "Xổ số",
+        "col_agent": "Đại lý",
+        "col_account": "Tài khoản",
+        "col_parent": "Đơn vị quản lý",
+        "col_bet_n": "Số lần cược",
+        "col_bet_amt": "Tiền cược",
+        "col_valid": "Cược hợp lệ",
+        "col_rebate": "Hoàn trả",
+        "col_result": "Thắng thua",
+        "col_winlose": "Thắng thua (ròng)",
+        "col_prize": "Tiền giải thưởng",
+        "col_name": "Tên xổ số"
+    },
+    "provider": {
+        "title": "Nhà cung cấp",
+        "col_agent": "Đại lý",
+        "col_account": "Tài khoản",
+        "col_provider": "Nhà cung cấp",
+        "col_bet_n": "Số lần cược",
+        "col_bet_amt": "Tiền cược",
+        "col_valid": "Cược hợp lệ",
+        "col_prize": "Giải thưởng",
+        "col_result": "Thắng thua"
     },
     "referral": {
         "title": "Danh sách mã giới thiệu",
-        "dialog_title": "Thêm / Sửa mã giới thiệu",
-        "staff": "Nhân viên:",
-        "code": "Mã giới thiệu:",
-        "referral_type": "Loại hình giới thiệu:",
-        "note": "Ghi chú:"
+        "col_agent": "Đại lý",
+        "col_code": "Mã mời",
+        "col_type": "Loại mời",
+        "col_total_reg": "Tổng đã ĐK",
+        "col_user_reg": "Người dùng đã ĐK",
+        "col_depositors": "Người nạp tiền",
+        "col_first_deposit": "Nạp tiền ngày đầu",
+        "col_first_amount": "Số tiền nạp ngày đầu",
+        "col_remark": "Ghi chú",
+        "col_time": "Thời gian thêm"
     },
     "account": {
         "title": "Tài khoản",

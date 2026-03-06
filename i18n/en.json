@@ -162,34 +162,112 @@
         "col_register": "Registered",
         "col_status": "Status"
     },
-    "lottery": {
-        "title": "Lottery"
-    },
-    "transaction": {
-        "title": "Transaction"
-    },
-    "provider": {
-        "title": "Provider"
-    },
     "deposit": {
-        "title": "Deposit"
+        "title": "Deposit",
+        "col_agent": "Agent",
+        "col_account": "Account",
+        "col_parent": "Parent",
+        "col_amount": "Amount",
+        "col_type": "Type",
+        "col_status": "Status",
+        "col_time": "Time"
     },
     "withdraw": {
-        "title": "Withdraw"
+        "title": "Withdraw",
+        "col_agent": "Agent",
+        "col_serial": "Serial No.",
+        "col_time": "Time",
+        "col_account": "Account",
+        "col_parent": "Parent",
+        "col_amount": "Request Amount",
+        "col_fee": "Service Fee",
+        "col_actual": "Actual Amount",
+        "col_status": "Status",
+        "col_action": "Action"
+    },
+    "transaction": {
+        "title": "Transaction",
+        "col_agent": "Agent",
+        "col_account": "Account",
+        "col_parent": "Parent",
+        "col_deposit_n": "Deposits",
+        "col_deposit_amt": "Total Deposit",
+        "col_withdraw_n": "Withdrawals",
+        "col_withdraw_amt": "Total Withdrawal",
+        "col_fee": "Service Fee",
+        "col_commission": "Agent Commission",
+        "col_promo": "Promotion",
+        "col_3rd_rebate": "3rd Party Rebate",
+        "col_3rd_bonus": "3rd Party Bonus",
+        "col_date": "Date"
     },
     "bet_lottery": {
-        "title": "Lottery Bets"
+        "title": "Lottery Bets",
+        "col_agent": "Agent",
+        "col_serial": "Serial No.",
+        "col_user": "User",
+        "col_time": "Bet Time",
+        "col_game": "Game",
+        "col_type": "Game Type",
+        "col_method": "Bet Method",
+        "col_period": "Period",
+        "col_info": "Bet Info",
+        "col_amount": "Bet Amount",
+        "col_rebate": "Rebate",
+        "col_result": "Win/Lose",
+        "col_status": "Status"
     },
     "bet_provider": {
-        "title": "Provider Bets"
+        "title": "Provider Bets",
+        "col_agent": "Agent",
+        "col_serial": "Serial No.",
+        "col_provider": "Provider",
+        "col_platform": "Platform Account",
+        "col_game_type": "Game Type",
+        "col_game_name": "Game Name",
+        "col_bet": "Bet Amount",
+        "col_valid": "Valid Bet",
+        "col_prize": "Prize",
+        "col_result": "Win/Lose",
+        "col_time": "Bet Time"
+    },
+    "lottery": {
+        "title": "Lottery",
+        "col_agent": "Agent",
+        "col_account": "Account",
+        "col_parent": "Parent",
+        "col_bet_n": "Bets",
+        "col_bet_amt": "Bet Amount",
+        "col_valid": "Valid Bet",
+        "col_rebate": "Rebate",
+        "col_result": "Win/Lose",
+        "col_winlose": "Net Win/Lose",
+        "col_prize": "Prize",
+        "col_name": "Lottery Name"
+    },
+    "provider": {
+        "title": "Provider",
+        "col_agent": "Agent",
+        "col_account": "Account",
+        "col_provider": "Provider",
+        "col_bet_n": "Bets",
+        "col_bet_amt": "Bet Amount",
+        "col_valid": "Valid Bet",
+        "col_prize": "Prize",
+        "col_result": "Win/Lose"
     },
     "referral": {
         "title": "Referral Codes",
-        "dialog_title": "Add / Edit Referral Code",
-        "staff": "Staff:",
-        "code": "Referral Code:",
-        "referral_type": "Referral Type:",
-        "note": "Note:"
+        "col_agent": "Agent",
+        "col_code": "Invite Code",
+        "col_type": "Invite Type",
+        "col_total_reg": "Total Registered",
+        "col_user_reg": "Users Registered",
+        "col_depositors": "Depositors",
+        "col_first_deposit": "First Day Deposits",
+        "col_first_amount": "First Day Amount",
+        "col_remark": "Remark",
+        "col_time": "Created"
     },
     "account": {
         "title": "Account",

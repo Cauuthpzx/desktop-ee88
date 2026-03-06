@@ -30,6 +30,7 @@ from server.routes.auth_routes import router as auth_router
 from server.routes.user_routes import router as user_router
 from server.routes.system_routes import router as system_router
 from server.routes.agent_routes import router as agent_router
+from server.routes.upstream_routes import router as upstream_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +61,7 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(system_router)
 app.include_router(agent_router)
+app.include_router(upstream_router)
 
 
 # ── Dev entry point ───────────────────────────────────────────

@@ -1,63 +1,29 @@
 """
-tabs/deposit_tab.py — Tab Nạp tiền
+tabs/deposit_tab.py — Tab Nạp tiền (upstream: /agent/depositAndWithdrawal.html)
 """
-from core.base_widgets import BaseTab, label, divider
-from core import theme
-from core.i18n import t
-from widgets.table_crud import TableCrud
+from tabs._upstream_tab import UpstreamTab
+from utils.upstream import upstream
+from utils.formatters import currency
 
 
-COLUMNS = [
-    "Nhân viên", "Tên tài khoản", "Thuộc đại lý",
-    "Số tiền", "Loại hình giao dịch", "Trạng thái giao dịch",
-    "Thời gian",
-]
-KEYS = [
-    "staff", "account_name", "agent",
-    "amount", "transaction_type", "status",
-    "time",
-]
+class DepositTab(UpstreamTab):
+    _title_key = "deposit.title"
+    _columns_keys = [
+        ("deposit.col_agent",   "_agentName"),
+        ("deposit.col_account", "username"),
+        ("deposit.col_parent",  "user_parent_format"),
+        ("deposit.col_amount",  "amount"),
+        ("deposit.col_type",    "type"),
+        ("deposit.col_status",  "status"),
+        ("deposit.col_time",    "create_time"),
+    ]
 
-
-class DepositTab(BaseTab):
-    def _build(self, layout):
-        self._title_lbl = label(t("deposit.title"), bold=True, size=theme.FONT_SIZE_LG)
-        layout.addWidget(self._title_lbl)
-        layout.addWidget(divider())
-
-        self.crud = TableCrud(
-            columns=COLUMNS,
-            on_search=self._on_search,
+    def _fetch_upstream(self, agent_id, page, limit, search):
+        return upstream.fetch_deposits(
+            agent_id=agent_id, page=page, limit=limit, username=search,
         )
-        layout.addWidget(self.crud)
 
-        self._next_id = 1
-        self._data: list[dict] = []
-        for row in [
-            ("Trần Minh", "user001", "agent001", 50_000_000, "Chuyển khoản", "Thành công", "2026-03-05 14:30"),
-            ("Lê Hương",  "user002", "agent002", 10_000_000, "Ví điện tử",   "Thành công", "2026-03-04 08:15"),
-            ("Phạm Tuấn", "user003", "agent003", 1_000_000,  "Thẻ cào",      "Đang xử lý", "2026-03-01 19:00"),
-        ]:
-            self._data.append({
-                "id": self._next_id,
-                "staff": row[0], "account_name": row[1], "agent": row[2],
-                "amount": row[3], "transaction_type": row[4],
-                "status": row[5], "time": row[6],
-            })
-            self._next_id += 1
-        self._reload()
-
-    def _reload(self, filter_text: str = ""):
-        data = self._data
-        if filter_text:
-            q = filter_text.lower()
-            data = [r for r in data
-                    if q in r["account_name"].lower()
-                    or q in r["staff"].lower()]
-        self.crud.load(data, keys=KEYS)
-
-    def _on_search(self, text: str):
-        self._reload(filter_text=text)
-
-    def retranslate(self) -> None:
-        self._title_lbl.setText(t("deposit.title"))
+    def _formatters(self):
+        return {
+            "amount": lambda v: currency(float(v)) if v else "0",
+        }

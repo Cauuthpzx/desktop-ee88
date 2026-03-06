@@ -182,21 +182,22 @@ class UpstreamClient:
 
         return result
 
-    def fetch_customers(
-        self, agent_id: int,
-        page: int = 1, limit: int = 50, username: str = "",
+    def _fetch(
+        self, agent_id: int, path: str,
+        page: int = 1, limit: int = 50, **kwargs: str,
     ) -> dict[str, Any]:
-        """Fetch customers tu upstream. Doc cookie tu QSettings (0ms)."""
+        """Generic fetch upstream. Doc cookie tu QSettings (0ms)."""
         cached = self.get_cookie(agent_id)
         if not cached:
             raise ValueError("No session. Login agent first.")
 
         cookie, base_url = cached
         params = f"page={page}&limit={limit}"
-        if username:
-            params += f"&username={username}"
+        for k, v in kwargs.items():
+            if v:
+                params += f"&{k}={v}"
 
-        result = self._post(cookie, base_url, "/agent/user.html", params)
+        result = self._post(cookie, base_url, path, params)
 
         if result.get("code") != 0:
             raise ConnectionError(f"Upstream: {result.get('msg', 'error')}")
@@ -208,6 +209,55 @@ class UpstreamClient:
             "page": page,
             "limit": limit,
         }
+
+    # ── Per-endpoint convenience methods ─────────────────────
+
+    def fetch_customers(self, agent_id: int, page: int = 1, limit: int = 50,
+                        username: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/user.html",
+                           page=page, limit=limit, username=username)
+
+    def fetch_deposits(self, agent_id: int, page: int = 1, limit: int = 50,
+                       username: str = "", date: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/depositAndWithdrawal.html",
+                           page=page, limit=limit, username=username, date=date)
+
+    def fetch_withdrawals(self, agent_id: int, page: int = 1, limit: int = 50,
+                          username: str = "", date: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/withdrawalsRecord.html",
+                           page=page, limit=limit, username=username, date=date)
+
+    def fetch_transactions(self, agent_id: int, page: int = 1, limit: int = 50,
+                           username: str = "", date: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/reportFunds.html",
+                           page=page, limit=limit, username=username, date=date)
+
+    def fetch_bet_lottery(self, agent_id: int, page: int = 1, limit: int = 50,
+                          username: str = "", date: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/bet.html",
+                           page=page, limit=limit, username=username, date=date,
+                           es="1", is_summary="0")
+
+    def fetch_bet_provider(self, agent_id: int, page: int = 1, limit: int = 50,
+                           username: str = "", bet_time: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/betOrder.html",
+                           page=page, limit=limit, platform_username=username,
+                           bet_time=bet_time, es="1")
+
+    def fetch_lottery(self, agent_id: int, page: int = 1, limit: int = 50,
+                      username: str = "", date: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/reportLottery.html",
+                           page=page, limit=limit, username=username, date=date)
+
+    def fetch_provider(self, agent_id: int, page: int = 1, limit: int = 50,
+                       username: str = "", date: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/reportThirdGame.html",
+                           page=page, limit=limit, username=username, date=date)
+
+    def fetch_referrals(self, agent_id: int, page: int = 1, limit: int = 50,
+                        invite_code: str = "") -> dict[str, Any]:
+        return self._fetch(agent_id, "/agent/inviteList.html",
+                           page=page, limit=limit, invite_code=invite_code)
 
 
 # Singleton

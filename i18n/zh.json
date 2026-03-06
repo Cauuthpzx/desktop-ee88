@@ -162,34 +162,112 @@
         "col_register": "注册日期",
         "col_status": "状态"
     },
-    "lottery": {
-        "title": "彩票"
-    },
-    "transaction": {
-        "title": "交易"
-    },
-    "provider": {
-        "title": "供应商"
-    },
     "deposit": {
-        "title": "充值"
+        "title": "充值",
+        "col_agent": "代理",
+        "col_account": "账号",
+        "col_parent": "上级管理",
+        "col_amount": "金额",
+        "col_type": "交易类型",
+        "col_status": "状态",
+        "col_time": "时间"
     },
     "withdraw": {
-        "title": "提现"
+        "title": "提现",
+        "col_agent": "代理",
+        "col_serial": "序列号",
+        "col_time": "创建时间",
+        "col_account": "账号",
+        "col_parent": "上级管理",
+        "col_amount": "请求金额",
+        "col_fee": "服务费",
+        "col_actual": "实际金额",
+        "col_status": "状态",
+        "col_action": "操作"
+    },
+    "transaction": {
+        "title": "交易",
+        "col_agent": "代理",
+        "col_account": "账号",
+        "col_parent": "上级管理",
+        "col_deposit_n": "充值次数",
+        "col_deposit_amt": "充值总额",
+        "col_withdraw_n": "提现次数",
+        "col_withdraw_amt": "提现总额",
+        "col_fee": "服务费",
+        "col_commission": "代理佣金",
+        "col_promo": "优惠活动",
+        "col_3rd_rebate": "第三方返利",
+        "col_3rd_bonus": "第三方奖金",
+        "col_date": "日期"
     },
     "bet_lottery": {
-        "title": "彩票投注单"
+        "title": "彩票投注单",
+        "col_agent": "代理",
+        "col_serial": "序列号",
+        "col_user": "用户",
+        "col_time": "投注时间",
+        "col_game": "游戏",
+        "col_type": "游戏类型",
+        "col_method": "投注方式",
+        "col_period": "期号",
+        "col_info": "投注内容",
+        "col_amount": "投注金额",
+        "col_rebate": "返利",
+        "col_result": "输赢",
+        "col_status": "状态"
     },
     "bet_provider": {
-        "title": "供应商投注单"
+        "title": "供应商投注单",
+        "col_agent": "代理",
+        "col_serial": "序列号",
+        "col_provider": "供应商",
+        "col_platform": "平台账号",
+        "col_game_type": "游戏类型",
+        "col_game_name": "游戏名称",
+        "col_bet": "投注金额",
+        "col_valid": "有效投注",
+        "col_prize": "奖金",
+        "col_result": "输赢",
+        "col_time": "投注时间"
+    },
+    "lottery": {
+        "title": "彩票",
+        "col_agent": "代理",
+        "col_account": "账号",
+        "col_parent": "上级管理",
+        "col_bet_n": "投注次数",
+        "col_bet_amt": "投注金额",
+        "col_valid": "有效投注",
+        "col_rebate": "返利",
+        "col_result": "输赢",
+        "col_winlose": "净输赢",
+        "col_prize": "奖金",
+        "col_name": "彩票名称"
+    },
+    "provider": {
+        "title": "供应商",
+        "col_agent": "代理",
+        "col_account": "账号",
+        "col_provider": "供应商",
+        "col_bet_n": "投注次数",
+        "col_bet_amt": "投注金额",
+        "col_valid": "有效投注",
+        "col_prize": "奖金",
+        "col_result": "输赢"
     },
     "referral": {
         "title": "推荐码列表",
-        "dialog_title": "添加 / 编辑推荐码",
-        "staff": "员工：",
-        "code": "推荐码：",
-        "referral_type": "推荐类型：",
-        "note": "备注："
+        "col_agent": "代理",
+        "col_code": "邀请码",
+        "col_type": "邀请类型",
+        "col_total_reg": "总注册数",
+        "col_user_reg": "用户注册数",
+        "col_depositors": "充值人数",
+        "col_first_deposit": "首日充值",
+        "col_first_amount": "首日充值金额",
+        "col_remark": "备注",
+        "col_time": "创建时间"
     },
     "account": {
         "title": "账户",
