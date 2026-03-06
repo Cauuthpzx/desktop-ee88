@@ -27,10 +27,11 @@ from pathlib import Path
 from PyQt6.QtGui import QIcon
 
 _GALLERY_DIR = Path("icons/gallery")
+_MATERIAL_OUTLINE_DIR = Path("icons/material_outline")
 
 
 # ── Main icon registry ─────────────────────────────────────────
-# Moi constant la QIcon — dung truc tiep: btn.setIcon(Icon.HOME)
+# Moi constant la QIcon (tinted theo palette) — dung truc tiep: btn.setIcon(Icon.HOME)
 
 class _IconPath:
     """Namespace for all icon paths used across the app."""
@@ -105,7 +106,11 @@ class _IconPath:
 
 
 class _IconMeta(type):
-    """Metaclass: lazy-load QIcon on first attribute access."""
+    """Metaclass: lazy-load tinted QIcon on first attribute access.
+
+    Icons are tinted to match QPalette text color so they work in both
+    light and dark themes.  Cache is cleared on every theme change.
+    """
 
     _cache: dict[str, QIcon] = {}
 
@@ -118,20 +123,37 @@ class _IconMeta(type):
         path = getattr(_IconPath, name, None)
         if path is None:
             raise AttributeError(f"Icon.{name} not found in IconPath")
-        icon = QIcon(path)
+        from core.theme import tinted_icon
+        icon = tinted_icon(path)
         cls._cache[name] = icon
         return icon
+
+    @classmethod
+    def _clear_cache(mcs) -> None:
+        mcs._cache.clear()
 
 
 class Icon(metaclass=_IconMeta):
     """
-    Central icon constants — lazy-loaded QIcon on first access.
+    Central icon constants — lazy-loaded tinted QIcon on first access.
+    Auto-tinted to palette text color; cache cleared on theme change.
 
     Usage:
         btn.setIcon(Icon.HOME)
         action = QAction(Icon.EDIT, "Sua", self)
     """
     pass
+
+
+def _on_theme_changed(_dark: bool) -> None:
+    """Clear Icon cache so next access re-tints to new palette color."""
+    _IconMeta._clear_cache()
+
+
+def _connect_theme_signal() -> None:
+    """Connect theme change signal. Called once at app startup."""
+    from core.theme import theme_signals
+    theme_signals.changed.connect(_on_theme_changed)
 
 
 # ── Gallery icons (black/white variant) ────────────────────────
@@ -173,3 +195,20 @@ def tinted(path_or_icon: str, **kwargs) -> QIcon:
 # ── Path access for special cases ─────────────────────────────
 # Dung khi can path string (vd: sidebar pixmap, expand_card pixmap)
 IconPath = _IconPath
+
+
+def outline_path(filled_path: str) -> str:
+    """Return outline variant path for a material icon.
+
+    If the filled icon is 'icons/material/home.svg',
+    returns 'icons/material_outline/home.svg' if it exists,
+    otherwise returns the original filled path.
+    Non-material icons are returned as-is.
+    """
+    if not filled_path.startswith("icons/material/"):
+        return filled_path
+    name = Path(filled_path).name
+    outline = _MATERIAL_OUTLINE_DIR / name
+    if outline.exists():
+        return str(outline)
+    return filled_path

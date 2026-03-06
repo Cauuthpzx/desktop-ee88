@@ -41,6 +41,7 @@ class LoadingBar(QWidget):
         self._bar = QProgressBar()
         self._bar.setRange(0, 0)   # indeterminate
         self._bar.setTextVisible(False)
+        self._bar.setFixedHeight(4)
 
         lay.addWidget(self._label)
         lay.addWidget(self._bar)
@@ -70,17 +71,19 @@ class LoadingOverlay(QWidget):
 
         frame = QFrame()
         frame.setFrameShape(QFrame.Shape.Box)
+        frame.setFixedSize(280, 80)
         frame_lay = QVBoxLayout(frame)
-        frame_lay.setContentsMargins(*[theme.SPACING_XL] * 4)
-        frame_lay.setSpacing(theme.SPACING_MD)
+        frame_lay.setContentsMargins(*[theme.SPACING_LG] * 4)
+        frame_lay.setSpacing(theme.SPACING_SM)
 
         self._label = QLabel(t("loading.processing"))
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._label.setFont(theme.font(size=theme.FONT_SIZE_LG))
+        self._label.setFont(theme.font())
 
         self._bar = QProgressBar()
         self._bar.setRange(0, 0)
         self._bar.setTextVisible(False)
+        self._bar.setFixedHeight(4)
         self._bar.setFixedWidth(240)
 
         frame_lay.addWidget(self._label)

@@ -241,7 +241,12 @@
         "agent_session_expired_msg": "Session hết hạn: {error}",
         "agent_checking": "Đang kiểm tra {name}...",
         "agent_no_password": "Chưa cấu hình mật khẩu.",
-        "agent_dialog_title": "Thêm / Sửa đại lý"
+        "agent_dialog_title": "Thêm / Sửa đại lý",
+        "agent_actions": "Thao tác",
+        "agent_login_tip": "Đăng nhập vào upstream",
+        "agent_check_tip": "Kiểm tra session còn sống không",
+        "agent_edit_tip": "Sửa thông tin đại lý",
+        "agent_delete_tip": "Xoá đại lý này"
     },
     "settings": {
         "title": "Cài đặt",

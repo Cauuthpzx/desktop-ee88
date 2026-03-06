@@ -9,12 +9,13 @@ from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSizePolicy,
 )
-from PyQt6.QtGui import QIcon, QPainter, QPen, QPalette
+from PyQt6.QtGui import QPainter, QPen, QPalette
 from PyQt6.QtCore import (
     Qt, QPropertyAnimation, QEasingCurve, pyqtProperty,
     QParallelAnimationGroup,
 )
 from core import theme
+from core.theme import theme_signals, tinted_icon
 
 
 class _ExpandArrow(QWidget):
@@ -63,6 +64,15 @@ class ExpandCard(QFrame):
 
     ANIM_DURATION = 200
 
+    def _get_card_height(self) -> int:
+        return self._card_height
+
+    def _set_card_height(self, h: int) -> None:
+        self._card_height = h
+        self.setFixedHeight(h)
+
+    cardHeight = pyqtProperty(int, _get_card_height, _set_card_height)
+
     def __init__(
         self,
         icon: str = "",
@@ -72,10 +82,16 @@ class ExpandCard(QFrame):
     ) -> None:
         super().__init__(parent)
         self._expanded = False
+        self._icon_path = icon
+        self._header_height = theme.HEADER_HEIGHT
 
         self.setFrameShape(QFrame.Shape.Box)
         self.setFrameShadow(QFrame.Shadow.Sunken)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        # Start collapsed — fixed to header height
+        self._card_height = self._header_height
+        self.setFixedHeight(self._header_height)
 
         # Main layout
         main_lay = QVBoxLayout(self)
@@ -85,7 +101,7 @@ class ExpandCard(QFrame):
         # ── Header ───────────────────────────────────────────
         self._header = QWidget()
         self._header.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._header.setMinimumHeight(theme.HEADER_HEIGHT)
+        self._header.setFixedHeight(self._header_height)
 
         h_lay = QHBoxLayout(self._header)
         h_lay.setContentsMargins(theme.SPACING_LG, theme.SPACING_MD,
@@ -95,7 +111,7 @@ class ExpandCard(QFrame):
         # Icon
         self._icon_lbl = QLabel()
         if icon:
-            self._icon_lbl.setPixmap(QIcon(icon).pixmap(20, 20))
+            self._icon_lbl.setPixmap(tinted_icon(icon).pixmap(20, 20))
         self._icon_lbl.setFixedSize(20, 20)
         h_lay.addWidget(self._icon_lbl)
 
@@ -126,25 +142,28 @@ class ExpandCard(QFrame):
             theme.SPACING_LG, theme.SPACING_LG,
         )
         self._content_lay.setSpacing(theme.SPACING_MD)
-        self._content.setMaximumHeight(0)
+        self._content.hide()
 
         main_lay.addWidget(self._content)
 
         # ── Animations ───────────────────────────────────────
         self._anim_group = QParallelAnimationGroup(self)
 
-        self._anim_height = QPropertyAnimation(self._content, b"maximumHeight")
+        self._anim_height = QPropertyAnimation(self, b"cardHeight")
         self._anim_height.setDuration(self.ANIM_DURATION)
-        self._anim_height.setEasingCurve(QEasingCurve.Type.OutQuad)
+        self._anim_height.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._anim_group.addAnimation(self._anim_height)
 
         self._anim_arrow = QPropertyAnimation(self._arrow, b"angle")
         self._anim_arrow.setDuration(self.ANIM_DURATION)
-        self._anim_arrow.setEasingCurve(QEasingCurve.Type.OutQuad)
+        self._anim_arrow.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._anim_group.addAnimation(self._anim_arrow)
 
         # Click handler on header
         self._header.mousePressEvent = lambda _e: self.toggle()
+
+        # Re-tint icon on theme change
+        theme_signals.changed.connect(self._on_theme_changed)
 
     # ── Public API ───────────────────────────────────────────
 
@@ -163,7 +182,12 @@ class ExpandCard(QFrame):
         self._desc_lbl.setText(text)
 
     def set_icon(self, icon_path: str) -> None:
-        self._icon_lbl.setPixmap(QIcon(icon_path).pixmap(20, 20))
+        self._icon_path = icon_path
+        self._icon_lbl.setPixmap(tinted_icon(icon_path).pixmap(20, 20))
+
+    def _on_theme_changed(self, _dark: bool) -> None:
+        if self._icon_path:
+            self._icon_lbl.setPixmap(tinted_icon(self._icon_path).pixmap(20, 20))
 
     def is_expanded(self) -> bool:
         return self._expanded
@@ -180,16 +204,15 @@ class ExpandCard(QFrame):
             return
         self._expanded = True
 
-        # Calculate content height
-        content_height = self._content_lay.sizeHint().height()
-        content_height += self._content_lay.contentsMargins().top()
-        content_height += self._content_lay.contentsMargins().bottom()
-        # Add a bit of extra space
-        content_height = max(content_height, 50)
+        # Show content so layout can calculate size
+        self._content.show()
+        self._content.adjustSize()
+        content_h = self._content.sizeHint().height()
+        target = self._header_height + max(content_h, 50)
 
         self._anim_group.stop()
-        self._anim_height.setStartValue(0)
-        self._anim_height.setEndValue(content_height)
+        self._anim_height.setStartValue(self._header_height)
+        self._anim_height.setEndValue(target)
         self._anim_arrow.setStartValue(0.0)
         self._anim_arrow.setEndValue(180.0)
         self._anim_group.start()
@@ -200,11 +223,18 @@ class ExpandCard(QFrame):
         self._expanded = False
 
         self._anim_group.stop()
-        self._anim_height.setStartValue(self._content.height())
-        self._anim_height.setEndValue(0)
+        self._anim_height.setStartValue(self.height())
+        self._anim_height.setEndValue(self._header_height)
         self._anim_arrow.setStartValue(180.0)
         self._anim_arrow.setEndValue(0.0)
         self._anim_group.start()
+        self._anim_group.finished.connect(self._hide_content_once)
+
+    def _hide_content_once(self) -> None:
+        """Hide content after collapse animation finishes."""
+        if not self._expanded:
+            self._content.hide()
+        self._anim_group.finished.disconnect(self._hide_content_once)
 
     @property
     def content_layout(self) -> QVBoxLayout:

@@ -44,6 +44,9 @@ def main():
     init_i18n()
     install_tooltip(app)
 
+    from core.icon import _connect_theme_signal
+    _connect_theme_signal()
+
     # Tạo bảng users nếu chưa có (background — không block UI)
     run_in_thread(auth.init)
 

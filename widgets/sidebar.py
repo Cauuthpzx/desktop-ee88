@@ -106,6 +106,7 @@ class _NavItem:
     pixmap: QPixmap | None = None
     checked: bool = False
     indent: int = 0  # 0 = top-level, 1 = child of group
+    icon_path: str = ""  # original path for theme-aware reload
 
 
 @dataclass
@@ -116,6 +117,7 @@ class _NavGroup:
     pixmap: QPixmap | None = None
     expanded: bool = False
     children: list[_NavItem] | None = None
+    icon_path: str = ""  # original path for theme-aware reload
 
     def __post_init__(self):
         if self.children is None:
@@ -200,11 +202,26 @@ class CollapsibleSidebar(QWidget):
 
     # ── Public API (giữ nguyên interface cũ 100%) ─────────────────────────────
 
+    @staticmethod
+    def _resolve_icon(icon_path: str | Path | None) -> str:
+        """Pick outline variant for light theme, filled for dark."""
+        if not icon_path:
+            return ""
+        path = str(icon_path)
+        if not theme.is_dark():
+            from core.icon import outline_path
+            return outline_path(path)
+        return path
+
     def add_button(self, identifier: str, text: str,
                    icon_path: str | Path | None = None) -> None:
         """Thêm nav button. identifier dùng cho button_clicked signal."""
-        pixmap = _load_pixmap(icon_path, _NAV_ICON_SIZE) if icon_path else None
-        self._entries.append(_NavItem(identifier=identifier, text=text, pixmap=pixmap))
+        orig = str(icon_path) if icon_path else ""
+        resolved = self._resolve_icon(icon_path)
+        pixmap = _load_pixmap(resolved, _NAV_ICON_SIZE) if resolved else None
+        self._entries.append(_NavItem(
+            identifier=identifier, text=text, pixmap=pixmap, icon_path=orig,
+        ))
         self._invalidate_rects()
         self.update()
 
@@ -224,8 +241,10 @@ class CollapsibleSidebar(QWidget):
         """Thêm menu cha (expand/collapse). Trả về group_id để add_group_item."""
         ident = f"_grp_{self._next_id}"
         self._next_id += 1
-        pixmap = _load_pixmap(icon, _NAV_ICON_SIZE) if icon else None
-        group = _NavGroup(identifier=ident, text=text, pixmap=pixmap)
+        orig = str(icon) if icon else ""
+        resolved = self._resolve_icon(icon)
+        pixmap = _load_pixmap(resolved, _NAV_ICON_SIZE) if resolved else None
+        group = _NavGroup(identifier=ident, text=text, pixmap=pixmap, icon_path=orig)
         self._entries.append(group)
         self._invalidate_rects()
         self.update()
@@ -240,8 +259,10 @@ class CollapsibleSidebar(QWidget):
             return
         ident = f"_nav_{self._next_id}"
         self._next_id += 1
-        pixmap = _load_pixmap(icon, _NAV_ICON_SIZE) if icon else None
-        child = _NavItem(identifier=ident, text=text, pixmap=pixmap, indent=1)
+        orig = str(icon) if icon else ""
+        resolved = self._resolve_icon(icon)
+        pixmap = _load_pixmap(resolved, _NAV_ICON_SIZE) if resolved else None
+        child = _NavItem(identifier=ident, text=text, pixmap=pixmap, indent=1, icon_path=orig)
         grp.children.append(child)
         self._page_map[ident] = widget
         self._invalidate_rects()
@@ -251,8 +272,10 @@ class CollapsibleSidebar(QWidget):
         """Thêm item ghim dưới cùng sidebar (ví dụ: Settings)."""
         ident = f"_nav_{self._next_id}"
         self._next_id += 1
-        pixmap = _load_pixmap(icon, _NAV_ICON_SIZE) if icon else None
-        item = _NavItem(identifier=ident, text=text, pixmap=pixmap)
+        orig = str(icon) if icon else ""
+        resolved = self._resolve_icon(icon)
+        pixmap = _load_pixmap(resolved, _NAV_ICON_SIZE) if resolved else None
+        item = _NavItem(identifier=ident, text=text, pixmap=pixmap, icon_path=orig)
         self._bottom_entries.append(item)
         self._page_map[ident] = widget
         self._invalidate_rects()
@@ -336,7 +359,20 @@ class CollapsibleSidebar(QWidget):
 
     def _on_theme_changed(self, _dark: bool) -> None:
         _clear_tinted_cache()
+        self._reload_icons()
         self.update()
+
+    def _reload_icons(self) -> None:
+        """Reload all icon pixmaps using outline/filled variant based on theme."""
+        for entry in self._entries + self._bottom_entries:
+            if isinstance(entry, (_NavItem, _NavGroup)) and entry.icon_path:
+                resolved = self._resolve_icon(entry.icon_path)
+                entry.pixmap = _load_pixmap(resolved, _NAV_ICON_SIZE)
+            if isinstance(entry, _NavGroup):
+                for child in (entry.children or []):
+                    if child.icon_path:
+                        resolved = self._resolve_icon(child.icon_path)
+                        child.pixmap = _load_pixmap(resolved, _NAV_ICON_SIZE)
 
     def cleanup(self) -> None:
         self._anim_group.stop()

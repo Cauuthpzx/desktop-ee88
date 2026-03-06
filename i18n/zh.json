@@ -241,7 +241,12 @@
         "agent_session_expired_msg": "会话已过期: {error}",
         "agent_checking": "正在检查 {name}...",
         "agent_no_password": "未配置密码。",
-        "agent_dialog_title": "添加 / 编辑代理"
+        "agent_dialog_title": "添加 / 编辑代理",
+        "agent_actions": "操作",
+        "agent_login_tip": "登录到上游平台",
+        "agent_check_tip": "检查会话是否仍然有效",
+        "agent_edit_tip": "编辑代理信息",
+        "agent_delete_tip": "删除此代理"
     },
     "settings": {
         "title": "设置",

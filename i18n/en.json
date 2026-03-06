@@ -241,7 +241,12 @@
         "agent_session_expired_msg": "Session expired: {error}",
         "agent_checking": "Checking {name}...",
         "agent_no_password": "No password configured.",
-        "agent_dialog_title": "Add / Edit Agent"
+        "agent_dialog_title": "Add / Edit Agent",
+        "agent_actions": "Actions",
+        "agent_login_tip": "Login to upstream",
+        "agent_check_tip": "Check if session is still alive",
+        "agent_edit_tip": "Edit agent details",
+        "agent_delete_tip": "Delete this agent"
     },
     "settings": {
         "title": "Settings",

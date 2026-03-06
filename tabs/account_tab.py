@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QVBoxLayout,
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 
 from core import theme
 from core.base_widgets import BaseTab, BaseDialog, vbox, hbox, form_layout, label, divider
@@ -32,21 +33,22 @@ from widgets.expand_card import ExpandCard
 logger = logging.getLogger(__name__)
 
 
-def _add_eye_toggle(line_edit: QLineEdit) -> None:
-    """Toggle show/hide password."""
-    icon_hide = Icon.EYE_INVISIBLE
-    icon_show = Icon.EYE
-    action = line_edit.addAction(icon_hide, QLineEdit.ActionPosition.TrailingPosition)
+def _add_eye_toggle(line_edit: QLineEdit) -> QAction:
+    """Toggle show/hide password. Returns QAction for theme refresh."""
+    action = line_edit.addAction(
+        Icon.EYE_INVISIBLE, QLineEdit.ActionPosition.TrailingPosition,
+    )
 
     def toggle() -> None:
         if line_edit.echoMode() == QLineEdit.EchoMode.Password:
             line_edit.setEchoMode(QLineEdit.EchoMode.Normal)
-            action.setIcon(icon_show)
+            action.setIcon(Icon.EYE)
         else:
             line_edit.setEchoMode(QLineEdit.EchoMode.Password)
-            action.setIcon(icon_hide)
+            action.setIcon(Icon.EYE_INVISIBLE)
 
     action.triggered.connect(toggle)
+    return action
 
 
 # ── Agent Dialog ─────────────────────────────────────────────────
@@ -246,7 +248,7 @@ class AccountTab(BaseTab):
         email_form = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         self._email_edit = QLineEdit()
         self._email_edit.setPlaceholderText(t("account.email_placeholder"))
-        self._email_edit.addAction(
+        self._email_action = self._email_edit.addAction(
             Icon.EMAIL,
             QLineEdit.ActionPosition.LeadingPosition,
         )
@@ -280,31 +282,32 @@ class AccountTab(BaseTab):
         self._current_pwd = QLineEdit()
         self._current_pwd.setPlaceholderText(t("account.current_password"))
         self._current_pwd.setEchoMode(QLineEdit.EchoMode.Password)
-        self._current_pwd.addAction(
+        self._pwd_action = self._current_pwd.addAction(
             Icon.PASSWORD,
             QLineEdit.ActionPosition.LeadingPosition,
         )
-        _add_eye_toggle(self._current_pwd)
+        self._eye_actions: list[QAction] = []
+        self._eye_actions.append(_add_eye_toggle(self._current_pwd))
         pwd_lay.addWidget(self._current_pwd)
 
         self._new_pwd = QLineEdit()
         self._new_pwd.setPlaceholderText(t("account.new_password"))
         self._new_pwd.setEchoMode(QLineEdit.EchoMode.Password)
-        self._new_pwd.addAction(
+        self._new_pwd_action = self._new_pwd.addAction(
             Icon.KEY,
             QLineEdit.ActionPosition.LeadingPosition,
         )
-        _add_eye_toggle(self._new_pwd)
+        self._eye_actions.append(_add_eye_toggle(self._new_pwd))
         pwd_lay.addWidget(self._new_pwd)
 
         self._confirm_pwd = QLineEdit()
         self._confirm_pwd.setPlaceholderText(t("account.confirm_password"))
         self._confirm_pwd.setEchoMode(QLineEdit.EchoMode.Password)
-        self._confirm_pwd.addAction(
+        self._confirm_pwd_action = self._confirm_pwd.addAction(
             Icon.KEY,
             QLineEdit.ActionPosition.LeadingPosition,
         )
-        _add_eye_toggle(self._confirm_pwd)
+        self._eye_actions.append(_add_eye_toggle(self._confirm_pwd))
         pwd_lay.addWidget(self._confirm_pwd)
 
         btn_pwd_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
@@ -355,7 +358,7 @@ class AccountTab(BaseTab):
             t("account.agent_status"),
             t("account.agent_last_login"),
             t("account.agent_base_url"),
-            "",  # actions
+            t("account.agent_actions"),
         ]
         self._agent_table.setHorizontalHeaderLabels(self._agent_headers)
         self._agent_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -363,8 +366,14 @@ class AccountTab(BaseTab):
         self._agent_table.setAlternatingRowColors(True)
         self._agent_table.verticalHeader().setVisible(False)
         header = self._agent_table.horizontalHeader()
-        for col in range(5):
-            header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+        # Name, Username — stretch to fill
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        # Status, Last login, Base URL — fit content
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        # Actions — fixed
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         self._agent_table.setColumnWidth(5, 300)
         agent_lay.addWidget(self._agent_table)
@@ -446,39 +455,30 @@ class AccountTab(BaseTab):
 
             agent_id = ag.get("id")
 
-            # Login button — color based on status
             btn_login = QPushButton(t("account.agent_login"))
+            btn_login.setToolTip(t("account.agent_login_tip"))
             btn_login.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_login.clicked.connect(lambda _, aid=agent_id: self._on_login_agent(aid))
-            if status == "active":
-                btn_login.setStyleSheet(
-                    "QPushButton { color: #2e7d32; border: 1px solid #2e7d32; }"
-                    "QPushButton:hover { background: #e8f5e9; }"
-                )
-                btn_login.setText(t("account.agent_login"))
-            elif status == "error":
-                btn_login.setStyleSheet(
-                    "QPushButton { color: #d32f2f; border: 1px solid #d32f2f; }"
-                    "QPushButton:hover { background: #fde8e8; }"
-                )
-            elif status == "logging_in":
+            if status == "logging_in":
                 btn_login.setEnabled(False)
                 btn_login.setText("...")
             actions_lay.addWidget(btn_login)
 
-            # Check session button
             btn_check = QPushButton(t("account.agent_check"))
+            btn_check.setToolTip(t("account.agent_check_tip"))
             btn_check.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_check.clicked.connect(lambda _, aid=agent_id: self._on_check_agent(aid))
             btn_check.setEnabled(status == "active")
             actions_lay.addWidget(btn_check)
 
             btn_edit = QPushButton(t("account.agent_edit"))
+            btn_edit.setToolTip(t("account.agent_edit_tip"))
             btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_edit.clicked.connect(lambda _, aid=agent_id: self._on_edit_agent(aid))
             actions_lay.addWidget(btn_edit)
 
             btn_del = QPushButton(t("crud.delete"))
+            btn_del.setToolTip(t("account.agent_delete_tip"))
             btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_del.clicked.connect(lambda _, aid=agent_id: self._on_delete_agent(aid))
             actions_lay.addWidget(btn_del)
@@ -666,6 +666,20 @@ class AccountTab(BaseTab):
 
     def _on_theme_changed(self, _dark: bool) -> None:
         self._apply_logout_style()
+        # Re-tint all icons for new palette
+        self._btn_logout.setIcon(Icon.LOGOUT)
+        self._btn_save_bio.setIcon(Icon.SAVE)
+        self._btn_save_email.setIcon(Icon.SAVE)
+        self._btn_change_pwd.setIcon(Icon.KEY)
+        self._btn_add_agent.setIcon(Icon.ADD)
+        self._email_action.setIcon(Icon.EMAIL)
+        self._pwd_action.setIcon(Icon.PASSWORD)
+        self._new_pwd_action.setIcon(Icon.KEY)
+        self._confirm_pwd_action.setIcon(Icon.KEY)
+        for eye, le in zip(self._eye_actions,
+                           [self._current_pwd, self._new_pwd, self._confirm_pwd]):
+            is_hidden = le.echoMode() == QLineEdit.EchoMode.Password
+            eye.setIcon(Icon.EYE_INVISIBLE if is_hidden else Icon.EYE)
 
     # ── Retranslate ───────────────────────────────────────────
 
@@ -712,7 +726,7 @@ class AccountTab(BaseTab):
             t("account.agent_status"),
             t("account.agent_last_login"),
             t("account.agent_base_url"),
-            "",
+            t("account.agent_actions"),
         ])
         # Re-populate to update status texts and action buttons
         if self._agents_data:
@@ -746,7 +760,7 @@ class AccountTab(BaseTab):
 
         email_val = data.get("email", "")
         self._email_edit.setText(email_val)
-        self._card_email.set_description(email_val or "—")
+        self._card_email.set_description(email_val or "")
 
         presence = data.get("presence", "online")
         if presence in self._presence_keys:
@@ -813,7 +827,7 @@ class AccountTab(BaseTab):
         msg = data.get("message", "")
         if ok and data.get("ok", False):
             self._show_msg(self._email_msg, t("account.email_saved"), error=False)
-            self._card_email.set_description(self._email_edit.text().strip() or "—")
+            self._card_email.set_description(self._email_edit.text().strip())
         else:
             self._show_msg(self._email_msg, msg or t("account.error_save"), error=True)
 
