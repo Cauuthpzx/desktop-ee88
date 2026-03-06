@@ -15,6 +15,7 @@ from core import theme
 from core.app_window import AppWindow
 from dialogs.login_window import LoginWindow
 from widgets.tooltip import install as install_tooltip
+from utils.auth import auth
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -29,6 +30,9 @@ def main():
     app = QApplication(sys.argv)
     theme.apply(app)
     install_tooltip(app)
+
+    # Tạo bảng users nếu chưa có
+    auth.init()
 
     icon_taskbar  = icon("icon-taskbar")   # Hex + M
     icon_titlebar = icon("icon-titlebar")  # Shield
