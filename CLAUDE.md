@@ -1,6 +1,7 @@
-# CLAUDE.md — MaxHub Desktop App (Online / PostgreSQL)
+# CLAUDE.md — MaxHub Desktop App (Online)
 
-App desktop PyQt6 kết nối PostgreSQL server. Có hệ thống đăng nhập/đăng ký, phân quyền user.
+App desktop PyQt6 ket noi API server (FastAPI + PostgreSQL).
+Desktop app KHONG truy cap DB truc tiep — moi thao tac qua HTTP API.
 
 ---
 
@@ -18,8 +19,11 @@ Thay the: `null_handler.py`, `console_utils.py`, `auxiliary.py`
 ```
 project/
 ├── main.py              # Entry point — login flow → AppWindow
-├── .env                 # PostgreSQL connection (gitignored)
-├── .env.example         # Template .env (khong chua password that)
+├── .env                 # API_URL + DB config (gitignored)
+├── .env.example         # Template .env
+├── server/              # FastAPI backend (ban local cua code tren VPS)
+│   ├── main.py          # FastAPI app: auth endpoints, JWT, PostgreSQL
+│   └── .env.example     # Server env template
 ├── icons/
 │   ├── app/             # icon-taskbar.*, icon-titlebar.*, icon-tray.*, login-bg.svg
 │   ├── layui/           # 184 SVG Layui (fill="currentColor")
@@ -36,8 +40,9 @@ project/
 │   └── ...              # Shared dialogs
 ├── widgets/             # Shared custom widgets
 └── utils/
-    ├── db.py            # PostgreSQL wrapper (psycopg v3, doc .env)
-    ├── auth.py          # AuthService: init(), login(), register() (bcrypt)
+    ├── api.py           # HTTP client goi API server (ApiClient singleton)
+    ├── db.py            # PostgreSQL wrapper (psycopg v3 — dung cho local dev/direct DB)
+    ├── auth.py          # AuthService: init(), login(), register() — goi qua api.py
     ├── settings.py      # QSettings wrapper
     ├── validators.py    # required, email, phone, min_length, validate_all
     ├── formatters.py    # currency, number, date_str, phone_fmt, truncate
@@ -53,13 +58,36 @@ Tab khong import tab khac. Circular import = fix ngay.
 
 ---
 
+## KIEN TRUC
+
+```
+Desktop App (PyQt6)  ──HTTP──>  API Server (FastAPI)  ──SQL──>  PostgreSQL
+   utils/api.py                  server/main.py                  VPS database
+   utils/auth.py                 JWT + bcrypt
+```
+
+- Desktop app chi goi HTTP endpoints qua `utils/api.py`
+- Server xu ly auth (bcrypt hash, JWT token), business logic
+- DB credentials chi nam tren server, KHONG trong desktop app
+- `server/` la ban local cua code deploy tren VPS — sua o day roi upload len VPS
+
+### VPS Info
+- IP: `42.96.20.12` | User: `root` | OS: Ubuntu 22.04
+- PostgreSQL 14 chay local tren VPS
+- FastAPI chay qua systemd: `maxhub-api.service`
+- API port: `8000` | DB port: `5432`
+- Project dir tren VPS: `/opt/maxhub-api/`
+- Deploy: upload `server/main.py` len VPS qua SFTP, restart service
+
+---
+
 ## APP FLOW
 
 ```
 main.py
   ├── SetCurrentProcessExplicitAppUserModelID (TRUOC QApplication)
   ├── QApplication + theme.apply(app) + install_tooltip(app)
-  ├── auth.init()  → tao bang users neu chua co
+  ├── auth.init()  → health check API server
   ├── LoginWindow.show()
   │     ├── Dang nhap thanh cong → login_success.emit(username)
   │     └── Dang ky → chuyen sang form register → thanh cong → quay lai login
@@ -77,59 +105,55 @@ main.py
 
 ---
 
-## DATABASE — PostgreSQL
+## API CLIENT — utils/api.py
 
-### Ket noi
-File `.env` (gitignored):
+Desktop app goi server qua HTTP. `.env`:
 ```
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=maxhub
-DB_USER=postgres
-DB_PASSWORD=your_password
+API_URL=http://42.96.20.12:8000
 ```
 
 ### Su dung
 ```python
-from utils.db import Database
+from utils.api import api
 
-# Context manager (tu dong close)
-with Database() as db:
-    rows = db.fetchall("SELECT * FROM users WHERE role = %s", ("admin",))
-    row  = db.fetchone("SELECT * FROM users WHERE id = %s", (1,))
-    db.execute("INSERT INTO users (name) VALUES (%s)", ("Alice",))
+# Auth (KHONG can token)
+ok, msg = api.register("admin", "123456")
+ok, msg = api.login("admin", "123456")   # luu token tu dong
+api.logout()
 
-# INSERT ... RETURNING
-new_row = db.execute_returning(
-    "INSERT INTO users (name) VALUES (%s) RETURNING *", ("Bob",)
-)
+# Goi API (tu dong gui Bearer token)
+ok, data = api.get("/api/users")
+ok, data = api.post("/api/users", {"name": "Alice"})
+ok, data = api.put("/api/users/1", {"name": "Bob"})
+ok, data = api.delete("/api/users/1")
 
-# Transaction
-db.begin()
-try:
-    db.execute("UPDATE accounts SET balance = balance - %s WHERE id = %s", (100, 1))
-    db.execute("UPDATE accounts SET balance = balance + %s WHERE id = %s", (100, 2))
-    db.commit()
-except Exception:
-    db.rollback()
-    raise
+# Properties
+api.is_logged_in   # bool
+api.username        # str | None
+api.role            # str | None
+api.token           # str | None
 ```
 
-### Quy tac SQL
-- Placeholder: `%s` (KHONG dung `?` nhu SQLite)
-- Ket qua tra ve `dict` (dict_row factory)
-- Autocommit = True mac dinh
-- Moi operation tao `Database()` moi hoac dung context manager — KHONG giu connection lau
-- Schema tao bang: dung `BIGSERIAL`, `VARCHAR`, `TIMESTAMPTZ`, `DEFAULT NOW()`
-
-### Auth service
+### Auth service (wrapper)
 ```python
 from utils.auth import auth
 
-auth.init()                                    # tao bang users (goi 1 lan)
-ok, msg = auth.register("admin", "123456")     # bcrypt hash
-ok, msg = auth.login("admin", "123456")        # verify bcrypt
+auth.init()                                    # health check server
+ok, msg = auth.register("admin", "123456")     # POST /api/register
+ok, msg = auth.login("admin", "123456")        # POST /api/login → luu JWT
+auth.is_logged_in                              # bool
+auth.username                                  # str | None
+auth.role                                      # str | None
 ```
+
+### Database (direct access — chi dung cho local dev)
+```python
+from utils.db import Database
+
+with Database() as db:
+    rows = db.fetchall("SELECT * FROM users WHERE role = %s", ("admin",))
+```
+Placeholder: `%s`. Ket qua: `dict`. Autocommit = True.
 
 Bang `users`:
 ```sql
@@ -265,8 +289,9 @@ Moi entry: `{icon, text, tab}`. `None` = separator. Thu tu = thu tu hien thi.
 ### utils/
 | File | Import | Dung khi |
 |------|--------|----------|
-| `db.py` | `Database` | Ket noi va truy van PostgreSQL |
-| `auth.py` | `auth` | Dang nhap, dang ky, phan quyen (bcrypt) |
+| `api.py` | `api` | HTTP client goi API server (singleton) |
+| `db.py` | `Database` | PostgreSQL direct (chi local dev) |
+| `auth.py` | `auth` | Dang nhap, dang ky — goi qua api.py |
 | `validators.py` | `required, email, phone, min_length, positive, validate_all` | Validate form truoc khi luu |
 | `formatters.py` | `currency, number, date_str, phone_fmt, truncate, yesno` | Format de hien thi |
 | `table_helper.py` | `setup_table, load_table, get_selected_id, set_column_width` | Thao tac QTableWidget |
@@ -369,32 +394,27 @@ worker.start()
 
 ## NETWORK & CONNECTION HANDLING
 
-App ket noi PostgreSQL qua mang — can xu ly mat ket noi:
+App goi API server qua HTTP — can xu ly mat ket noi:
 
 ```python
-# Pattern: retry voi backoff
+from utils.api import api
 from utils.thread_worker import run_in_thread
 
-def _load_with_retry(self):
-    def task():
-        import time
-        for attempt in range(3):
-            try:
-                with Database() as db:
-                    return db.fetchall("SELECT * FROM data")
-            except Exception:
-                if attempt == 2:
-                    raise
-                time.sleep(1 * (attempt + 1))  # 1s, 2s
-        return []
-
+def _load_data(self):
     run_in_thread(
-        task,
+        lambda: api.get("/api/data"),
         on_result=self._on_data,
         on_error=lambda e: error(self.window(), "Khong the ket noi may chu."),
         on_finished=self._loading.stop,
     )
     self._loading.start("Dang tai...")
+
+def _on_data(self, result):
+    ok, data = result
+    if ok:
+        self.crud.load(data, keys=["id", "ten"])
+    else:
+        error(self.window(), data.get("message", "Loi."))
 ```
 
 **Xu ly loi mang:**
@@ -631,11 +651,48 @@ for row_idx, row in enumerate(data_rows):
 
 ---
 
+## SERVER — FastAPI (server/main.py)
+
+Ban local cua code chay tren VPS. Khi sua:
+1. Sua `server/main.py` tai local
+2. Upload len VPS qua SFTP hoac SSH
+3. `systemctl restart maxhub-api` tren VPS
+
+### API Endpoints hien co
+| Method | Path | Auth | Mo ta |
+|--------|------|------|-------|
+| POST | `/api/register` | No | Dang ky (username, password) |
+| POST | `/api/login` | No | Dang nhap → JWT token |
+| GET | `/api/me` | Yes | Kiem tra token, tra ve user info |
+| GET | `/api/health` | No | Health check |
+
+### Them endpoint moi
+```python
+# Trong server/main.py
+
+@app.get("/api/data")
+def get_data(user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor()
+    cur.execute("SELECT * FROM data WHERE deleted_at IS NULL")
+    return {"ok": True, "items": cur.fetchall()}
+```
+
+Sau khi them: upload file + restart service tren VPS.
+
+### Deploy commands (chay tren VPS qua SSH)
+```bash
+systemctl restart maxhub-api    # restart server
+systemctl status maxhub-api     # check status
+journalctl -u maxhub-api -n 50  # xem logs
+```
+
+---
+
 ## COMMON MISTAKES
 
 | Sai | Dung |
 |-----|------|
-| DB query trong main thread | `run_in_thread()` — **BAT BUOC voi app online** |
+| API call trong main thread | `run_in_thread()` — **BAT BUOC voi app online** |
 | Update UI tu worker thread | Emit signal, de main thread xu ly |
 | `except: pass` | Log + `error(self.window(), ...)` |
 | Tu viet toolbar + table tu dau | Dung `TableCrud` |
@@ -654,6 +711,9 @@ for row_idx, row in enumerate(data_rows):
 | Dung `?` placeholder trong SQL | PostgreSQL dung `%s` |
 | Giu Database connection lau | Tao moi + context manager cho moi operation |
 | LIKE khong phan biet hoa thuong | PostgreSQL dung `ILIKE` thay `LIKE` |
+| Desktop app goi DB truc tiep | Goi qua `utils/api.py` → server |
+| Sua server code nhung khong upload | Upload `server/main.py` len VPS + restart |
+| Hardcode API_URL trong code | Doc tu `.env` qua `utils/api.py` |
 
 ---
 

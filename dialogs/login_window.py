@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
-    QLineEdit, QCheckBox, QPushButton, QLabel,
+    QLineEdit, QCheckBox, QPushButton, QLabel, QProgressBar,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
@@ -280,6 +280,14 @@ class LoginWindow(QWidget):
         self._stack.addWidget(self._register_form)
         root.addWidget(self._stack)
 
+        # Loading bar — indeterminate, ẩn mặc định
+        self._progress = QProgressBar()
+        self._progress.setRange(0, 0)
+        self._progress.setTextVisible(False)
+        self._progress.setFixedHeight(3)
+        self._progress.hide()
+        root.addWidget(self._progress)
+
         # Signals
         self._login_form.switch_to_register.connect(
             lambda: self._stack.setCurrentWidget(self._register_form)
@@ -342,3 +350,4 @@ class LoginWindow(QWidget):
 
     def _set_busy(self, busy: bool) -> None:
         self._stack.setEnabled(not busy)
+        self._progress.setVisible(busy)
