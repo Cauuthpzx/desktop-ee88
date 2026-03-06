@@ -33,12 +33,17 @@ project/
 │   ├── theme.py         # FONT_*, SPACING_*, MARGIN_*, sizing constants
 │   ├── base_widgets.py  # BaseTab, BaseDialog, vbox(), hbox(), form_layout(), group(), divider()
 │   ├── app_window.py    # AppWindow(QMainWindow): toolbar + sidebar + stacked tabs
-│   └── icon.py          # GalleryIcon enum registry
+│   ├── icon.py          # GalleryIcon enum registry
+│   └── i18n.py          # t(), set_language(), get_language() — i18n module
 ├── tabs/                # Moi tab 1 file, ke thua BaseTab
 ├── dialogs/
 │   ├── login_window.py  # LoginWindow: dang nhap / dang ky (hien truoc AppWindow)
 │   └── ...              # Shared dialogs
 ├── widgets/             # Shared custom widgets
+├── i18n/                # Translation files (JSON)
+│   ├── vi.json          # Tieng Viet (default)
+│   ├── en.json          # English
+│   └── zh.json          # 中文
 └── utils/
     ├── api.py           # HTTP client goi API server (ApiClient singleton)
     ├── db.py            # PostgreSQL wrapper (psycopg v3 — dung cho local dev/direct DB)
@@ -259,6 +264,101 @@ grp, g = group("Tieu de", "vbox")  # (QGroupBox, layout)
 
 ---
 
+## I18N — DA NGON NGU (BAT BUOC)
+
+App ho tro 3 ngon ngu: **Tieng Viet (vi)**, **English (en)**, **中文 (zh)**.
+Default: `vi`. Nguoi dung chuyen ngon ngu trong Settings.
+
+### Quy tac #1: KHONG hardcode text UI
+
+```python
+# SAI — hardcode tieng Viet
+label("Trang chu")
+btn = QPushButton("Dang nhap")
+self._error_lbl.setText("Khong the ket noi may chu.")
+
+# DUNG — dung t() tu core/i18n.py
+from core.i18n import t
+
+label(t("home.title"))
+btn = QPushButton(t("login.btn_login"))
+self._error_lbl.setText(t("login.error_connect"))
+```
+
+### Su dung
+
+```python
+from core.i18n import t, set_language, get_language, get_languages, init
+
+# Khoi tao (trong main.py, sau theme.apply):
+init()
+
+# Lay text theo key:
+t("login.title")                         # "Dang nhap" | "Login" | "登录"
+t("dialog.confirm_delete_msg", name="Alice")  # "Ban co chac muon xoa Alice?"
+t("validator.min_length", field="Mat khau", min=6)  # voi parameters
+
+# Chuyen ngon ngu:
+set_language("en")   # luu vao QSettings tu dong
+
+# Lay ngon ngu hien tai:
+lang = get_language()  # "vi" | "en" | "zh"
+
+# Lay danh sach ngon ngu:
+langs = get_languages()  # {"vi": "Tieng Viet", "en": "English", "zh": "中文"}
+```
+
+### Cau truc key
+
+Key dung dot notation, phan cap theo chuc nang:
+```
+login.title          → "Dang nhap"
+login.btn_login      → "Dang nhap"
+register.success     → "Dang ky thanh cong! Hay dang nhap."
+crud.add             → "Them"
+dialog.confirm       → "Xac nhan"
+validator.required   → "{field} khong duoc de trong."
+update.downloading   → "Dang tai ban cap nhat..."
+home.title           → "Trang chu"
+```
+
+### Them key moi
+
+1. Them key vao **CA 3 file** `i18n/vi.json`, `i18n/en.json`, `i18n/zh.json`
+2. Dung `t("section.key")` trong code
+3. Key co parameter: `t("key", param1="value1")`
+
+File JSON: nested object, key = dot notation path:
+```json
+{
+    "login": {
+        "title": "Dang nhap",
+        "btn_login": "Dang nhap"
+    }
+}
+```
+
+### Key da co san
+
+| Nhom | Key prefix | Vi du |
+|------|------------|-------|
+| App chung | `app.*` | `app.title`, `app.tray_tooltip` |
+| Menu tray | `menu.*` | `menu.show`, `menu.hide`, `menu.exit` |
+| Toolbar | `toolbar.*` | `toolbar.tip_new`, `toolbar.tip_save` |
+| Sidebar | `sidebar.*` | `sidebar.home`, `sidebar.example` |
+| Dang nhap | `login.*` | `login.title`, `login.username`, `login.btn_login` |
+| Dang ky | `register.*` | `register.title`, `register.success` |
+| CRUD | `crud.*` | `crud.add`, `crud.edit`, `crud.delete`, `crud.search` |
+| Empty state | `empty.*` | `empty.title`, `empty.add_hint` |
+| Loading | `loading.*` | `loading.processing`, `loading.loading_data` |
+| Dialog | `dialog.*` | `dialog.confirm`, `dialog.error`, `dialog.success` |
+| Validator | `validator.*` | `validator.required`, `validator.email` |
+| Cap nhat | `update.*` | `update.title`, `update.downloading` |
+| Trang chu | `home.*` | `home.title`, `home.stats`, `home.users` |
+| Vi du | `example.*` | `example.title`, `example.dialog_title` |
+
+---
+
 ## SHARED COMPONENTS
 
 ### dialogs/
@@ -336,6 +436,15 @@ Moi entry: `{icon, text, tab}`. `None` = separator. Thu tu = thu tu hien thi.
 | `settings.py` | `settings` | Luu/doc cau hinh app (QSettings) |
 | `thread_worker.py` | `Worker, run_in_thread` | Chay task nang khong do UI |
 | `updater.py` | `APP_VERSION, check_update, download_update, apply_update` | Auto update app |
+
+### core/i18n.py
+| Import | Dung khi |
+|--------|----------|
+| `t` | Lay text da dich theo key: `t("login.title")` |
+| `set_language` | Chuyen ngon ngu: `set_language("en")` |
+| `get_language` | Lay ngon ngu hien tai |
+| `get_languages` | Lay dict {code: display_name} |
+| `init` | Khoi tao i18n (goi trong main.py) |
 
 ---
 
@@ -753,6 +862,8 @@ journalctl -u maxhub-api -n 50  # xem logs
 | Desktop app goi DB truc tiep | Goi qua `utils/api.py` → server |
 | Sua server code nhung khong upload | Upload `server/main.py` len VPS + restart |
 | Hardcode API_URL trong code | Doc tu `.env` qua `utils/api.py` |
+| Hardcode text UI tieng Viet | Dung `t("key")` tu `core/i18n.py` |
+| Them key chi 1 file JSON | Them key vao **CA 3 file** vi/en/zh |
 
 ---
 
@@ -768,6 +879,8 @@ journalctl -u maxhub-api -n 50  # xem logs
 [ ] Xu ly loi mang: on_error hien message than thien
 [ ] Khong import tab/feature khac
 [ ] Dang ky tab trong MENU list o core/app_window.py
+[ ] Moi text UI dung t("key") tu core/i18n.py — KHONG hardcode
+[ ] Them key moi vao CA 3 file i18n/vi.json, en.json, zh.json
 [ ] Test: UI khong do khi load data lon / mat mang
 [ ] Test: app dong sach, khong co hanging thread/connection
 ```

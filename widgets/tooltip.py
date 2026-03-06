@@ -23,32 +23,22 @@ Usage:
 """
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QWidget, QApplication, QGraphicsDropShadowEffect
-from PyQt6.QtCore import (
-    Qt, QTimer, QPoint, QPointF, QRect, QPropertyAnimation,
-    QEasingCurve, QSize, QObject, QEvent,
-)
+from PyQt6.QtWidgets import QWidget, QApplication
+from PyQt6.QtCore import Qt, QPoint, QPointF, QRect, QObject, QEvent
 from PyQt6.QtGui import (
     QPainter, QColor, QPen, QPolygonF, QFontMetrics, QPainterPath,
-    QGuiApplication, QCursor,
+    QGuiApplication,
 )
 
 from core import theme
 
 # ── Style constants (layui-vue inspired) ──────────────────────────────────────
-_BG_COLOR      = QColor("#FFFFFF")
-_TEXT_COLOR     = QColor("#3a3a3a")
-_BORDER_COLOR  = QColor("#cecece")
 _BORDER_RADIUS = 6
 _PADDING_H     = 12        # horizontal padding
 _PADDING_V     = 8         # vertical padding
 _ARROW_SIZE    = 8          # kích thước arrow (half-diagonal of rotated square)
-_SHADOW_BLUR   = 12
-_SHADOW_COLOR  = QColor(0, 0, 0, 38)  # rgba(0,0,0,0.15)
-_SHADOW_OFFSET = 2
-_FADE_MS       = 150
-_SHOW_DELAY    = 500        # ms chờ trước khi hiện (giống QToolTip default)
-_HIDE_DELAY    = 100        # ms chờ trước khi ẩn
+_SHADOW_BLUR   = 6          # margin around body for painted shadow
+_SHADOW_COLOR  = QColor(0, 0, 0, 30)  # subtle shadow base color
 _MARGIN        = 4          # khoảng cách giữa arrow và target widget
 
 
@@ -73,28 +63,8 @@ class Tooltip(QWidget):
         self._arrow_x = 0          # arrow center X relative to widget
         self._arrow_y = 0          # arrow center Y relative to widget
 
-        # Fade animation
-        self._fade_anim = QPropertyAnimation(self, b"windowOpacity")
-        self._fade_anim.setDuration(_FADE_MS)
-        self._fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-
-        # Shadow
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(_SHADOW_BLUR)
-        shadow.setColor(_SHADOW_COLOR)
-        shadow.setOffset(0, _SHADOW_OFFSET)
-        self.setGraphicsEffect(shadow)
-
-        # Timers
-        self._show_timer = QTimer(self)
-        self._show_timer.setSingleShot(True)
-        self._show_timer.timeout.connect(self._do_show)
-
-        self._hide_timer = QTimer(self)
-        self._hide_timer.setSingleShot(True)
-        self._hide_timer.timeout.connect(self._do_hide)
-
         self._target: QWidget | None = None
+        self._target_rect_override: QRect | None = None
 
     @classmethod
     def instance(cls) -> Tooltip:
@@ -112,46 +82,36 @@ class Tooltip(QWidget):
         tip._text = text
         tip._position = position
         tip._target = target
-        tip._hide_timer.stop()
-        tip._show_timer.start(_SHOW_DELAY)
+        tip._target_rect_override = None
+        tip._show()
+
+    @classmethod
+    def show_at_rect(cls, owner: QWidget, rect_global: QRect, text: str,
+                     position: str = "right") -> None:
+        """Hiện tooltip tại vùng rect (global coords) — dùng cho custom-painted widgets."""
+        tip = cls.instance()
+        tip._text = text
+        tip._position = position
+        tip._target = owner
+        tip._target_rect_override = rect_global
+        tip._show()
 
     @classmethod
     def hide(cls) -> None:
         tip = cls.instance()
-        tip._show_timer.stop()
-        if tip.isVisible():
-            tip._hide_timer.start(_HIDE_DELAY)
-
-    @classmethod
-    def hide_immediate(cls) -> None:
-        tip = cls.instance()
-        tip._show_timer.stop()
-        tip._hide_timer.stop()
         tip.setVisible(False)
+
+    # Alias for backward compatibility
+    hide_immediate = hide
 
     # ── Internal ──────────────────────────────────────────────────────────────
 
-    def _do_show(self) -> None:
+    def _show(self) -> None:
         if not self._target or not self._text:
             return
         self._calculate_geometry()
-        self.setWindowOpacity(0.0)
+        self.setWindowOpacity(1.0)
         self.show()
-        self._fade_anim.stop()
-        self._fade_anim.setStartValue(0.0)
-        self._fade_anim.setEndValue(1.0)
-        self._fade_anim.start()
-
-    def _do_hide(self) -> None:
-        self._fade_anim.stop()
-        self._fade_anim.setStartValue(self.windowOpacity())
-        self._fade_anim.setEndValue(0.0)
-        self._fade_anim.finished.connect(self._on_fade_out_done)
-        self._fade_anim.start()
-
-    def _on_fade_out_done(self) -> None:
-        self._fade_anim.finished.disconnect(self._on_fade_out_done)
-        self.setVisible(False)
 
     def _calculate_geometry(self) -> None:
         """Tính vị trí tooltip + arrow dựa trên target widget."""
@@ -167,10 +127,13 @@ class Tooltip(QWidget):
         total_h = text_h + shadow_m * 2 + _ARROW_SIZE
 
         # Target rect in global coordinates
-        target_rect = QRect(
-            self._target.mapToGlobal(QPoint(0, 0)),
-            self._target.size(),
-        )
+        if self._target_rect_override is not None:
+            target_rect = self._target_rect_override
+        else:
+            target_rect = QRect(
+                self._target.mapToGlobal(QPoint(0, 0)),
+                self._target.size(),
+            )
         tc_x = target_rect.center().x()  # target center X
         tc_y = target_rect.center().y()  # target center Y
 
@@ -240,14 +203,32 @@ class Tooltip(QWidget):
         else:
             body = QRect(sm, sm, text_w, text_h)
 
+        # ── Colors from palette (dark/light aware) ─────────────────────
+        pal = QGuiApplication.palette()
+        bg_color = pal.color(pal.ColorRole.ToolTipBase)
+        text_color = pal.color(pal.ColorRole.ToolTipText)
+        border_color = pal.color(pal.ColorRole.Mid)
+
+        # ── Painted shadow (multiple expanding rects with decreasing alpha) ──
+        p.setPen(Qt.PenStyle.NoPen)
+        for i in range(1, sm + 1):
+            sc = QColor(_SHADOW_COLOR)
+            sc.setAlpha(max(1, _SHADOW_COLOR.alpha() * (sm - i + 1) // (sm + 1)))
+            p.setBrush(sc)
+            p.drawRoundedRect(
+                body.x() - i, body.y() - i,
+                body.width() + i * 2, body.height() + i * 2,
+                _BORDER_RADIUS + i, _BORDER_RADIUS + i,
+            )
+
         # ── Draw body (rounded rect with border) ────────────────────────
         path = QPainterPath()
         path.addRoundedRect(
             body.x(), body.y(), body.width(), body.height(),
             _BORDER_RADIUS, _BORDER_RADIUS,
         )
-        p.setPen(QPen(_BORDER_COLOR, 1))
-        p.setBrush(_BG_COLOR)
+        p.setPen(QPen(border_color, 1))
+        p.setBrush(bg_color)
         p.drawPath(path)
 
         # ── Draw arrow ───────────────────────────────────────────────────
@@ -284,27 +265,17 @@ class Tooltip(QWidget):
         if not arrow.isEmpty():
             # Fill arrow (cover border at junction)
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(_BG_COLOR)
+            p.setBrush(bg_color)
             p.drawPolygon(arrow)
 
-            # Draw arrow border (only outer edges)
-            p.setPen(QPen(_BORDER_COLOR, 1))
+            # Draw arrow border (outer two edges only)
+            p.setPen(QPen(border_color, 1))
             p.setBrush(Qt.BrushStyle.NoBrush)
-            if pos == "top":
-                p.drawLine(arrow[0], arrow[1])
-                p.drawLine(arrow[1], arrow[2])
-            elif pos == "bottom":
-                p.drawLine(arrow[0], arrow[1])
-                p.drawLine(arrow[1], arrow[2])
-            elif pos == "left":
-                p.drawLine(arrow[0], arrow[1])
-                p.drawLine(arrow[1], arrow[2])
-            elif pos == "right":
-                p.drawLine(arrow[0], arrow[1])
-                p.drawLine(arrow[1], arrow[2])
+            p.drawLine(arrow[0], arrow[1])
+            p.drawLine(arrow[1], arrow[2])
 
         # ── Draw text ────────────────────────────────────────────────────
-        p.setPen(_TEXT_COLOR)
+        p.setPen(text_color)
         p.setFont(theme.font())
         text_rect = body.adjusted(_PADDING_H, _PADDING_V, -_PADDING_H, -_PADDING_V)
         p.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self._text)

@@ -1,0 +1,163 @@
+{
+    "app": {
+        "title": "MaxHUB - Connect Everything",
+        "tray_tooltip": "MaxHUB"
+    },
+    "menu": {
+        "show": "Show",
+        "hide": "Hide",
+        "exit": "Exit"
+    },
+    "toolbar": {
+        "new": "New",
+        "open": "Open",
+        "save": "Save",
+        "undo": "Undo",
+        "redo": "Redo",
+        "tip_new": "New (Ctrl+N)",
+        "tip_open": "Open file (Ctrl+O)",
+        "tip_save": "Save file (Ctrl+S)",
+        "tip_undo": "Undo (Ctrl+Z)",
+        "tip_redo": "Redo (Ctrl+Y)"
+    },
+    "sidebar": {
+        "home": "Home",
+        "example": "Example",
+        "account": "Account",
+        "settings": "Settings"
+    },
+    "login": {
+        "title": "Login",
+        "username": "Username",
+        "password": "Password",
+        "remember": "Remember me",
+        "btn_login": "Login",
+        "btn_cancel": "Cancel",
+        "no_account": "Don't have an account?",
+        "link_register": "Register",
+        "error_connect": "Cannot connect to server."
+    },
+    "register": {
+        "title": "Register",
+        "username": "Username",
+        "password": "Password",
+        "confirm_password": "Confirm password",
+        "btn_register": "Register",
+        "btn_cancel": "Cancel",
+        "has_account": "Already have an account?",
+        "link_login": "Login",
+        "success": "Registration successful! Please login.",
+        "password_mismatch": "Passwords do not match."
+    },
+    "crud": {
+        "add": "Add",
+        "edit": "Edit",
+        "delete": "Delete",
+        "search": "Search..."
+    },
+    "empty": {
+        "title": "No data",
+        "add_hint": "Click 'Add' to create a new record."
+    },
+    "loading": {
+        "processing": "Processing...",
+        "loading_data": "Loading data...",
+        "loading": "Loading..."
+    },
+    "dialog": {
+        "confirm": "Confirm",
+        "confirm_delete": "Confirm delete",
+        "confirm_delete_msg": "Are you sure you want to delete {name}?",
+        "alert": "Notice",
+        "warning": "Warning",
+        "error": "Error",
+        "success": "Success",
+        "input": "Input",
+        "input_number": "Enter number",
+        "input_float": "Enter decimal",
+        "choose": "Choose",
+        "about_title": "About {app_name}",
+        "version": "Version {version}"
+    },
+    "validator": {
+        "required": "{field} is required.",
+        "min_length": "{field} must be at least {min} characters.",
+        "max_length": "{field} must not exceed {max} characters.",
+        "email": "{field} is not a valid email.",
+        "phone": "{field} is not a valid phone number (10 digits, starting with 0).",
+        "positive": "{field} must be greater than 0.",
+        "non_negative": "{field} must not be negative.",
+        "in_range": "{field} must be between {min} and {max}.",
+        "numeric": "{field} must be a number."
+    },
+    "update": {
+        "title": "Software Update",
+        "new_version": "New version {version} is available!\n(Current: {current})\n\nDo you want to update now?",
+        "downloading": "Downloading update...",
+        "cancel": "Cancel",
+        "download_title": "Update",
+        "download_success": "Update downloaded successfully!\nThe application will restart to complete.",
+        "download_error_title": "Update Error",
+        "download_error": "Cannot download update.\nPlease try again later."
+    },
+    "home": {
+        "title": "Home",
+        "stats": "Statistics",
+        "users": "Users",
+        "orders": "Orders",
+        "revenue": "Revenue",
+        "notifications": "Recent Notifications"
+    },
+    "example": {
+        "title": "User Management",
+        "dialog_title": "Add / Edit User",
+        "name": "Name:",
+        "age": "Age:",
+        "role": "Role:"
+    },
+    "account": {
+        "title": "Account",
+        "profile_info": "Account Information",
+        "username": "Username:",
+        "role": "Role:",
+        "created_at": "Created:",
+        "last_login": "Last login:",
+        "status_section": "Status & Thoughts",
+        "presence": "Status:",
+        "presence_online": "🟢 Online",
+        "presence_busy": "🔴 Busy",
+        "presence_away": "🟡 Away",
+        "presence_dnd": "⛔ Do Not Disturb",
+        "presence_invisible": "⚫ Invisible",
+        "bio_label": "What's on your mind?",
+        "bio_placeholder": "Share your thoughts...",
+        "btn_save_bio": "Update",
+        "status_saved": "Status updated.",
+        "update_email": "Email",
+        "email_placeholder": "Enter your email",
+        "email_label": "Email",
+        "btn_save": "Save",
+        "email_saved": "Email saved successfully.",
+        "error_save": "Cannot save. Please try again.",
+        "error_load": "Cannot load account information.",
+        "change_password": "Change Password",
+        "current_password": "Current password",
+        "new_password": "New password",
+        "confirm_password": "Confirm new password",
+        "btn_change_password": "Change Password",
+        "password_mismatch": "Passwords do not match.",
+        "password_changed": "Password changed successfully! Please login again.",
+        "error_change_pwd": "Cannot change password.",
+        "btn_logout": "Logout",
+        "confirm_logout": "Are you sure you want to logout?"
+    },
+    "settings": {
+        "title": "Settings",
+        "general": "General",
+        "language": "Language:",
+        "language_restart": "Language changes will apply immediately.",
+        "theme": "Theme:",
+        "dark_mode": "Dark mode",
+        "theme_toggle": "Toggle light/dark theme"
+    }
+}

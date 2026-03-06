@@ -4,36 +4,46 @@ home_tab.py — Tab trang chủ mẫu
 from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtCore import Qt
 from core.base_widgets import BaseTab, group, section_label, label, divider
+from core.i18n import t
 from widgets.stat_card import StatCard
 
 
 class HomeTab(BaseTab):
     def _build(self, layout: QVBoxLayout):
-        # Tiêu đề
-        title = section_label("Trang chủ")
-        title.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        layout.addWidget(title)
+        self._title_lbl = section_label(t("home.title"))
+        self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self._title_lbl)
         layout.addWidget(divider())
 
-        # Stat cards
-        grp, g = group("Thống kê", layout_type="hbox")
-        for title_text, value in [
-            ("Người dùng", "128"),
-            ("Đơn hàng",   "54"),
-            ("Doanh thu",  "9.200"),
+        # Stat cards — store references for retranslate
+        self._grp_stats, g = group(t("home.stats"), layout_type="hbox")
+        self._stat_cards: list[tuple[StatCard, str]] = []  # (card, i18n_key)
+        for key, value in [
+            ("home.users",   "128"),
+            ("home.orders",  "54"),
+            ("home.revenue", "9.200"),
         ]:
-            g.addWidget(StatCard(title_text, value))
+            card = StatCard(t(key), value)
+            self._stat_cards.append((card, key))
+            g.addWidget(card)
         g.addStretch()
-        layout.addWidget(grp)
+        layout.addWidget(self._grp_stats)
 
         # Thông báo
-        grp2, g2 = group("Thông báo gần đây")
+        self._grp_notif, g2 = group(t("home.notifications"))
         for msg in [
             "Người dùng Alice vừa đăng nhập",
             "Đơn hàng #1042 đã được xác nhận",
             "Báo cáo tháng 3 đã sẵn sàng",
         ]:
             g2.addWidget(label(f"• {msg}"))
-        layout.addWidget(grp2)
+        layout.addWidget(self._grp_notif)
 
         layout.addStretch()
+
+    def retranslate(self) -> None:
+        self._title_lbl.setText(t("home.title"))
+        self._grp_stats.setTitle(t("home.stats"))
+        self._grp_notif.setTitle(t("home.notifications"))
+        for card, key in self._stat_cards:
+            card.set_title(t(key))

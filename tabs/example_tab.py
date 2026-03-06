@@ -7,10 +7,12 @@ Pattern:
   - Dùng confirm_delete() thay vì QMessageBox trực tiếp
   - Dùng validate_all() thay vì if/else tự viết
   - Dùng BaseDialog cho form
+  - Dùng t() cho mọi text UI
 """
 from PyQt6.QtWidgets import QLineEdit, QSpinBox, QComboBox, QDialog
 from core.base_widgets import BaseTab, BaseDialog, label, divider
 from core import theme
+from core.i18n import t
 from widgets.table_crud import TableCrud
 from dialogs.confirm_dialog import confirm_delete, warn
 from utils.validators import validate_all, required, positive
@@ -26,19 +28,19 @@ ROLES   = ["Admin", "User", "Guest"]
 
 class PersonDialog(BaseDialog):
     def __init__(self, parent=None, data: dict | None = None):
-        super().__init__(parent, title="Thêm / Sửa người dùng",
+        super().__init__(parent, title=t("example.dialog_title"),
                          min_width=360, data=data)
 
     def _build_form(self, form):
         self.name_edit  = QLineEdit()
-        self.name_edit.setPlaceholderText("Nhập họ tên...")
+        self.name_edit.setPlaceholderText("...")
         self.age_spin   = QSpinBox()
         self.age_spin.setRange(1, 120)
         self.role_combo = QComboBox()
         self.role_combo.addItems(ROLES)
-        form.addRow("Tên:",     self.name_edit)
-        form.addRow("Tuổi:",    self.age_spin)
-        form.addRow("Vai trò:", self.role_combo)
+        form.addRow(t("example.name"),     self.name_edit)
+        form.addRow(t("example.age"),    self.age_spin)
+        form.addRow(t("example.role"), self.role_combo)
 
     def _fill(self, data: dict):
         self.name_edit.setText(data.get("name", ""))
@@ -59,8 +61,8 @@ class PersonDialog(BaseDialog):
 
 class ExampleTab(BaseTab):
     def _build(self, layout):
-        layout.addWidget(label("Quản lý người dùng", bold=True,
-                               size=theme.FONT_SIZE_LG))
+        self._title_lbl = label(t("example.title"), bold=True, size=theme.FONT_SIZE_LG)
+        layout.addWidget(self._title_lbl)
         layout.addWidget(divider())
 
         # TableCrud tích hợp sẵn: Toolbar + Search + Table + EmptyState
@@ -103,8 +105,8 @@ class ExampleTab(BaseTab):
             return
         data = dlg.get_data()
         errors = validate_all([
-            required("Tên", data["name"]),
-            positive("Tuổi", data["age"]),
+            required(t("example.name"), data["name"]),
+            positive(t("example.age"), data["age"]),
         ])
         if errors:
             warn(self.window(), "\n".join(errors))
@@ -124,7 +126,7 @@ class ExampleTab(BaseTab):
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         data = dlg.get_data()
-        errors = validate_all([required("Tên", data["name"])])
+        errors = validate_all([required(t("example.name"), data["name"])])
         if errors:
             warn(self.window(), "\n".join(errors))
             return
@@ -142,3 +144,6 @@ class ExampleTab(BaseTab):
 
     def _on_search(self, text: str):
         self._reload(filter_text=text)
+
+    def retranslate(self) -> None:
+        self._title_lbl.setText(t("example.title"))

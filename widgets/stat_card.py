@@ -36,10 +36,15 @@ class StatCard(QFrame):
         lbl_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl_value.setFont(theme.font(size=theme.FONT_SIZE_XL, bold=True))
 
+        self._lbl_title = lbl_title
+        self._lbl_value = lbl_value
         lay.addWidget(lbl_title)
         lay.addWidget(lbl_value)
 
-    def update_value(self, value: str, suffix: str = ""):
+    def set_title(self, title: str) -> None:
+        """Cập nhật tiêu đề thẻ."""
+        self._lbl_title.setText(title)
+
+    def update_value(self, value: str, suffix: str = "") -> None:
         """Cập nhật giá trị hiển thị."""
-        lbl = self.findChildren(QLabel)[1]
-        lbl.setText(f"{value}{suffix}")
+        self._lbl_value.setText(f"{value}{suffix}")

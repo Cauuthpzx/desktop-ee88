@@ -3,8 +3,8 @@ theme.py — Cấu hình giao diện toàn bộ ứng dụng
 Import và gọi apply(app) trong main.py
 """
 from PyQt6.QtWidgets import QApplication, QWidget, QLayout
-from PyQt6.QtGui import QFont, QPalette, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
+from PyQt6.QtCore import Qt, QObject, pyqtSignal
 
 
 # ── Typography ────────────────────────────────────────────
@@ -38,16 +38,131 @@ HEADER_HEIGHT           = 48
 WINDOW_MIN_W  = 960
 WINDOW_MIN_H  = 640
 
+# ── Theme state ───────────────────────────────────────────
+_is_dark = False
+
+
+class _ThemeSignals(QObject):
+    """Global signal emitter for theme changes."""
+    changed = pyqtSignal(bool)  # True = dark, False = light
+
+
+theme_signals = _ThemeSignals()
+
 
 def apply(app: QApplication) -> None:
     """Gọi trong main() trước khi show window."""
+    from utils.settings import settings
+    global _is_dark
     app.setStyle("Fusion")
     app.setFont(QFont(FONT_FAMILY, FONT_SIZE))
 
-    # Nền trắng toàn app — Window = Base = trắng
-    pal = app.palette()
+    _is_dark = settings.get_bool("app/dark_theme", False)
+    if _is_dark:
+        _apply_dark_palette(app)
+    else:
+        _apply_light_palette(app)
+
+
+def _apply_light_palette(app: QApplication) -> None:
+    """Reset về palette mặc định Fusion, rồi set Window = Base = trắng."""
+    # Lấy palette gốc từ style Fusion (không phải palette hiện tại của app)
+    style = app.style()
+    pal = style.standardPalette()
     pal.setColor(QPalette.ColorRole.Window, pal.color(QPalette.ColorRole.Base))
     app.setPalette(pal)
+
+
+def _apply_dark_palette(app: QApplication) -> None:
+    """Dark palette cho Fusion style."""
+    pal = QPalette()
+    dark      = QColor(30, 30, 30)
+    darker    = QColor(20, 20, 20)
+    mid_dark  = QColor(45, 45, 45)
+    text      = QColor(220, 220, 220)
+    highlight = QColor(42, 130, 218)
+    disabled  = QColor(127, 127, 127)
+    link      = QColor(42, 130, 218)
+
+    pal.setColor(QPalette.ColorRole.Window, dark)
+    pal.setColor(QPalette.ColorRole.WindowText, text)
+    pal.setColor(QPalette.ColorRole.Base, darker)
+    pal.setColor(QPalette.ColorRole.AlternateBase, mid_dark)
+    pal.setColor(QPalette.ColorRole.ToolTipBase, mid_dark)
+    pal.setColor(QPalette.ColorRole.ToolTipText, text)
+    pal.setColor(QPalette.ColorRole.Text, text)
+    pal.setColor(QPalette.ColorRole.Button, mid_dark)
+    pal.setColor(QPalette.ColorRole.ButtonText, text)
+    pal.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    pal.setColor(QPalette.ColorRole.Link, link)
+    pal.setColor(QPalette.ColorRole.Highlight, highlight)
+    pal.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+    pal.setColor(QPalette.ColorRole.PlaceholderText, QColor(140, 140, 140))
+
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, disabled)
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, disabled)
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, disabled)
+
+    # Mid / Dark / Light / Midlight — dùng bởi Fusion cho border/shadow
+    pal.setColor(QPalette.ColorRole.Dark, QColor(15, 15, 15))
+    pal.setColor(QPalette.ColorRole.Mid, QColor(60, 60, 60))
+    pal.setColor(QPalette.ColorRole.Midlight, QColor(55, 55, 55))
+    pal.setColor(QPalette.ColorRole.Light, QColor(70, 70, 70))
+    pal.setColor(QPalette.ColorRole.Shadow, QColor(0, 0, 0))
+
+    app.setPalette(pal)
+
+
+def is_dark() -> bool:
+    """Return True if current theme is dark."""
+    return _is_dark
+
+
+def set_theme(dark: bool) -> None:
+    """Switch theme and save preference."""
+    from utils.settings import settings
+    global _is_dark
+    if dark == _is_dark:
+        return
+    _is_dark = dark
+    settings.set("app/dark_theme", dark)
+    app = QApplication.instance()
+    if app:
+        if dark:
+            _apply_dark_palette(app)
+        else:
+            # Reset to Fusion default then apply light
+            app.setStyle("Fusion")
+            _apply_light_palette(app)
+    theme_signals.changed.emit(dark)
+
+
+def toggle_theme() -> bool:
+    """Toggle between light and dark theme. Returns new is_dark state."""
+    set_theme(not _is_dark)
+    return _is_dark
+
+
+def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon:
+    """Load SVG icon and tint it. If color is None, uses palette text color."""
+    from PyQt6.QtGui import QPixmap, QPainter
+
+    if color is None:
+        app = QApplication.instance()
+        color = app.palette().color(QPalette.ColorRole.WindowText) if app else QColor(0, 0, 0)
+
+    try:
+        from PyQt6.QtSvg import QSvgRenderer
+        px = QPixmap(size, size)
+        px.fill(Qt.GlobalColor.transparent)
+        p = QPainter(px)
+        QSvgRenderer(path).render(p)
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        p.fillRect(px.rect(), color)
+        p.end()
+        return QIcon(px)
+    except Exception:  # noqa: BLE001 — fallback to untinted icon
+        return QIcon(path)
 
 
 def font(size: int = FONT_SIZE, bold: bool = False, italic: bool = False) -> QFont:

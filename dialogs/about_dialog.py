@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from core.base_widgets import vbox, divider
 from core import theme
+from core.i18n import t
 
 
 class AboutDialog(QDialog):
@@ -33,7 +34,7 @@ class AboutDialog(QDialog):
                  author:      str = "",
                  year:        str = "2026"):
         super().__init__(parent)
-        self.setWindowTitle(f"Về {app_name}")
+        self.setWindowTitle(t("dialog.about_title", app_name=app_name))
         self.setMinimumWidth(320)
         self.setFixedHeight(220)
 
@@ -47,7 +48,7 @@ class AboutDialog(QDialog):
         root.addWidget(lbl_name)
 
         # Version
-        lbl_ver = QLabel(f"Phiên bản {version}")
+        lbl_ver = QLabel(t("dialog.version", version=version))
         lbl_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl_ver.setFont(theme.font(size=theme.FONT_SIZE_SM))
         root.addWidget(lbl_ver)

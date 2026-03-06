@@ -35,6 +35,7 @@ from widgets.pagination     import Pagination
 from widgets.empty_state    import EmptyState
 from utils.table_helper     import setup_table, load_table, get_selected_id
 from core import theme
+from core.i18n import t
 
 
 class TableCrud(QWidget):
@@ -48,13 +49,18 @@ class TableCrud(QWidget):
                  on_search=None,
                  on_page_change=None,
                  page_size: int = 20,
-                 add_label:    str = "Thêm",
-                 edit_label:   str = "Sửa",
-                 delete_label: str = "Xoá",
-                 search_placeholder: str = "Tìm kiếm..."):
+                 add_label:    str = "",
+                 edit_label:   str = "",
+                 delete_label: str = "",
+                 search_placeholder: str = ""):
         super().__init__()
         self._columns   = columns
         self._page_size = page_size
+
+        add_label    = add_label    or t("crud.add")
+        edit_label   = edit_label   or t("crud.edit")
+        delete_label = delete_label or t("crud.delete")
+        search_placeholder = search_placeholder or t("crud.search")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(*theme.MARGIN_ZERO)
@@ -80,8 +86,7 @@ class TableCrud(QWidget):
         root.addWidget(self.table)
 
         # ── Empty state ───────────────────────────────────
-        self._empty = EmptyState("Không có dữ liệu",
-                                 "Nhấn 'Thêm' để tạo bản ghi mới.")
+        self._empty = EmptyState(t("empty.title"), t("empty.add_hint"))
         self._empty.setVisible(False)
         root.addWidget(self._empty)
 

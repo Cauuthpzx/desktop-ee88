@@ -14,10 +14,11 @@ Dùng:
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PyQt6.QtCore import Qt
 from core import theme
+from core.i18n import t
 
 
 class EmptyState(QWidget):
-    def __init__(self, title: str = "Không có dữ liệu",
+    def __init__(self, title: str = "",
                  description: str = ""):
         super().__init__()
         lay = QVBoxLayout(self)
@@ -29,7 +30,7 @@ class EmptyState(QWidget):
         icon_lbl.setFont(theme.font(size=32))
         lay.addWidget(icon_lbl)
 
-        title_lbl = QLabel(title)
+        title_lbl = QLabel(title or t("empty.title"))
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_lbl.setFont(theme.font(size=theme.FONT_SIZE_LG, bold=True))
         lay.addWidget(title_lbl)

@@ -6,7 +6,7 @@ Dùng:
     from widgets.loading import LoadingBar, LoadingOverlay
 
     # 1. Loading bar đơn giản (nhúng vào layout):
-    bar = LoadingBar("Đang tải dữ liệu...")
+    bar = LoadingBar()
     layout.addWidget(bar)
     bar.start()
     bar.stop()
@@ -23,17 +23,18 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from core import theme
+from core.i18n import t
 
 
 class LoadingBar(QWidget):
     """Progress bar indeterminate + label text."""
-    def __init__(self, text: str = "Đang xử lý..."):
+    def __init__(self, text: str = ""):
         super().__init__()
         lay = QVBoxLayout(self)
         lay.setContentsMargins(*theme.MARGIN_ZERO)
         lay.setSpacing(theme.SPACING_SM)
 
-        self._label = QLabel(text)
+        self._label = QLabel(text or t("loading.processing"))
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFont(theme.font())
 
@@ -73,7 +74,7 @@ class LoadingOverlay(QWidget):
         frame_lay.setContentsMargins(*[theme.SPACING_XL] * 4)
         frame_lay.setSpacing(theme.SPACING_MD)
 
-        self._label = QLabel("Đang xử lý...")
+        self._label = QLabel(t("loading.processing"))
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFont(theme.font(size=theme.FONT_SIZE_LG))
 
@@ -86,8 +87,8 @@ class LoadingOverlay(QWidget):
         frame_lay.addWidget(self._bar)
         lay.addWidget(frame)
 
-    def start(self, text: str = "Đang xử lý..."):
-        self._label.setText(text)
+    def start(self, text: str = ""):
+        self._label.setText(text or t("loading.processing"))
         self.resize(self.parent().size())
         self.show()
         self.raise_()

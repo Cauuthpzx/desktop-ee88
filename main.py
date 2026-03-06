@@ -12,10 +12,13 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon
 from core import theme
+from core.i18n import init as init_i18n, t
 from core.app_window import AppWindow
 from dialogs.login_window import LoginWindow
 from widgets.tooltip import install as install_tooltip
+from utils.api import api
 from utils.auth import auth
+from utils.settings import settings
 from utils.thread_worker import run_in_thread
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +33,7 @@ def icon(name: str) -> QIcon:
 def main():
     app = QApplication(sys.argv)
     theme.apply(app)
+    init_i18n()
     install_tooltip(app)
 
     # Tạo bảng users nếu chưa có (background — không block UI)
@@ -47,12 +51,12 @@ def main():
     # System tray
     tray = QSystemTrayIcon(icon_tray, app)
     tray_menu = QMenu()
-    tray_menu.addAction("Show", window.show)
-    tray_menu.addAction("Hide", window.hide)
+    tray_menu.addAction(t("menu.show"), window.show)
+    tray_menu.addAction(t("menu.hide"), window.hide)
     tray_menu.addSeparator()
-    tray_menu.addAction("Exit", app.quit)
+    tray_menu.addAction(t("menu.exit"), app.quit)
     tray.setContextMenu(tray_menu)
-    tray.setToolTip("MaxHub")
+    tray.setToolTip(t("app.tray_tooltip"))
 
     # Login window — hien truoc AppWindow
     login = LoginWindow()
@@ -64,7 +68,13 @@ def main():
         tray.show()
 
     login.login_success.connect(on_login_success)
-    login.show()
+
+    # Auto-login: neu co session luu tu truoc, vao thang AppWindow
+    if settings.get_bool("login/remember") and api.restore_session():
+        window.show()
+        tray.show()
+    else:
+        login.show()
 
     sys.exit(app.exec())
 

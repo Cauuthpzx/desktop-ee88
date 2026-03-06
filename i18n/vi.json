@@ -1,0 +1,163 @@
+{
+    "app": {
+        "title": "MaxHUB - Connect Everything",
+        "tray_tooltip": "MaxHUB"
+    },
+    "menu": {
+        "show": "Hiển thị",
+        "hide": "Ẩn",
+        "exit": "Thoát"
+    },
+    "toolbar": {
+        "new": "New",
+        "open": "Open",
+        "save": "Save",
+        "undo": "Undo",
+        "redo": "Redo",
+        "tip_new": "Tạo mới (Ctrl+N)",
+        "tip_open": "Mở file (Ctrl+O)",
+        "tip_save": "Lưu file (Ctrl+S)",
+        "tip_undo": "Hoàn tác (Ctrl+Z)",
+        "tip_redo": "Làm lại (Ctrl+Y)"
+    },
+    "sidebar": {
+        "home": "Trang chủ",
+        "example": "Ví dụ",
+        "account": "Tài khoản",
+        "settings": "Cài đặt"
+    },
+    "login": {
+        "title": "Đăng nhập",
+        "username": "Tên đăng nhập",
+        "password": "Mật khẩu",
+        "remember": "Nhớ đăng nhập",
+        "btn_login": "Đăng nhập",
+        "btn_cancel": "Huỷ",
+        "no_account": "Chưa có tài khoản?",
+        "link_register": "Đăng ký",
+        "error_connect": "Không thể kết nối máy chủ."
+    },
+    "register": {
+        "title": "Đăng ký",
+        "username": "Tên đăng nhập",
+        "password": "Mật khẩu",
+        "confirm_password": "Xác nhận mật khẩu",
+        "btn_register": "Đăng ký",
+        "btn_cancel": "Huỷ",
+        "has_account": "Đã có tài khoản?",
+        "link_login": "Đăng nhập",
+        "success": "Đăng ký thành công! Hãy đăng nhập.",
+        "password_mismatch": "Mật khẩu xác nhận không khớp."
+    },
+    "crud": {
+        "add": "Thêm",
+        "edit": "Sửa",
+        "delete": "Xoá",
+        "search": "Tìm kiếm..."
+    },
+    "empty": {
+        "title": "Không có dữ liệu",
+        "add_hint": "Nhấn 'Thêm' để tạo bản ghi mới."
+    },
+    "loading": {
+        "processing": "Đang xử lý...",
+        "loading_data": "Đang tải dữ liệu...",
+        "loading": "Đang tải..."
+    },
+    "dialog": {
+        "confirm": "Xác nhận",
+        "confirm_delete": "Xác nhận xoá",
+        "confirm_delete_msg": "Bạn có chắc muốn xoá {name}?",
+        "alert": "Thông báo",
+        "warning": "Cảnh báo",
+        "error": "Lỗi",
+        "success": "Thành công",
+        "input": "Nhập liệu",
+        "input_number": "Nhập số",
+        "input_float": "Nhập số thực",
+        "choose": "Chọn",
+        "about_title": "Về {app_name}",
+        "version": "Phiên bản {version}"
+    },
+    "validator": {
+        "required": "{field} không được để trống.",
+        "min_length": "{field} phải có ít nhất {min} ký tự.",
+        "max_length": "{field} không được vượt quá {max} ký tự.",
+        "email": "{field} không đúng định dạng email.",
+        "phone": "{field} không đúng định dạng (10 số, bắt đầu bằng 0).",
+        "positive": "{field} phải lớn hơn 0.",
+        "non_negative": "{field} không được âm.",
+        "in_range": "{field} phải trong khoảng {min} – {max}.",
+        "numeric": "{field} phải là số."
+    },
+    "update": {
+        "title": "Cập nhật phần mềm",
+        "new_version": "Phiên bản mới {version} đã sẵn sàng!\n(Hiện tại: {current})\n\nBạn có muốn cập nhật ngay?",
+        "downloading": "Đang tải bản cập nhật...",
+        "cancel": "Huỷ",
+        "download_title": "Cập nhật",
+        "download_success": "Tải bản cập nhật thành công!\nỨng dụng sẽ khởi động lại để hoàn tất.",
+        "download_error_title": "Lỗi cập nhật",
+        "download_error": "Không thể tải bản cập nhật.\nVui lòng thử lại sau."
+    },
+    "home": {
+        "title": "Trang chủ",
+        "stats": "Thống kê",
+        "users": "Người dùng",
+        "orders": "Đơn hàng",
+        "revenue": "Doanh thu",
+        "notifications": "Thông báo gần đây"
+    },
+    "example": {
+        "title": "Quản lý người dùng",
+        "dialog_title": "Thêm / Sửa người dùng",
+        "name": "Tên:",
+        "age": "Tuổi:",
+        "role": "Vai trò:"
+    },
+    "account": {
+        "title": "Tài khoản",
+        "profile_info": "Thông tin tài khoản",
+        "username": "Tên đăng nhập:",
+        "role": "Vai trò:",
+        "created_at": "Ngày tạo:",
+        "last_login": "Đăng nhập lần cuối:",
+        "status_section": "Trạng thái & Suy nghĩ",
+        "presence": "Trạng thái:",
+        "presence_online": "🟢 Trực tuyến",
+        "presence_busy": "🔴 Bận",
+        "presence_away": "🟡 Vắng mặt",
+        "presence_dnd": "⛔ Đừng làm phiền",
+        "presence_invisible": "⚫ Ẩn",
+        "bio_label": "Bạn đang nghĩ gì?",
+        "bio_placeholder": "Chia sẻ suy nghĩ của bạn...",
+        "btn_save_bio": "Cập nhật",
+        "status_saved": "Đã cập nhật trạng thái.",
+        "update_email": "Email",
+        "email_placeholder": "Nhập email của bạn",
+        "email_label": "Email",
+        "btn_save": "Lưu",
+        "email_saved": "Đã lưu email thành công.",
+        "error_save": "Không thể lưu. Vui lòng thử lại.",
+        "error_load": "Không thể tải thông tin tài khoản.",
+        "change_password": "Đổi mật khẩu",
+        "current_password": "Mật khẩu hiện tại",
+        "new_password": "Mật khẩu mới",
+        "confirm_password": "Xác nhận mật khẩu mới",
+        "btn_change_password": "Đổi mật khẩu",
+        "password_mismatch": "Mật khẩu xác nhận không khớp.",
+        "password_changed": "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.",
+        "error_change_pwd": "Không thể đổi mật khẩu.",
+        "btn_logout": "Đăng xuất",
+        "confirm_logout": "Bạn có chắc muốn đăng xuất?"
+    },
+    "settings": {
+        "title": "Cài đặt",
+        "general": "Chung",
+        "language": "Ngôn ngữ:",
+        "language_restart": "Thay đổi ngôn ngữ sẽ áp dụng ngay lập tức.",
+        "theme": "Giao diện:",
+        "dark_mode": "Chế độ tối",
+        "theme_toggle": "Đổi giao diện sáng/tối"
+    }
+}

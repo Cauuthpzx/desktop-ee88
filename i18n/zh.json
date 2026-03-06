@@ -1,0 +1,163 @@
+{
+    "app": {
+        "title": "MaxHUB - Connect Everything",
+        "tray_tooltip": "MaxHUB"
+    },
+    "menu": {
+        "show": "显示",
+        "hide": "隐藏",
+        "exit": "退出"
+    },
+    "toolbar": {
+        "new": "New",
+        "open": "Open",
+        "save": "Save",
+        "undo": "Undo",
+        "redo": "Redo",
+        "tip_new": "新建 (Ctrl+N)",
+        "tip_open": "打开文件 (Ctrl+O)",
+        "tip_save": "保存文件 (Ctrl+S)",
+        "tip_undo": "撤销 (Ctrl+Z)",
+        "tip_redo": "重做 (Ctrl+Y)"
+    },
+    "sidebar": {
+        "home": "首页",
+        "example": "示例",
+        "account": "账户",
+        "settings": "设置"
+    },
+    "login": {
+        "title": "登录",
+        "username": "用户名",
+        "password": "密码",
+        "remember": "记住登录",
+        "btn_login": "登录",
+        "btn_cancel": "取消",
+        "no_account": "还没有账号？",
+        "link_register": "注册",
+        "error_connect": "无法连接服务器。"
+    },
+    "register": {
+        "title": "注册",
+        "username": "用户名",
+        "password": "密码",
+        "confirm_password": "确认密码",
+        "btn_register": "注册",
+        "btn_cancel": "取消",
+        "has_account": "已有账号？",
+        "link_login": "登录",
+        "success": "注册成功！请登录。",
+        "password_mismatch": "两次密码不一致。"
+    },
+    "crud": {
+        "add": "添加",
+        "edit": "编辑",
+        "delete": "删除",
+        "search": "搜索..."
+    },
+    "empty": {
+        "title": "暂无数据",
+        "add_hint": "点击「添加」创建新记录。"
+    },
+    "loading": {
+        "processing": "处理中...",
+        "loading_data": "加载数据中...",
+        "loading": "加载中..."
+    },
+    "dialog": {
+        "confirm": "确认",
+        "confirm_delete": "确认删除",
+        "confirm_delete_msg": "确定要删除 {name} 吗？",
+        "alert": "通知",
+        "warning": "警告",
+        "error": "错误",
+        "success": "成功",
+        "input": "输入",
+        "input_number": "输入数字",
+        "input_float": "输入小数",
+        "choose": "选择",
+        "about_title": "关于 {app_name}",
+        "version": "版本 {version}"
+    },
+    "validator": {
+        "required": "{field} 不能为空。",
+        "min_length": "{field} 至少需要 {min} 个字符。",
+        "max_length": "{field} 不能超过 {max} 个字符。",
+        "email": "{field} 邮箱格式不正确。",
+        "phone": "{field} 手机号格式不正确（10位数字，以0开头）。",
+        "positive": "{field} 必须大于0。",
+        "non_negative": "{field} 不能为负数。",
+        "in_range": "{field} 必须在 {min} 到 {max} 之间。",
+        "numeric": "{field} 必须是数字。"
+    },
+    "update": {
+        "title": "软件更新",
+        "new_version": "新版本 {version} 已就绪！\n（当前版本：{current}）\n\n是否立即更新？",
+        "downloading": "正在下载更新...",
+        "cancel": "取消",
+        "download_title": "更新",
+        "download_success": "更新下载成功！\n应用将重启以完成更新。",
+        "download_error_title": "更新失败",
+        "download_error": "无法下载更新。\n请稍后再试。"
+    },
+    "home": {
+        "title": "首页",
+        "stats": "统计",
+        "users": "用户",
+        "orders": "订单",
+        "revenue": "营收",
+        "notifications": "最近通知"
+    },
+    "example": {
+        "title": "用户管理",
+        "dialog_title": "添加 / 编辑用户",
+        "name": "姓名：",
+        "age": "年龄：",
+        "role": "角色："
+    },
+    "account": {
+        "title": "账户",
+        "profile_info": "账户信息",
+        "username": "用户名：",
+        "role": "角色：",
+        "created_at": "创建时间：",
+        "last_login": "最后登录：",
+        "status_section": "状态与心情",
+        "presence": "状态：",
+        "presence_online": "🟢 在线",
+        "presence_busy": "🔴 忙碌",
+        "presence_away": "🟡 离开",
+        "presence_dnd": "⛔ 请勿打扰",
+        "presence_invisible": "⚫ 隐身",
+        "bio_label": "你在想什么？",
+        "bio_placeholder": "分享你的想法...",
+        "btn_save_bio": "更新",
+        "status_saved": "状态已更新。",
+        "update_email": "邮箱",
+        "email_placeholder": "请输入邮箱",
+        "email_label": "邮箱",
+        "btn_save": "保存",
+        "email_saved": "邮箱保存成功。",
+        "error_save": "无法保存，请重试。",
+        "error_load": "无法加载账户信息。",
+        "change_password": "修改密码",
+        "current_password": "当前密码",
+        "new_password": "新密码",
+        "confirm_password": "确认新密码",
+        "btn_change_password": "修改密码",
+        "password_mismatch": "两次密码不一致。",
+        "password_changed": "密码修改成功！请重新登录。",
+        "error_change_pwd": "无法修改密码。",
+        "btn_logout": "退出登录",
+        "confirm_logout": "确定要退出登录吗？"
+    },
+    "settings": {
+        "title": "设置",
+        "general": "常规",
+        "language": "语言：",
+        "language_restart": "语言更改将立即生效。",
+        "theme": "主题：",
+        "dark_mode": "深色模式",
+        "theme_toggle": "切换亮色/深色主题"
+    }
+}
