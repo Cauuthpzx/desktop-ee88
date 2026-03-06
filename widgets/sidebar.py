@@ -113,8 +113,8 @@ class CollapsibleSidebar(QWidget):
         self._rects_cache_w: int = -1             # width khi cache được tạo
 
         # Toggle button icons
-        self._px_menu = _load_pixmap("icons/menu.svg")
-        self._px_menu_open = _load_pixmap("icons/menu_open.svg")
+        self._px_menu = _load_pixmap("icons/material/menu.svg")
+        self._px_menu_open = _load_pixmap("icons/material/menu_open.svg")
 
         self.setFixedWidth(_W_EXPANDED)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)

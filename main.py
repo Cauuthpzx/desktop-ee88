@@ -18,8 +18,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def icon(name: str) -> QIcon:
-    ico = os.path.join(BASE_DIR, "icons", f"{name}.ico")
-    svg = os.path.join(BASE_DIR, "icons", f"{name}.svg")
+    ico = os.path.join(BASE_DIR, "icons", "app", f"{name}.ico")
+    svg = os.path.join(BASE_DIR, "icons", "app", f"{name}.svg")
     return QIcon(ico) if os.path.exists(ico) else QIcon(svg)
 
 

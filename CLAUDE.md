@@ -18,10 +18,9 @@ Thay thế: `null_handler.py`, `console_utils.py`, `auxiliary.py`
 project/
 ├── main.py              # Entry point — SetCurrentProcessExplicitAppUserModelID + theme.apply(app)
 ├── icons/
-│   ├── icon-taskbar.*   # Hex+M — icon trên taskbar Windows
-│   ├── icon-titlebar.*  # Shield — icon trên titlebar cửa sổ
-│   ├── icon-tray.*      # Rounded square — system tray icon
-│   └── layui/           # 184 icon SVG từ Layui (home.svg, edit.svg, delete.svg...)
+│   ├── app/             # App icons: icon-taskbar.*, icon-titlebar.*, icon-tray.*
+│   ├── layui/           # 184 icon SVG từ Layui (home.svg, edit.svg, delete.svg...)
+│   └── material/        # 2100+ Google Material SVG (menu.svg, menu_open.svg...)
 ├── core/
 │   ├── theme.py         # Tất cả constants: FONT_*, SPACING_*, MARGIN_*, sizing
 │   ├── base_widgets.py  # BaseTab, BaseDialog, vbox(), hbox(), form_layout(), group(), divider()
@@ -182,23 +181,20 @@ from utils.thread_worker import Worker, run_in_thread
 
 ---
 
-## LAYUI ICONS — 184 SVG CÓ SẴN
+## ICONS — 3 THƯ MỤC
 
-Icon nằm trong `icons/layui/` — dùng trực tiếp với `QIcon`:
+### `icons/app/` — App icons
+Chứa `icon-taskbar.*`, `icon-titlebar.*`, `icon-tray.*` (SVG + ICO + PNG các kích thước).
+Dùng trong `main.py` — **không sửa path trong code khác**.
+
+### `icons/layui/` — 184 SVG Layui
+Dùng cho sidebar nav, toolbar, button — `fill="currentColor"` tự theo QPalette.
 
 ```python
 from PyQt6.QtGui import QIcon
 
-# Gắn icon cho button
-btn = QPushButton()
 btn.setIcon(QIcon("icons/layui/home.svg"))
-btn.setIconSize(QSize(16, 16))
-
-# Gắn icon cho action trong toolbar/menu
 action = QAction(QIcon("icons/layui/edit.svg"), "Sửa", self)
-
-# Gắn icon cho tab
-self.tabs.addTab(widget, QIcon("icons/layui/user.svg"), "Người dùng")
 ```
 
 Icon thường dùng:
@@ -226,7 +222,14 @@ Icon thường dùng:
 | `log.svg` | Nhật ký |
 | `key.svg` | Bảo mật / mật khẩu |
 
-**Lưu ý:** SVG dùng `fill="currentColor"` — màu icon theo QPalette tự động (không cần hardcode màu).
+### `icons/material/` — 2100+ Google Material SVG
+Bộ icon lớn hơn, dùng khi Layui không có icon phù hợp.
+Sidebar toggle dùng `icons/material/menu.svg` và `icons/material/menu_open.svg`.
+
+```python
+QIcon("icons/material/menu.svg")
+QIcon("icons/material/settings.svg")
+```
 
 ---
 
@@ -501,7 +504,7 @@ for row_idx, row in enumerate(data_rows):
 | `from core.base_widgets import *` không dùng | Import đúng tên cần |
 | Truy cập `obj._attr` từ class khác | Tạo public method trên class đó |
 | `QFrame.StyledPanel` ra màu trắng | Bỏ + thêm `WA_TranslucentBackground` |
-| Unicode icon không hiện | Dùng file `.svg` từ `icons/layui/` |
+| Unicode icon không hiện | Dùng file `.svg` từ `icons/layui/` hoặc `icons/material/` |
 | Thiếu `SetCurrentProcessExplicitAppUserModelID` | Đã có trong `main.py` — đừng xoá |
 | Dialog About dùng `QMessageBox.about()` | Dùng `AboutDialog` từ `dialogs/about_dialog.py` |
 
