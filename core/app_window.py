@@ -203,32 +203,42 @@ class AppWindow(QMainWindow):
         self._sidebar = CollapsibleSidebar()
         self._pages: list[tuple[QWidget, str]] = []  # (page, text_key)
         self._groups: list[tuple[str, str]] = []      # (group_id, text_key)
+        # Lazy loading: map placeholder → (TabClass, already_built)
+        self._lazy_map: dict[int, tuple[type, QWidget]] = {}
+
+        def _make_page(tab_cls: type) -> QWidget:
+            """Create tab eagerly for first item, lazily for rest."""
+            if not self._pages:
+                # First page — build immediately (visible on startup)
+                page = tab_cls()
+            else:
+                # Lazy placeholder — real tab built on first show
+                page = QWidget()
+                self._lazy_map[id(page)] = (tab_cls, page)
+            self._stack.addWidget(page)
+            return page
 
         for item in MENU:
             if item is None:
                 self._sidebar.add_separator()
             elif "children" in item:
-                # Group with children
                 grp_id = self._sidebar.add_group(item["icon"], t(item["text_key"]))
                 self._groups.append((grp_id, item["text_key"]))
                 for child in item["children"]:
-                    page = child["tab"]()
-                    self._stack.addWidget(page)
+                    page = _make_page(child["tab"])
                     self._sidebar.add_group_item(grp_id, child["icon"], t(child["text_key"]), page)
                     self._pages.append((page, child["text_key"]))
             else:
-                page = item["tab"]()
-                self._stack.addWidget(page)
+                page = _make_page(item["tab"])
                 self._sidebar.add_item(item["icon"], t(item["text_key"]), page)
                 self._pages.append((page, item["text_key"]))
 
         for item in MENU_BOTTOM:
-            page = item["tab"]()
-            self._stack.addWidget(page)
+            page = _make_page(item["tab"])
             self._sidebar.add_item_bottom(item["icon"], t(item["text_key"]), page)
             self._pages.append((page, item["text_key"]))
 
-        self._sidebar.page_changed.connect(self._stack.setCurrentWidget)
+        self._sidebar.page_changed.connect(self._on_page_changed)
 
         central = QWidget()
         lay = QHBoxLayout(central)
@@ -237,6 +247,32 @@ class AppWindow(QMainWindow):
         lay.addWidget(self._sidebar)
         lay.addWidget(self._stack, 1)
         self.setCentralWidget(central)
+
+    def _on_page_changed(self, page: QWidget) -> None:
+        """Handle sidebar page change — lazy-instantiate tab if needed."""
+        key = id(page)
+        if key in self._lazy_map:
+            tab_cls, placeholder = self._lazy_map.pop(key)
+            real_tab = tab_cls()
+            # Replace in stack
+            idx = self._stack.indexOf(placeholder)
+            self._stack.removeWidget(placeholder)
+            self._stack.insertWidget(idx, real_tab)
+            # Replace in sidebar's page map
+            self._sidebar.replace_page(placeholder, real_tab)
+            # Replace in our _pages list
+            self._pages = [
+                (real_tab, text_key) if pg is placeholder else (pg, text_key)
+                for pg, text_key in self._pages
+            ]
+            # Replace in tab bar pages
+            for i, pg in enumerate(self._tab_pages):
+                if pg is placeholder:
+                    self._tab_pages[i] = real_tab
+                    break
+            placeholder.deleteLater()
+            page = real_tab
+        self._stack.setCurrentWidget(page)
 
     def _retranslate(self, _lang: str = "") -> None:
         """Update all UI text when language changes."""

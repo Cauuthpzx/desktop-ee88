@@ -59,14 +59,20 @@ def load_table(table: QTableWidget,
         load_table(table, data, ["id", "name", "age"],
                    formatters={"age": lambda v: f"{v} tuổi"})
     """
-    table.setRowCount(0)
     fmts = formatters or {}
+    row_count = len(data)
+    col_count = len(keys)
+    center = Qt.AlignmentFlag.AlignCenter
+    user_role = Qt.ItemDataRole.UserRole
 
-    for rec in data:
-        row = table.rowCount()
-        table.insertRow(row)
+    # Suppress repaints during bulk load
+    table.setUpdatesEnabled(False)
+    table.setSortingEnabled(False)
+    table.setRowCount(row_count)
 
-        for col, key in enumerate(keys):
+    for row, rec in enumerate(data):
+        for col in range(col_count):
+            key = keys[col]
             val = rec.get(key, "")
             if key in fmts:
                 display = fmts[key](val)
@@ -74,13 +80,14 @@ def load_table(table: QTableWidget,
                 display = str(val) if val is not None else ""
 
             item = QTableWidgetItem(display)
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            item.setTextAlignment(center)
 
-            # Lưu ID vào cột 0
             if col == 0:
-                item.setData(Qt.ItemDataRole.UserRole, rec.get(id_key))
+                item.setData(user_role, rec.get(id_key))
 
             table.setItem(row, col, item)
+
+    table.setUpdatesEnabled(True)
 
 
 def get_selected_id(table: QTableWidget, col: int = 0):

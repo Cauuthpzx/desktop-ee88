@@ -54,13 +54,27 @@ if getattr(sys, "frozen", False):
 else:
     _I18N_DIR = Path(__file__).resolve().parent.parent / "i18n"
 _translations: dict[str, dict[str, Any]] = {}
+# Flattened cache: {lang: {"section.key": "value"}}
+_flat_cache: dict[str, dict[str, str]] = {}
 _current_lang: str = DEFAULT_LANG
 
 
-def _load_language(lang: str) -> dict[str, Any]:
-    """Load a language JSON file. Returns flat dict or empty dict on error."""
-    if lang in _translations:
-        return _translations[lang]
+def _flatten(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
+    """Flatten nested dict to dot-notation keys."""
+    result: dict[str, str] = {}
+    for k, v in data.items():
+        full_key = f"{prefix}{k}" if prefix else k
+        if isinstance(v, dict):
+            result.update(_flatten(v, f"{full_key}."))
+        elif isinstance(v, str):
+            result[full_key] = v
+    return result
+
+
+def _load_language(lang: str) -> dict[str, str]:
+    """Load a language JSON file. Returns flattened dict."""
+    if lang in _flat_cache:
+        return _flat_cache[lang]
 
     filepath = _I18N_DIR / f"{lang}.json"
     if not filepath.exists():
@@ -71,22 +85,12 @@ def _load_language(lang: str) -> dict[str, Any]:
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
         _translations[lang] = data
-        return data
+        flat = _flatten(data)
+        _flat_cache[lang] = flat
+        return flat
     except (json.JSONDecodeError, OSError) as e:
         logger.error("Failed to load language file %s: %s", filepath, e)
         return {}
-
-
-def _resolve(data: dict[str, Any], key: str) -> str | None:
-    """Resolve dot-notation key from nested dict."""
-    parts = key.split(".")
-    current: Any = data
-    for part in parts:
-        if isinstance(current, dict):
-            current = current.get(part)
-        else:
-            return None
-    return current if isinstance(current, str) else None
 
 
 def t(key: str, **kwargs: Any) -> str:
@@ -99,13 +103,13 @@ def t(key: str, **kwargs: Any) -> str:
     Returns:
         Translated string, or the key itself if not found.
     """
-    data = _load_language(_current_lang)
-    text = _resolve(data, key)
+    flat = _load_language(_current_lang)
+    text = flat.get(key)
 
     # Fallback to default language
     if text is None and _current_lang != DEFAULT_LANG:
-        data = _load_language(DEFAULT_LANG)
-        text = _resolve(data, key)
+        flat = _load_language(DEFAULT_LANG)
+        text = flat.get(key)
 
     # Fallback to key itself
     if text is None:
@@ -157,4 +161,5 @@ def init() -> None:
 def reload() -> None:
     """Clear cache and reload current language."""
     _translations.clear()
+    _flat_cache.clear()
     _load_language(_current_lang)

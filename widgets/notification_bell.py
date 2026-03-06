@@ -85,6 +85,7 @@ class NotificationBell(QWidget):
         self.setToolTip(t("notification.title"))
 
         self._items: list[NotificationItem] = []
+        self._unread_count: int = 0
         self._popup: _NotificationPopup | None = None
         from core.icon import IconPath
         self._icon_path = IconPath.NOTIFICATIONS
@@ -101,20 +102,26 @@ class NotificationBell(QWidget):
         # Gioi han 50 thong bao
         if len(self._items) > 50:
             self._items = self._items[:50]
+        self._update_unread_count()
         self.update()
         if self._popup and self._popup.isVisible():
             self._popup.refresh(self._items)
 
     def unread_count(self) -> int:
-        return sum(1 for n in self._items if not n.read)
+        return self._unread_count
+
+    def _update_unread_count(self) -> None:
+        self._unread_count = sum(1 for n in self._items if not n.read)
 
     def mark_all_read(self) -> None:
         for n in self._items:
             n.read = True
+        self._unread_count = 0
         self.update()
 
     def clear_all(self) -> None:
         self._items.clear()
+        self._unread_count = 0
         self.update()
         if self._popup and self._popup.isVisible():
             self._popup.refresh(self._items)
@@ -132,15 +139,12 @@ class NotificationBell(QWidget):
         self._cached_icon.paint(p, icon_rect)
 
         # Badge
-        count = self.unread_count()
+        count = self._unread_count
         if count > 0:
             text = str(count) if count <= 99 else "99+"
-            fm = p.fontMetrics()
-
             badge_font = theme.font(size=7, bold=True)
             p.setFont(badge_font)
-            fm = p.fontMetrics()
-            text_w = fm.horizontalAdvance(text)
+            text_w = p.fontMetrics().horizontalAdvance(text)
 
             badge_w = max(text_w + 6, 16)
             badge_h = 14
@@ -197,10 +201,11 @@ class NotificationBell(QWidget):
         self._popup.raise_()
 
     def _on_item_clicked(self, notif_id: str) -> None:
-        # Danh dau da doc
         for n in self._items:
             if n.id == notif_id:
-                n.read = True
+                if not n.read:
+                    n.read = True
+                    self._unread_count = max(0, self._unread_count - 1)
                 break
         self.update()
         self.notification_clicked.emit(notif_id)

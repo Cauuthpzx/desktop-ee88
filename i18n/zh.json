@@ -46,9 +46,10 @@
         "btn_cancel": "取消",
         "no_account": "还没有账号？",
         "link_register": "注册",
+        "subtitle": "登录以继续",
         "error_connect": "无法连接服务器。",
-        "headline": "Max HUB Admin – 智能运营中心",
-        "description": "专为管理员打造的现代化管理工具，集成智能功能，帮助监控、分析和优化 Max HUB 生态系统中的用户体验。"
+        "headline": "随时随地连接代理商",
+        "description": "专为代理商网络打造的智能管理软件 — 集成计算工具、交易跟踪和数据分析，让管理工作更轻松、更高效。"
     },
     "register": {
         "title": "注册",
@@ -59,6 +60,7 @@
         "btn_cancel": "取消",
         "has_account": "已有账号？",
         "link_login": "登录",
+        "subtitle": "创建新账号",
         "success": "注册成功！请登录。",
         "password_mismatch": "两次密码不一致。"
     },

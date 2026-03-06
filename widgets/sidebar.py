@@ -311,6 +311,13 @@ class CollapsibleSidebar(QWidget):
                 self._select(ident)
                 return
 
+    def replace_page(self, old_widget: QWidget, new_widget: QWidget) -> None:
+        """Replace a page widget reference (used for lazy tab instantiation)."""
+        for ident, w in self._page_map.items():
+            if w is old_widget:
+                self._page_map[ident] = new_widget
+                return
+
     def update_texts(self, widget_text_map: dict[QWidget, str]) -> None:
         """Update display text of nav items by their associated widget.
         Identifiers remain stable — only display text changes."""
@@ -469,27 +476,44 @@ class CollapsibleSidebar(QWidget):
         w = self.width()
         h = self.height()
 
-        # ── Background trắng ──────────────────────────────────────────────
-        p.fillRect(self.rect(), pal.base())
+        # Pre-extract palette colors once
+        base_color = pal.base().color()
+        dark_color = pal.dark().color()
+        light_color = pal.light().color()
+        mid_color = pal.mid().color()
+        icon_tint = pal.text().color()
+        text_color = icon_tint
+        hover_bg = pal.midlight().color()
+        accent_color = pal.highlight().color()
+        active_bg = QColor(accent_color)
+        active_bg.setAlpha(30)
 
-        # ── Right border — 2 lines giống Fusion Sunken (dark + light) ────
-        #   Line 1: pal.dark() (shadow line)
-        #   Line 2: pal.light() (highlight line) — ngay bên phải
-        # Kết quả giống hệt QFrame.VLine + Sunken nhưng không có artifact
-        p.setPen(QPen(pal.dark().color(), 0))
+        # Pre-create pens
+        dark_pen = QPen(dark_color, 0)
+        light_pen = QPen(light_color, 0)
+        sep_pen = QPen(mid_color, 0)
+        text_pen = QPen(text_color, 0)
+        accent_pen = QPen(accent_color, 0)
+
+        # Set hints once for entire paint
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        p.setFont(theme.font(bold=True))
+
+        # ── Background ────────────────────────────────────────────────
+        p.fillRect(self.rect(), base_color)
+
+        # ── Right border ──────────────────────────────────────────────
+        p.setPen(dark_pen)
         p.drawLine(w - 2, 0, w - 2, h)
-        p.setPen(QPen(pal.light().color(), 0))
+        p.setPen(light_pen)
         p.drawLine(w - 1, 0, w - 1, h)
-        sep_pen = QPen(pal.mid().color(), 0)
-        icon_tint = pal.text().color()  # tint icons theo palette
 
-        # ── Toggle button (trên cùng, cùng style hover như nav items) ────
+        # ── Toggle button ─────────────────────────────────────────────
         t_rect = self._toggle_rect()
-        is_toggle_hover = (self._hover_index == -2)
-        if is_toggle_hover:
+        if self._hover_index == -2:
             p.setRenderHint(QPainter.RenderHint.Antialiasing)
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(pal.midlight().color())
+            p.setBrush(hover_bg)
             p.drawRoundedRect(
                 _NAV_PAD, t_rect.y(), w - _NAV_PAD * 2, _BTN_H,
                 _HOVER_RADIUS, _HOVER_RADIUS,
@@ -498,31 +522,24 @@ class CollapsibleSidebar(QWidget):
 
         t_px = self._px_menu if self._is_expanded else self._px_menu_open
         if t_px:
-            p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             p.drawPixmap(_ICON_LEFT, t_rect.y() + (_BTN_H - _ICON_SIZE) // 2,
                          _tinted_pixmap(t_px, icon_tint))
 
-        # ── Separator dưới toggle ────────────────────────────────────────
+        # ── Separator dưới toggle ─────────────────────────────────────
         sep_y = t_rect.y() + _BTN_H + _TOGGLE_GAP // 2
         p.setPen(sep_pen)
         p.drawLine(_NAV_PAD, sep_y, w - _NAV_PAD, sep_y)
 
-        # ── Nav items ────────────────────────────────────────────────────
+        # ── Nav items ─────────────────────────────────────────────────
         item_rects = self._item_rects()
-        accent_color = pal.highlight().color()
-        text_color = pal.text().color()
-        hover_bg = pal.midlight().color()
-        active_bg = QColor(accent_color)
-        active_bg.setAlpha(30)
         draw_text = w > _TEXT_VISIBLE_THRESHOLD
         hover_idx = self._hover_index
-
-        p.setFont(theme.font(bold=True))
-        child_indent = _NAV_PAD + 12  # extra left indent for group children
+        child_indent = _NAV_PAD + 12
+        icon_y_offset = (_BTN_H - _NAV_ICON_SIZE) // 2
 
         for i, (entry, rect, has_next) in enumerate(item_rects):
             if isinstance(entry, _Separator):
-                continue  # _Separator từ MENU vẫn tạo khoảng cách, không vẽ thêm
+                continue
 
             ry = rect.y()
             is_group = isinstance(entry, _NavGroup)
@@ -547,32 +564,31 @@ class CollapsibleSidebar(QWidget):
                 p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
             if is_group:
-                # ── Group header: icon + text + chevron ────────────────
                 if entry.pixmap:
-                    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-                    p.drawPixmap(_NAV_ICON_LEFT, ry + (_BTN_H - _NAV_ICON_SIZE) // 2,
+                    p.drawPixmap(_NAV_ICON_LEFT, ry + icon_y_offset,
                                  _tinted_pixmap(entry.pixmap, icon_tint))
                 if draw_text:
-                    p.setPen(text_color)
+                    p.setPen(text_pen)
                     p.drawText(
                         _TEXT_LEFT, ry, w - _TEXT_LEFT - _NAV_PAD - 20, _BTN_H,
                         Qt.AlignmentFlag.AlignVCenter, entry.text.upper(),
                     )
-                    # Chevron icon (expand_more ▾ / chevron_right ▸)
                     chev_px = self._px_chevron_down if entry.expanded else self._px_chevron_right
                     if chev_px:
                         chev_size = chev_px.width()
-                        chev_x = w - _NAV_PAD - chev_size - 4
-                        chev_y = ry + (_BTN_H - chev_size) // 2
-                        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-                        p.drawPixmap(chev_x, chev_y, _tinted_pixmap(chev_px, icon_tint))
+                        p.drawPixmap(
+                            w - _NAV_PAD - chev_size - 4,
+                            ry + (_BTN_H - chev_size) // 2,
+                            _tinted_pixmap(chev_px, icon_tint),
+                        )
                 continue
 
-            # ── Accent bar bên trái (chỉ khi active) ─────────────────
+            # ── Accent bar (active only) ──────────────────────────────
             if entry.checked:
                 bar_h = _BTN_H - 12
                 bar_y = ry + (_BTN_H - bar_h) // 2
                 p.setRenderHint(QPainter.RenderHint.Antialiasing)
+                p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(accent_color)
                 p.drawRoundedRect(
                     QRectF(pad_left, bar_y, _ACCENT_W, bar_h),
@@ -580,24 +596,23 @@ class CollapsibleSidebar(QWidget):
                 )
                 p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
-            # ── Icon (vị trí tuyệt đối — không bao giờ thay đổi) ─────
+            # ── Icon ──────────────────────────────────────────────────
             icon_left = (_NAV_ICON_LEFT + child_indent - _NAV_PAD) if is_child else _NAV_ICON_LEFT
             if entry.pixmap:
-                p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                 ic_color = accent_color if entry.checked else icon_tint
-                p.drawPixmap(icon_left, ry + (_BTN_H - _NAV_ICON_SIZE) // 2,
+                p.drawPixmap(icon_left, ry + icon_y_offset,
                              _tinted_pixmap(entry.pixmap, ic_color))
 
-            # ── Text (chỉ vẽ khi đủ rộng) ────────────────────────────
+            # ── Text ──────────────────────────────────────────────────
             text_left = (_TEXT_LEFT + child_indent - _NAV_PAD) if is_child else _TEXT_LEFT
             if draw_text:
-                p.setPen(accent_color if entry.checked else text_color)
+                p.setPen(accent_pen if entry.checked else text_pen)
                 p.drawText(
                     text_left, ry, w - text_left - _NAV_PAD, _BTN_H,
                     Qt.AlignmentFlag.AlignVCenter, entry.text.upper(),
                 )
 
-            # ── Separator dưới nav item (pre-computed) ───────────────
+            # ── Separator ─────────────────────────────────────────────
             if has_next:
                 p.setPen(sep_pen)
                 p.drawLine(
@@ -605,7 +620,7 @@ class CollapsibleSidebar(QWidget):
                     w - _NAV_PAD, ry + _BTN_H + _ITEM_GAP // 2,
                 )
 
-        # ── Separator trên bottom entries ──────────────────────────
+        # ── Separator trên bottom entries ─────────────────────────────
         if self._bottom_entries:
             tc = getattr(self, '_rects_top_count', len(item_rects))
             if tc < len(item_rects):

@@ -46,9 +46,10 @@
         "btn_cancel": "Cancel",
         "no_account": "Don't have an account?",
         "link_register": "Register",
+        "subtitle": "Sign in to continue",
         "error_connect": "Cannot connect to server.",
-        "headline": "Max HUB Admin – Smart Operations Center",
-        "description": "A modern admin tool with smart features for monitoring, analyzing, and optimizing user experience across the Max HUB ecosystem."
+        "headline": "Connect agents anywhere, anytime",
+        "description": "Smart management software for agent networks — integrated with calculation tools, transaction tracking and data analytics to make your work easier and more efficient."
     },
     "register": {
         "title": "Register",
@@ -59,6 +60,7 @@
         "btn_cancel": "Cancel",
         "has_account": "Already have an account?",
         "link_login": "Login",
+        "subtitle": "Create a new account",
         "success": "Registration successful! Please login.",
         "password_mismatch": "Passwords do not match."
     },

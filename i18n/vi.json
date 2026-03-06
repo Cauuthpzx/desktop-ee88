@@ -46,9 +46,10 @@
         "btn_cancel": "Huỷ",
         "no_account": "Chưa có tài khoản?",
         "link_register": "Đăng ký",
+        "subtitle": "Đăng nhập để tiếp tục",
         "error_connect": "Không thể kết nối máy chủ.",
-        "headline": "Max HUB Admin – Trung tam Dieu hanh Thong minh",
-        "description": "Cong cu quan tri hien dai danh rieng cho Admin, tich hop cac tinh nang thong minh giup theo doi, phan tich va toi uu hoa trai nghiem nguoi dung tren he sinh thai Max HUB."
+        "headline": "Kết nối đại lý mọi nơi, mọi lúc",
+        "description": "Phần mềm quản trị thông minh dành cho hệ thống đại lý — tích hợp tiện ích tính toán, theo dõi giao dịch và phân tích dữ liệu, giúp công việc quản lý trở nên dễ dàng và hiệu quả hơn."
     },
     "register": {
         "title": "Đăng ký",
@@ -59,6 +60,7 @@
         "btn_cancel": "Huỷ",
         "has_account": "Đã có tài khoản?",
         "link_login": "Đăng nhập",
+        "subtitle": "Tạo tài khoản mới",
         "success": "Đăng ký thành công! Hãy đăng nhập.",
         "password_mismatch": "Mật khẩu xác nhận không khớp."
     },

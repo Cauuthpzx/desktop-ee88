@@ -96,8 +96,15 @@ def _shadow(color: str = "#000", blur: int = 20, y: int = 4,
     return s
 
 
+_svg_pixmap_cache: dict[tuple[int, str, int], QPixmap] = {}
+
+
 def _svg_to_pixmap(svg_str: str, size: int, color: str = "#4A5B78"):
     from PyQt6.QtGui import QPixmap
+    cache_key = (id(svg_str), color, size)
+    cached = _svg_pixmap_cache.get(cache_key)
+    if cached is not None:
+        return cached
     svg_str = svg_str.replace("{color}", color)
     renderer = QSvgRenderer(QByteArray(svg_str.encode()))
     pm = QPixmap(size, size)
@@ -106,6 +113,7 @@ def _svg_to_pixmap(svg_str: str, size: int, color: str = "#4A5B78"):
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     renderer.render(p)
     p.end()
+    _svg_pixmap_cache[cache_key] = pm
     return pm
 
 
@@ -213,7 +221,7 @@ class _LinkLabel(QLabel):
 
 def _field_label(text: str) -> QLabel:
     lbl = QLabel(text)
-    lbl.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:10.5px; font-weight:600; font-family:'Segoe UI';")
+    lbl.setStyleSheet(f"color:{_C.TEXT}; font-size:11px; font-weight:600; font-family:'Segoe UI';")
     return lbl
 
 
@@ -248,8 +256,8 @@ class _LoginForm(QWidget):
         lay.addWidget(self._title)
         lay.addSpacing(3)
 
-        self._subtitle = QLabel(t("login.username"))
-        self._subtitle.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:11.5px; font-family:'Segoe UI';")
+        self._subtitle = QLabel(t("login.subtitle"))
+        self._subtitle.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:12px; font-family:'Segoe UI';")
         lay.addWidget(self._subtitle)
         lay.addSpacing(20)
 
@@ -279,7 +287,7 @@ class _LoginForm(QWidget):
         self._remember = QLabel()
         self._remember._checked = False
         self._update_remember_text()
-        self._remember.setStyleSheet(f"color:{_C.TEXT_MUTED}; font-size:10.5px; font-family:'Segoe UI';")
+        self._remember.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:11px; font-family:'Segoe UI';")
         self._remember.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remember.mousePressEvent = lambda e: self._toggle_remember()
         row.addWidget(self._remember)
@@ -307,7 +315,7 @@ class _LoginForm(QWidget):
         switch_row.setContentsMargins(0, 0, 0, 0)
         switch_row.addStretch()
         self._no_account_lbl = QLabel(t("login.no_account"))
-        self._no_account_lbl.setStyleSheet(f"color:{_C.TEXT_MUTED}; font-size:11px; font-family:'Segoe UI';")
+        self._no_account_lbl.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:11px; font-family:'Segoe UI';")
         switch_row.addWidget(self._no_account_lbl)
         switch_row.addSpacing(4)
         self._link_register = _LinkLabel(t("login.link_register"), _C.ORANGE)
@@ -331,7 +339,7 @@ class _LoginForm(QWidget):
 
     def retranslate(self) -> None:
         self._title.setText(t("login.title"))
-        self._subtitle.setText(t("login.username"))
+        self._subtitle.setText(t("login.subtitle"))
         self._user_lbl.setText(t("login.username"))
         self._username.setPlaceholderText(t("login.username"))
         self._pwd_lbl.setText(t("login.password"))
@@ -396,8 +404,8 @@ class _RegisterForm(QWidget):
         lay.addWidget(self._title)
         lay.addSpacing(3)
 
-        self._subtitle = QLabel(t("register.username"))
-        self._subtitle.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:11.5px; font-family:'Segoe UI';")
+        self._subtitle = QLabel(t("register.subtitle"))
+        self._subtitle.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:12px; font-family:'Segoe UI';")
         lay.addWidget(self._subtitle)
         lay.addSpacing(16)
 
@@ -445,7 +453,7 @@ class _RegisterForm(QWidget):
         switch_row.setContentsMargins(0, 0, 0, 0)
         switch_row.addStretch()
         self._has_account_lbl = QLabel(t("register.has_account"))
-        self._has_account_lbl.setStyleSheet(f"color:{_C.TEXT_MUTED}; font-size:11px; font-family:'Segoe UI';")
+        self._has_account_lbl.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:11px; font-family:'Segoe UI';")
         switch_row.addWidget(self._has_account_lbl)
         switch_row.addSpacing(4)
         self._link_login = _LinkLabel(t("register.link_login"), _C.CYAN_DIM)
@@ -458,7 +466,7 @@ class _RegisterForm(QWidget):
 
     def retranslate(self) -> None:
         self._title.setText(t("register.title"))
-        self._subtitle.setText(t("register.username"))
+        self._subtitle.setText(t("register.subtitle"))
         self._user_lbl.setText(t("register.username"))
         self._username.setPlaceholderText(t("register.username"))
         self._pwd_lbl.setText(t("register.password"))
@@ -589,7 +597,7 @@ class LoginWindow(QWidget):
         self._headline = QLabel(t("login.headline"))
         self._headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._headline.setWordWrap(True)
-        self._headline.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:12px; font-family:'Segoe UI'; font-weight:600;")
+        self._headline.setStyleSheet(f"color:{_C.TEXT}; font-size:13px; font-family:'Segoe UI'; font-weight:700;")
         ll.addWidget(self._headline)
         ll.addSpacing(10)
 
@@ -597,7 +605,7 @@ class LoginWindow(QWidget):
         self._description = QLabel(t("login.description"))
         self._description.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._description.setWordWrap(True)
-        self._description.setStyleSheet(f"color:{_C.TEXT_MUTED}; font-size:10px; font-family:'Segoe UI'; line-height:15px; padding:0 8px;")
+        self._description.setStyleSheet(f"color:{_C.TEXT_DIM}; font-size:10.5px; font-family:'Segoe UI'; line-height:16px; padding:0 8px;")
         ll.addWidget(self._description)
 
         ll.addStretch()

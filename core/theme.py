@@ -3,8 +3,9 @@ theme.py — Cấu hình giao diện toàn bộ ứng dụng
 Import và gọi apply(app) trong main.py
 """
 from PyQt6.QtWidgets import QApplication, QWidget, QLayout
-from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
+from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPixmap, QPainter
 from PyQt6.QtCore import Qt, QObject, pyqtSignal
+from PyQt6.QtSvg import QSvgRenderer
 
 
 # ── Typography ────────────────────────────────────────────
@@ -134,8 +135,6 @@ def set_theme(dark: bool) -> None:
         if dark:
             _apply_dark_palette(app)
         else:
-            # Reset to Fusion default then apply light
-            app.setStyle("Fusion")
             _apply_light_palette(app)
     theme_signals.changed.emit(dark)
 
@@ -151,8 +150,6 @@ _tinted_icon_cache: dict[tuple[str, int, int], QIcon] = {}
 
 def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon:
     """Load SVG icon and tint it. If color is None, uses palette text color."""
-    from PyQt6.QtGui import QPixmap, QPainter
-
     if color is None:
         app = QApplication.instance()
         color = app.palette().color(QPalette.ColorRole.WindowText) if app else QColor(0, 0, 0)
@@ -163,7 +160,6 @@ def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon
         return cached
 
     try:
-        from PyQt6.QtSvg import QSvgRenderer
         px = QPixmap(size, size)
         px.fill(Qt.GlobalColor.transparent)
         p = QPainter(px)
