@@ -30,7 +30,12 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from core.i18n import t
+try:
+    from core.i18n import t
+except ImportError:
+    # Server-side fallback (no PyQt6)
+    def t(key: str, **kwargs: Any) -> str:  # type: ignore[misc]
+        return key
 
 logger = logging.getLogger(__name__)
 
