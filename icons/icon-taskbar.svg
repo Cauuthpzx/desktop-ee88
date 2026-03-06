@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Hexagon flat-top -->
+  <polygon points="128,18 222,70 222,186 128,238 34,186 34,70" fill="#0A1628"/>
+  <polygon points="128,18 222,70 222,186 128,238 34,186 34,70"
+           fill="none" stroke="#00B0FF" stroke-width="5"/>
+  <!-- Inner hex -->
+  <polygon points="128,44 198,84 198,172 128,212 58,172 58,84"
+           fill="none" stroke="#1565C0" stroke-width="2"/>
+  <!-- Bold M lettermark -->
+  <polyline points="72,182 72,82 128,150 184,82 184,182"
+            fill="none" stroke="#FFFFFF" stroke-width="18"
+            stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Accent dot -->
+  <circle cx="128" cy="200" r="7" fill="#00B0FF"/>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Shield shape -->
+  <path d="M128,16 L216,50 L216,128 Q216,192 128,240 Q40,192 40,128 L40,50 Z" fill="#0D1B4B"/>
+  <path d="M128,16 L216,50 L216,128 Q216,192 128,240 Q40,192 40,128 L40,50 Z"
+        fill="none" stroke="#3D5AFE" stroke-width="5"/>
+  <!-- Lines -->
+  <line x1="128" y1="124" x2="128" y2="72"  stroke="#40C4FF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="124" x2="172" y2="98"  stroke="#40C4FF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="124" x2="172" y2="152" stroke="#7C4DFF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="124" x2="128" y2="178" stroke="#7C4DFF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="124" x2="84"  y2="152" stroke="#7C4DFF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="124" x2="84"  y2="98"  stroke="#40C4FF" stroke-width="4" stroke-linecap="round"/>
+  <!-- Satellite nodes -->
+  <circle cx="128" cy="72"  r="10" fill="#1565C0"/><circle cx="128" cy="72"  r="5" fill="#40C4FF"/>
+  <circle cx="172" cy="98"  r="10" fill="#1565C0"/><circle cx="172" cy="98"  r="5" fill="#40C4FF"/>
+  <circle cx="172" cy="152" r="10" fill="#311B92"/><circle cx="172" cy="152" r="5" fill="#7C4DFF"/>
+  <circle cx="128" cy="178" r="10" fill="#311B92"/><circle cx="128" cy="178" r="5" fill="#7C4DFF"/>
+  <circle cx="84"  cy="152" r="10" fill="#311B92"/><circle cx="84"  cy="152" r="5" fill="#7C4DFF"/>
+  <circle cx="84"  cy="98"  r="10" fill="#1565C0"/><circle cx="84"  cy="98"  r="5" fill="#40C4FF"/>
+  <!-- Center -->
+  <circle cx="128" cy="124" r="18" fill="#0D47A1"/>
+  <circle cx="128" cy="124" r="18" fill="none" stroke="#40C4FF" stroke-width="3"/>
+  <circle cx="128" cy="124" r="9"  fill="#40C4FF"/>
+  <circle cx="128" cy="124" r="4"  fill="#FFFFFF"/>
+</svg>

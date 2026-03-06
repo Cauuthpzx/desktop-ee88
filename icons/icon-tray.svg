@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Rounded square bg -->
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="#1A237E"/>
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="none" stroke="#3F51B5" stroke-width="4"/>
+  <!-- Hub lines -->
+  <line x1="128" y1="128" x2="128" y2="68"  stroke="#42A5F5" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="128" x2="180" y2="98"  stroke="#42A5F5" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="128" x2="180" y2="158" stroke="#5C6BC0" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="128" x2="128" y2="188" stroke="#5C6BC0" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="128" x2="76"  y2="158" stroke="#5C6BC0" stroke-width="4" stroke-linecap="round"/>
+  <line x1="128" y1="128" x2="76"  y2="98"  stroke="#42A5F5" stroke-width="4" stroke-linecap="round"/>
+  <!-- Nodes -->
+  <circle cx="128" cy="68"  r="12" fill="#1565C0"/><circle cx="128" cy="68"  r="6" fill="#42A5F5"/>
+  <circle cx="180" cy="98"  r="12" fill="#1565C0"/><circle cx="180" cy="98"  r="6" fill="#42A5F5"/>
+  <circle cx="180" cy="158" r="12" fill="#283593"/><circle cx="180" cy="158" r="6" fill="#7986CB"/>
+  <circle cx="128" cy="188" r="12" fill="#283593"/><circle cx="128" cy="188" r="6" fill="#7986CB"/>
+  <circle cx="76"  cy="158" r="12" fill="#283593"/><circle cx="76"  cy="158" r="6" fill="#7986CB"/>
+  <circle cx="76"  cy="98"  r="12" fill="#1565C0"/><circle cx="76"  cy="98"  r="6" fill="#42A5F5"/>
+  <!-- Center -->
+  <circle cx="128" cy="128" r="20" fill="#0D47A1"/>
+  <circle cx="128" cy="128" r="20" fill="none" stroke="#42A5F5" stroke-width="3"/>
+  <circle cx="128" cy="128" r="10" fill="#42A5F5"/>
+  <circle cx="128" cy="128" r="4"  fill="#FFFFFF"/>
+</svg>
