@@ -93,7 +93,8 @@ def scroll_tab() -> tuple[QScrollArea, QVBoxLayout]:
     Trả về (scroll_area, inner_layout) — addWidget vào inner_layout.
     """
     inner = QWidget()
-    inner_lay = vbox(margins=theme.MARGIN_DEFAULT, spacing=theme.SPACING_LG)
+    l, _t, r, b = theme.MARGIN_DEFAULT
+    inner_lay = vbox(margins=(l, _t - 1, r, b), spacing=theme.SPACING_LG)
     inner_lay.setAlignment(Qt.AlignmentFlag.AlignTop)
     inner.setLayout(inner_lay)
 

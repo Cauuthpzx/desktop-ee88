@@ -15,12 +15,13 @@ Usage:
     sidebar.page_changed.connect(stack.setCurrentWidget)
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve, pyqtSignal, QRect, QRectF, QSize,
+    Qt, QPropertyAnimation, QParallelAnimationGroup,
+    QEasingCurve, pyqtSignal, QRect, QRectF, QSize,
 )
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen, QCursor, QMouseEvent
 from core import theme
@@ -108,6 +109,8 @@ class CollapsibleSidebar(QWidget):
         self._entries: list[_Entry] = []
         self._page_map: dict[str, QWidget] = {}  # identifier → widget
         self._hover_index: int = -1               # -2 = hover trên toggle btn
+        self._rects_cache: list[tuple[_Entry, QRect]] | None = None
+        self._rects_cache_w: int = -1             # width khi cache được tạo
 
         # Toggle button icons
         self._px_menu = _load_pixmap("icons/menu.svg")
@@ -123,6 +126,10 @@ class CollapsibleSidebar(QWidget):
     # ── Animation ─────────────────────────────────────────────────────────────
 
     def _setup_animation(self) -> None:
+        # QParallelAnimationGroup đảm bảo min và max luôn đồng bộ
+        # trong cùng 1 frame — không bao giờ lệch nhau
+        self._anim_group = QParallelAnimationGroup(self)
+
         self._anim_min = QPropertyAnimation(self, b"minimumWidth")
         self._anim_min.setDuration(_ANIM_MS)
         self._anim_min.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -131,6 +138,9 @@ class CollapsibleSidebar(QWidget):
         self._anim_max.setDuration(_ANIM_MS)
         self._anim_max.setEasingCurve(QEasingCurve.Type.OutCubic)
 
+        self._anim_group.addAnimation(self._anim_min)
+        self._anim_group.addAnimation(self._anim_max)
+
     # ── Public API (giữ nguyên interface cũ 100%) ─────────────────────────────
 
     def add_button(self, identifier: str, text: str,
@@ -138,6 +148,7 @@ class CollapsibleSidebar(QWidget):
         """Thêm nav button. identifier dùng cho button_clicked signal."""
         pixmap = _load_pixmap(icon_path) if icon_path else None
         self._entries.append(_NavItem(identifier=identifier, text=text, pixmap=pixmap))
+        self._invalidate_rects()
         self.update()
 
     def add_item(self, icon: str, text: str, widget: QWidget) -> None:
@@ -152,22 +163,22 @@ class CollapsibleSidebar(QWidget):
 
     def add_separator(self) -> None:
         self._entries.append(_Separator())
+        self._invalidate_rects()
         self.update()
 
     def toggle(self) -> None:
         self._is_expanded = not self._is_expanded
         target = _W_EXPANDED if self._is_expanded else _W_COLLAPSED
 
-        self._anim_min.stop()
-        self._anim_max.stop()
+        self._anim_group.stop()
 
-        self._anim_min.setStartValue(self.width())
+        current = self.width()
+        self._anim_min.setStartValue(current)
         self._anim_min.setEndValue(target)
-        self._anim_max.setStartValue(self.width())
+        self._anim_max.setStartValue(current)
         self._anim_max.setEndValue(target)
 
-        self._anim_min.start()
-        self._anim_max.start()
+        self._anim_group.start()
 
         self.toggled.emit(self._is_expanded)
 
@@ -195,8 +206,7 @@ class CollapsibleSidebar(QWidget):
                 return
 
     def cleanup(self) -> None:
-        self._anim_min.stop()
-        self._anim_max.stop()
+        self._anim_group.stop()
 
     # ── Geometry helpers ──────────────────────────────────────────────────────
 
@@ -204,27 +214,46 @@ class CollapsibleSidebar(QWidget):
         """Rect cho toggle button — cùng vị trí X, kích thước như nav items."""
         return QRect(0, _NAV_PAD, self.width(), _BTN_H)
 
-    def _item_rects(self) -> list[tuple[_Entry, QRect]]:
-        """Tính toán vị trí Y của từng entry (sau toggle button)."""
-        result: list[tuple[_Entry, QRect]] = []
-        y = _NAV_PAD + _BTN_H + _TOGGLE_GAP  # sau toggle button
+    def _item_rects(self) -> list[tuple[_Entry, QRect, bool]]:
+        """Tính toán vị trí Y — cached, chỉ rebuild khi width hoặc entries thay đổi.
+
+        Returns list of (entry, rect, has_next_nav) — has_next_nav=True nếu phía sau
+        còn NavItem (dùng để quyết định vẽ separator line hay không).
+        """
         w = self.width()
+        if self._rects_cache is not None and self._rects_cache_w == w:
+            return self._rects_cache
+        result: list[tuple[_Entry, QRect, bool]] = []
+        y = _NAV_PAD + _BTN_H + _TOGGLE_GAP
         for entry in self._entries:
             if isinstance(entry, _Separator):
                 rect = QRect(0, y, w, _SEP_H + _ITEM_GAP * 2)
-                result.append((entry, rect))
+                result.append((entry, rect, False))
                 y += _SEP_H + _ITEM_GAP * 2
             else:
                 rect = QRect(0, y, w, _BTN_H)
-                result.append((entry, rect))
+                result.append((entry, rect, False))  # has_next filled below
                 y += _BTN_H + _ITEM_GAP
+        # Pre-compute has_next_nav: duyệt ngược để tránh O(n²) trong paintEvent
+        seen_nav_after = False
+        for j in range(len(result) - 1, -1, -1):
+            entry, rect, _ = result[j]
+            if isinstance(entry, _NavItem):
+                result[j] = (entry, rect, seen_nav_after)
+                seen_nav_after = True
+        self._rects_cache = result
+        self._rects_cache_w = w
         return result
+
+    def _invalidate_rects(self) -> None:
+        """Gọi khi entries thay đổi."""
+        self._rects_cache = None
 
     def _hit_test(self, y: int) -> int:
         """Trả về index: -2 = toggle button, >=0 = NavItem index, -1 = nothing."""
         if self._toggle_rect().contains(0, y):
             return -2
-        for i, (entry, rect) in enumerate(self._item_rects()):
+        for i, (entry, rect, _) in enumerate(self._item_rects()):
             if isinstance(entry, _NavItem) and rect.contains(0, y):
                 return i
         return -1
@@ -257,8 +286,6 @@ class CollapsibleSidebar(QWidget):
 
     def paintEvent(self, event) -> None:  # type: ignore[override]
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         pal = self.palette()
         w = self.width()
         h = self.height()
@@ -266,32 +293,38 @@ class CollapsibleSidebar(QWidget):
         # ── Background trắng ──────────────────────────────────────────────
         p.fillRect(self.rect(), pal.base())
 
-        # ── Right border — pal.mid(), cosmetic pen, khớp Fusion toolbar ──
-        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        p.setPen(QPen(pal.mid().color(), 0))
+        # ── Right border — 2 lines giống Fusion Sunken (dark + light) ────
+        #   Line 1: pal.dark() (shadow line)
+        #   Line 2: pal.light() (highlight line) — ngay bên phải
+        # Kết quả giống hệt QFrame.VLine + Sunken nhưng không có artifact
+        p.setPen(QPen(pal.dark().color(), 0))
+        p.drawLine(w - 2, 0, w - 2, h)
+        p.setPen(QPen(pal.light().color(), 0))
         p.drawLine(w - 1, 0, w - 1, h)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        sep_pen = QPen(pal.mid().color(), 0)
 
         # ── Toggle button (trên cùng, cùng style hover như nav items) ────
         t_rect = self._toggle_rect()
-        t_item_rect = QRect(_NAV_PAD, t_rect.y(), w - _NAV_PAD * 2, _BTN_H)
         is_toggle_hover = (self._hover_index == -2)
         if is_toggle_hover:
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(pal.midlight().color())
-            p.drawRoundedRect(t_item_rect, _HOVER_RADIUS, _HOVER_RADIUS)
+            p.drawRoundedRect(
+                _NAV_PAD, t_rect.y(), w - _NAV_PAD * 2, _BTN_H,
+                _HOVER_RADIUS, _HOVER_RADIUS,
+            )
+            p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
         t_px = self._px_menu if self._is_expanded else self._px_menu_open
         if t_px:
+            p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             p.drawPixmap(_ICON_LEFT, t_rect.y() + (_BTN_H - _ICON_SIZE) // 2, t_px)
 
         # ── Separator dưới toggle ────────────────────────────────────────
-        sep_pen = QPen(pal.mid().color(), 0)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         sep_y = t_rect.y() + _BTN_H + _TOGGLE_GAP // 2
         p.setPen(sep_pen)
         p.drawLine(_NAV_PAD, sep_y, w - _NAV_PAD, sep_y)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
         # ── Nav items ────────────────────────────────────────────────────
         item_rects = self._item_rects()
@@ -300,67 +333,61 @@ class CollapsibleSidebar(QWidget):
         hover_bg = pal.midlight().color()
         active_bg = QColor(accent_color)
         active_bg.setAlpha(30)
+        draw_text = w > _TEXT_VISIBLE_THRESHOLD
+        hover_idx = self._hover_index
 
         p.setFont(theme.font())
 
-        for i, (entry, rect) in enumerate(item_rects):
+        for i, (entry, rect, has_next) in enumerate(item_rects):
             if isinstance(entry, _Separator):
                 continue  # _Separator từ MENU vẫn tạo khoảng cách, không vẽ thêm
 
-            # entry is _NavItem
-            item_rect = QRect(_NAV_PAD, rect.y(), w - _NAV_PAD * 2, _BTN_H)
+            ry = rect.y()
 
-            # ── Hover background ──────────────────────────────────────
-            is_hover = (i == self._hover_index and not entry.checked)
-            if is_hover:
+            # ── Hover / Active background ─────────────────────────────
+            is_hover = (i == hover_idx and not entry.checked)
+            if is_hover or entry.checked:
+                p.setRenderHint(QPainter.RenderHint.Antialiasing)
                 p.setPen(Qt.PenStyle.NoPen)
-                p.setBrush(hover_bg)
-                p.drawRoundedRect(item_rect, _HOVER_RADIUS, _HOVER_RADIUS)
+                p.setBrush(hover_bg if is_hover else active_bg)
+                p.drawRoundedRect(
+                    _NAV_PAD, ry, w - _NAV_PAD * 2, _BTN_H,
+                    _HOVER_RADIUS, _HOVER_RADIUS,
+                )
+                p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
-            # ── Active state: subtle bg + accent bar ──────────────────
+            # ── Accent bar bên trái (chỉ khi active) ─────────────────
             if entry.checked:
-                # Subtle background
-                p.setPen(Qt.PenStyle.NoPen)
-                p.setBrush(active_bg)
-                p.drawRoundedRect(item_rect, _HOVER_RADIUS, _HOVER_RADIUS)
-
-                # Accent bar bên trái
-                bar_h = _BTN_H - 12  # bar ngắn hơn item một chút
-                bar_y = rect.y() + (_BTN_H - bar_h) // 2
-                bar_rect = QRectF(_NAV_PAD, bar_y, _ACCENT_W, bar_h)
+                bar_h = _BTN_H - 12
+                bar_y = ry + (_BTN_H - bar_h) // 2
+                p.setRenderHint(QPainter.RenderHint.Antialiasing)
                 p.setBrush(accent_color)
-                p.drawRoundedRect(bar_rect, _ACCENT_W / 2, _ACCENT_W / 2)
+                p.drawRoundedRect(
+                    QRectF(_NAV_PAD, bar_y, _ACCENT_W, bar_h),
+                    _ACCENT_W / 2, _ACCENT_W / 2,
+                )
+                p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
             # ── Icon (vị trí tuyệt đối — không bao giờ thay đổi) ─────
             if entry.pixmap:
-                icon_x = _ICON_LEFT
-                icon_y = rect.y() + (_BTN_H - _ICON_SIZE) // 2
-                p.drawPixmap(icon_x, icon_y, entry.pixmap)
+                p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                p.drawPixmap(_ICON_LEFT, ry + (_BTN_H - _ICON_SIZE) // 2, entry.pixmap)
 
             # ── Text (chỉ vẽ khi đủ rộng) ────────────────────────────
-            if w > _TEXT_VISIBLE_THRESHOLD:
-                text_rect = QRect(
-                    _TEXT_LEFT, rect.y(),
-                    w - _TEXT_LEFT - _NAV_PAD, _BTN_H,
+            if draw_text:
+                p.setPen(accent_color if entry.checked else text_color)
+                p.drawText(
+                    _TEXT_LEFT, ry, w - _TEXT_LEFT - _NAV_PAD, _BTN_H,
+                    Qt.AlignmentFlag.AlignVCenter, entry.text,
                 )
-                if entry.checked:
-                    p.setPen(accent_color)
-                else:
-                    p.setPen(text_color)
-                p.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter, entry.text)
 
-            # ── Separator dưới mỗi nav item ─────────────────────────
-            # Kiểm tra còn nav item phía sau không (bỏ qua _Separator)
-            has_next = any(
-                isinstance(e, _NavItem)
-                for e, _ in item_rects[i + 1:]
-            )
+            # ── Separator dưới nav item (pre-computed) ───────────────
             if has_next:
-                p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-                line_y = rect.y() + _BTN_H + _ITEM_GAP // 2
                 p.setPen(sep_pen)
-                p.drawLine(_NAV_PAD, line_y, w - _NAV_PAD, line_y)
-                p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+                p.drawLine(
+                    _NAV_PAD, ry + _BTN_H + _ITEM_GAP // 2,
+                    w - _NAV_PAD, ry + _BTN_H + _ITEM_GAP // 2,
+                )
 
         p.end()
 
