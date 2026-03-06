@@ -186,6 +186,22 @@ class _LoginForm(QWidget):
         btn_lay.addWidget(self._btn_login)
         lay.addLayout(btn_lay)
 
+        # Headline + description — fills the gap
+        lay.addSpacing(theme.SPACING_MD)
+        self._headline = QLabel(t("login.headline"))
+        self._headline.setFont(theme.font(size=theme.FONT_SIZE_SM, bold=True))
+        self._headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._headline.setWordWrap(True)
+        self._headline.setStyleSheet("color: #666;")
+        lay.addWidget(self._headline)
+
+        self._desc = QLabel(t("login.description"))
+        self._desc.setFont(theme.font(size=8))
+        self._desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._desc.setWordWrap(True)
+        self._desc.setStyleSheet("color: #999; line-height: 1.3;")
+        lay.addWidget(self._desc)
+
         lay.addStretch()
 
         # Switch link
@@ -210,6 +226,8 @@ class _LoginForm(QWidget):
         self._btn_login.setText(t("login.btn_login"))
         self._no_account_lbl.setText(t("login.no_account"))
         self._link_register.setText(t("login.link_register"))
+        self._headline.setText(t("login.headline"))
+        self._desc.setText(t("login.description"))
 
     def _on_cancel(self) -> None:
         self._username.clear()
@@ -319,6 +337,22 @@ class _RegisterForm(QWidget):
         btn_lay.addWidget(self._btn_register)
         lay.addLayout(btn_lay)
 
+        # Headline + description
+        lay.addSpacing(theme.SPACING_MD)
+        self._headline = QLabel(t("login.headline"))
+        self._headline.setFont(theme.font(size=theme.FONT_SIZE_SM, bold=True))
+        self._headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._headline.setWordWrap(True)
+        self._headline.setStyleSheet("color: #666;")
+        lay.addWidget(self._headline)
+
+        self._desc = QLabel(t("login.description"))
+        self._desc.setFont(theme.font(size=8))
+        self._desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._desc.setWordWrap(True)
+        self._desc.setStyleSheet("color: #999; line-height: 1.3;")
+        lay.addWidget(self._desc)
+
         lay.addStretch()
 
         # Switch link
@@ -343,6 +377,8 @@ class _RegisterForm(QWidget):
         self._btn_register.setText(t("register.btn_register"))
         self._has_account_lbl.setText(t("register.has_account"))
         self._link_login.setText(t("register.link_login"))
+        self._headline.setText(t("login.headline"))
+        self._desc.setText(t("login.description"))
 
     def _on_cancel(self) -> None:
         self._username.clear()

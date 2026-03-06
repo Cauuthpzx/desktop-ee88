@@ -35,7 +35,9 @@
         "btn_cancel": "Huỷ",
         "no_account": "Chưa có tài khoản?",
         "link_register": "Đăng ký",
-        "error_connect": "Không thể kết nối máy chủ."
+        "error_connect": "Không thể kết nối máy chủ.",
+        "headline": "Max HUB Admin – Trung tam Dieu hanh Thong minh",
+        "description": "Cong cu quan tri hien dai danh rieng cho Admin, tich hop cac tinh nang thong minh giup theo doi, phan tich va toi uu hoa trai nghiem nguoi dung tren he sinh thai Max HUB."
     },
     "register": {
         "title": "Đăng ký",

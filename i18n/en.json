@@ -35,7 +35,9 @@
         "btn_cancel": "Cancel",
         "no_account": "Don't have an account?",
         "link_register": "Register",
-        "error_connect": "Cannot connect to server."
+        "error_connect": "Cannot connect to server.",
+        "headline": "Max HUB Admin – Smart Operations Center",
+        "description": "A modern admin tool with smart features for monitoring, analyzing, and optimizing user experience across the Max HUB ecosystem."
     },
     "register": {
         "title": "Register",

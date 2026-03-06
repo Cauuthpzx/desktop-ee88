@@ -35,7 +35,9 @@
         "btn_cancel": "取消",
         "no_account": "还没有账号？",
         "link_register": "注册",
-        "error_connect": "无法连接服务器。"
+        "error_connect": "无法连接服务器。",
+        "headline": "Max HUB Admin – 智能运营中心",
+        "description": "专为管理员打造的现代化管理工具，集成智能功能，帮助监控、分析和优化 Max HUB 生态系统中的用户体验。"
     },
     "register": {
         "title": "注册",
