@@ -156,10 +156,23 @@
     "settings": {
         "title": "设置",
         "general": "常规",
+        "appearance": "外观",
+        "appearance_desc": "自定义应用主题",
+        "language_card": "语言",
+        "language_desc": "选择显示语言",
         "language": "语言：",
         "language_restart": "语言更改将立即生效。",
         "theme": "主题：",
         "dark_mode": "深色模式",
-        "theme_toggle": "切换亮色/深色主题"
+        "theme_toggle": "切换亮色/深色主题",
+        "notifications": "通知",
+        "notifications_desc": "管理通知",
+        "notify_enabled": "启用通知",
+        "notify_sound": "通知声音",
+        "about": "关于",
+        "about_desc": "版本和许可证",
+        "version_label": "版本：",
+        "author_label": "作者：",
+        "license_label": "许可证："
     }
 }

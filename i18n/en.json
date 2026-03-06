@@ -156,10 +156,23 @@
     "settings": {
         "title": "Settings",
         "general": "General",
+        "appearance": "Appearance",
+        "appearance_desc": "Customize app theme",
+        "language_card": "Language",
+        "language_desc": "Choose display language",
         "language": "Language:",
         "language_restart": "Language changes will apply immediately.",
         "theme": "Theme:",
         "dark_mode": "Dark mode",
-        "theme_toggle": "Toggle light/dark theme"
+        "theme_toggle": "Toggle light/dark theme",
+        "notifications": "Notifications",
+        "notifications_desc": "Manage notifications",
+        "notify_enabled": "Enable notifications",
+        "notify_sound": "Notification sound",
+        "about": "About",
+        "about_desc": "Version & license",
+        "version_label": "Version:",
+        "author_label": "Author:",
+        "license_label": "License:"
     }
 }

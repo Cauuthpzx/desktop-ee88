@@ -156,10 +156,23 @@
     "settings": {
         "title": "Cài đặt",
         "general": "Chung",
+        "appearance": "Giao diện",
+        "appearance_desc": "Tuỳ chỉnh giao diện ứng dụng",
+        "language_card": "Ngôn ngữ",
+        "language_desc": "Chọn ngôn ngữ hiển thị",
         "language": "Ngôn ngữ:",
         "language_restart": "Thay đổi ngôn ngữ sẽ áp dụng ngay lập tức.",
         "theme": "Giao diện:",
         "dark_mode": "Chế độ tối",
-        "theme_toggle": "Đổi giao diện sáng/tối"
+        "theme_toggle": "Đổi giao diện sáng/tối",
+        "notifications": "Thông báo",
+        "notifications_desc": "Quản lý thông báo",
+        "notify_enabled": "Bật thông báo",
+        "notify_sound": "Âm thanh thông báo",
+        "about": "Thông tin",
+        "about_desc": "Phiên bản & giấy phép",
+        "version_label": "Phiên bản:",
+        "author_label": "Tác giả:",
+        "license_label": "Giấy phép:"
     }
 }
