@@ -88,7 +88,7 @@ class AccountTab(BaseTab):
 
         # ── Card 2: Status & Bio ──────────────────────────────
         self._card_status = ExpandCard(
-            icon="icons/layui/remark.svg",
+            icon="icons/layui/face-smile.svg",
             title=t("account.status_section"),
         )
 
