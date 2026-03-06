@@ -336,7 +336,7 @@ class CollapsibleSidebar(QWidget):
         draw_text = w > _TEXT_VISIBLE_THRESHOLD
         hover_idx = self._hover_index
 
-        p.setFont(theme.font())
+        p.setFont(theme.font(bold=True))
 
         for i, (entry, rect, has_next) in enumerate(item_rects):
             if isinstance(entry, _Separator):
@@ -378,7 +378,7 @@ class CollapsibleSidebar(QWidget):
                 p.setPen(accent_color if entry.checked else text_color)
                 p.drawText(
                     _TEXT_LEFT, ry, w - _TEXT_LEFT - _NAV_PAD, _BTN_H,
-                    Qt.AlignmentFlag.AlignVCenter, entry.text,
+                    Qt.AlignmentFlag.AlignVCenter, entry.text.upper(),
                 )
 
             # ── Separator dưới nav item (pre-computed) ───────────────

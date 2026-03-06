@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon
 from core import theme
 from core.app_window import AppWindow
+from dialogs.login_window import LoginWindow
 from widgets.tooltip import install as install_tooltip
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +38,6 @@ def main():
 
     window = AppWindow()
     window.setWindowIcon(icon_titlebar)    # titlebar
-    window.show()
 
     # System tray
     tray = QSystemTrayIcon(icon_tray, app)
@@ -48,7 +48,18 @@ def main():
     tray_menu.addAction("Exit", app.quit)
     tray.setContextMenu(tray_menu)
     tray.setToolTip("MaxHub")
-    tray.show()
+
+    # Login window — hien truoc AppWindow
+    login = LoginWindow()
+    login.setWindowIcon(icon_titlebar)
+
+    def on_login_success(username: str) -> None:
+        login.hide()
+        window.show()
+        tray.show()
+
+    login.login_success.connect(on_login_success)
+    login.show()
 
     sys.exit(app.exec())
 

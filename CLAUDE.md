@@ -29,7 +29,8 @@ project/
 ├── dialogs/             # Shared dialogs — dùng lại, không tự viết
 ├── widgets/             # Shared custom widgets — dùng lại, không tự viết
 ├── utils/               # db, settings, validators, formatters, table_helper, thread_worker
-└── data/                # SQLite (tự tạo lần đầu chạy)
+├── .env                 # PostgreSQL connection (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
+└── .env.example         # Template cho .env (không chứa password thật)
 ```
 
 **Import flow một chiều:**
@@ -168,7 +169,7 @@ Moi entry la dict `{icon, text, tab}`. `None` = separator. Thu tu = thu tu hien 
 | `validators.py` | `required, email, phone, positive, validate_all` | Validate form trước khi lưu |
 | `formatters.py` | `currency, number, date_str, phone_fmt, truncate, yesno` | Format để hiển thị |
 | `table_helper.py` | `setup_table, load_table, get_selected_id, set_column_width` | Thao tác QTableWidget |
-| `db.py` | `Database` | Kết nối và truy vấn SQLite |
+| `db.py` | `Database` | Kết nối và truy vấn PostgreSQL (psycopg v3, đọc .env) |
 | `settings.py` | `settings` | Lưu/đọc cấu hình app |
 | `thread_worker.py` | `Worker, run_in_thread` | Chạy task nặng không đơ UI |
 
@@ -333,8 +334,8 @@ except (FileNotFoundError, PermissionError) as e:
 # SAI — SQL injection
 db.execute(f"SELECT * FROM users WHERE name = '{name}'")
 
-# ĐÚNG — parameterized query
-db.execute("SELECT * FROM users WHERE name = ?", (name,))
+# ĐÚNG — parameterized query (PostgreSQL dùng %s, KHÔNG dùng ?)
+db.execute("SELECT * FROM users WHERE name = %s", (name,))
 ```
 - Validate mọi input trước khi dùng (dùng `validators.py`)
 - Không log password, token, thông tin nhạy cảm
@@ -390,7 +391,7 @@ class QuanLyKhoTab(BaseTab):
         self._reload()
 
     def _reload(self, q=""):
-        data = []  # db.fetchall("SELECT id, ten, so_luong FROM hang_hoa WHERE ten LIKE ?", (f"%{q}%",))
+        data = []  # db.fetchall("SELECT id, ten, so_luong FROM hang_hoa WHERE ten LIKE %s", (f"%{q}%",))
         self.crud.load(data, keys=["id", "ten", "so_luong"])
 
     def _on_add(self):
@@ -401,22 +402,22 @@ class QuanLyKhoTab(BaseTab):
         errors = validate_all([required("Tên hàng", data["ten"])])
         if errors:
             warn(self.window(), "\n".join(errors)); return
-        # db.execute("INSERT INTO hang_hoa (ten, so_luong) VALUES (?, ?)", ...)
+        # db.execute("INSERT INTO hang_hoa (ten, so_luong) VALUES (%s, %s)", ...)
         self._reload()
 
     def _on_edit(self):
         id_ = self.crud.selected_id()
         if not id_: return
-        rec = {}  # db.fetchone("SELECT * FROM hang_hoa WHERE id = ?", (id_,))
+        rec = {}  # db.fetchone("SELECT * FROM hang_hoa WHERE id = %s", (id_,))
         dlg = KhoDialog(self.window(), data=rec)
         if dlg.exec() != QDialog.DialogCode.Accepted: return
-        # db.execute("UPDATE hang_hoa SET ten=?, so_luong=? WHERE id=?", ...)
+        # db.execute("UPDATE hang_hoa SET ten=%s, so_luong=%s WHERE id=%s", ...)
         self._reload()
 
     def _on_delete(self):
         id_ = self.crud.selected_id()
         if id_ and confirm_delete(self.window()):
-            # db.execute("DELETE FROM hang_hoa WHERE id = ?", (id_,))
+            # db.execute("DELETE FROM hang_hoa WHERE id = %s", (id_,))
             self._reload()
 
     def _on_search(self, text: str):
