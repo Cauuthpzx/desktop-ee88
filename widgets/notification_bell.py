@@ -235,7 +235,6 @@ class _NotificationPopup(QWidget):
             None,
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint,
         )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedWidth(self._POPUP_W)
 
         self._build_ui()
