@@ -7,13 +7,12 @@ to reveal content on click. Inspired by PyQt-Fluent-Widgets ExpandSettingCard.
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QSizePolicy, QGraphicsOpacityEffect,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSizePolicy,
 )
-from PyQt6.QtGui import QIcon, QPainter, QColor, QPen, QFont, QPalette
+from PyQt6.QtGui import QIcon, QPainter, QPen, QPalette
 from PyQt6.QtCore import (
     Qt, QPropertyAnimation, QEasingCurve, pyqtProperty,
-    QParallelAnimationGroup, QSize,
+    QParallelAnimationGroup,
 )
 from core import theme
 
@@ -74,8 +73,8 @@ class ExpandCard(QFrame):
         super().__init__(parent)
         self._expanded = False
 
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setFrameShadow(QFrame.Shadow.Plain)
+        self.setFrameShape(QFrame.Shape.Box)
+        self.setFrameShadow(QFrame.Shadow.Sunken)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
 
         # Main layout
@@ -110,9 +109,7 @@ class ExpandCard(QFrame):
         # Description (right-side summary text)
         self._desc_lbl = QLabel(description)
         self._desc_lbl.setFont(theme.font(size=theme.FONT_SIZE_SM))
-        desc_color = self.palette().color(QPalette.ColorRole.WindowText)
-        desc_color.setAlpha(140)
-        self._desc_lbl.setStyleSheet(f"color: rgba({desc_color.red()},{desc_color.green()},{desc_color.blue()},0.55);")
+        self._desc_lbl.setEnabled(False)  # uses disabled palette text = subtle
         h_lay.addWidget(self._desc_lbl)
 
         # Arrow

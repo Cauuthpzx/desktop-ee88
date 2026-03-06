@@ -9,10 +9,9 @@ from __future__ import annotations
 import logging
 
 from PyQt6.QtWidgets import (
-    QWidget, QLineEdit, QPushButton, QLabel, QHBoxLayout, QComboBox, QTextEdit,
-    QSizePolicy, QFormLayout,
+    QWidget, QLineEdit, QPushButton, QLabel, QComboBox, QTextEdit,
 )
-from PyQt6.QtGui import QIcon, QPalette
+from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt
 
 from core import theme
@@ -55,7 +54,15 @@ class AccountTab(BaseTab):
         layout.addWidget(self._title_lbl)
         layout.addWidget(divider())
 
-        # ── Card 1: Profile Info ──────────────────────────────
+        # ── Two independent columns ─────────────────────────
+        columns = hbox(spacing=theme.SPACING_LG, margins=theme.MARGIN_ZERO)
+
+        col_left = vbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
+        col_left.setAlignment(Qt.AlignmentFlag.AlignTop)
+        col_right = vbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
+        col_right.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # ── Card 1: Profile Info (left) ──────────────────────
         self._card_info = ExpandCard(
             icon="icons/layui/user.svg",
             title=t("account.profile_info"),
@@ -83,10 +90,9 @@ class AccountTab(BaseTab):
         info_w = QWidget()
         info_w.setLayout(info_form)
         self._card_info.add_widget(info_w)
+        col_left.addWidget(self._card_info)
 
-        layout.addWidget(self._card_info)
-
-        # ── Card 2: Status & Bio ──────────────────────────────
+        # ── Card 2: Status & Bio (left) ──────────────────────
         self._card_status = ExpandCard(
             icon="icons/layui/face-smile.svg",
             title=t("account.status_section"),
@@ -134,9 +140,9 @@ class AccountTab(BaseTab):
         status_lay.addWidget(self._status_msg)
 
         self._card_status.add_widget(status_w)
-        layout.addWidget(self._card_status)
+        col_left.addWidget(self._card_status)
 
-        # ── Card 3: Email ─────────────────────────────────────
+        # ── Card 3: Email (right) ────────────────────────────
         self._card_email = ExpandCard(
             icon="icons/layui/email.svg",
             title=t("account.update_email"),
@@ -168,9 +174,9 @@ class AccountTab(BaseTab):
         email_lay.addWidget(self._email_msg)
 
         self._card_email.add_widget(email_w)
-        layout.addWidget(self._card_email)
+        col_right.addWidget(self._card_email)
 
-        # ── Card 4: Change Password ───────────────────────────
+        # ── Card 4: Change Password (right) ──────────────────
         self._card_pwd = ExpandCard(
             icon="icons/layui/key.svg",
             title=t("account.change_password"),
@@ -225,7 +231,11 @@ class AccountTab(BaseTab):
         pwd_lay.addWidget(self._pwd_msg)
 
         self._card_pwd.add_widget(pwd_w)
-        layout.addWidget(self._card_pwd)
+        col_right.addWidget(self._card_pwd)
+
+        columns.addLayout(col_left, 1)
+        columns.addLayout(col_right, 1)
+        layout.addLayout(columns)
 
         # ── Logout — theme-aware ────────────────────────────
         logout_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)

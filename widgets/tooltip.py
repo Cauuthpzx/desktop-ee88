@@ -1,18 +1,12 @@
 """
-widgets/tooltip.py — Custom tooltip giống layui-vue.
+widgets/tooltip.py — Custom tooltip.
 
-Thay thế QToolTip mặc định bằng popup custom-painted với arrow, shadow, fade-in.
+Nền đen trong suốt 50%, chữ trắng, border-radius, arrow — mọi chế độ.
+Hiện ngay khi hover (không delay).
+
 Cài đặt global qua install() — tự động override mọi setToolTip trong app.
 
-Visual style (từ layui-vue):
-    - Nền trắng, text #3a3a3a, border #cecece
-    - Border-radius 6px, padding 8px 12px
-    - Box-shadow nhẹ
-    - Arrow 8px xoay 45°, border khớp tooltip
-    - Fade-in 150ms
-
 Usage:
-    # Cài đặt global (trong main.py sau theme.apply):
     from widgets.tooltip import install
     install(app)
 
@@ -32,14 +26,17 @@ from PyQt6.QtGui import (
 
 from core import theme
 
-# ── Style constants (layui-vue inspired) ──────────────────────────────────────
+# ── Style constants ───────────────────────────────────────────────────────────
 _BORDER_RADIUS = 6
-_PADDING_H     = 12        # horizontal padding
-_PADDING_V     = 8         # vertical padding
-_ARROW_SIZE    = 8          # kích thước arrow (half-diagonal of rotated square)
-_SHADOW_BLUR   = 6          # margin around body for painted shadow
-_SHADOW_COLOR  = QColor(0, 0, 0, 30)  # subtle shadow base color
-_MARGIN        = 4          # khoảng cách giữa arrow và target widget
+_PADDING_H     = 10        # horizontal padding
+_PADDING_V     = 6         # vertical padding
+_ARROW_SIZE    = 6          # arrow triangle height
+_MARGIN        = 4          # gap between arrow tip and target widget
+
+# Fixed colors — same in both light and dark mode
+_BG_COLOR      = QColor(0, 0, 0, 204)   # black 80% transparent
+_TEXT_COLOR     = QColor(255, 255, 255)  # white
+_BORDER_COLOR  = QColor(255, 255, 255, 30)  # subtle white border
 
 
 class Tooltip(QWidget):
@@ -48,7 +45,6 @@ class Tooltip(QWidget):
     _instance: Tooltip | None = None
 
     def __init__(self) -> None:
-        # parent=None, window flags: no frame, stay on top, tool window
         super().__init__(
             None,
             Qt.WindowType.ToolTip
@@ -59,9 +55,9 @@ class Tooltip(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
         self._text = ""
-        self._position = "top"     # top, bottom, left, right
-        self._arrow_x = 0          # arrow center X relative to widget
-        self._arrow_y = 0          # arrow center Y relative to widget
+        self._position = "top"
+        self._arrow_x = 0
+        self._arrow_y = 0
 
         self._target: QWidget | None = None
         self._target_rect_override: QRect | None = None
@@ -101,7 +97,6 @@ class Tooltip(QWidget):
         tip = cls.instance()
         tip.setVisible(False)
 
-    # Alias for backward compatibility
     hide_immediate = hide
 
     # ── Internal ──────────────────────────────────────────────────────────────
@@ -112,21 +107,17 @@ class Tooltip(QWidget):
         self._calculate_geometry()
         self.setWindowOpacity(1.0)
         self.show()
+        self.raise_()
 
     def _calculate_geometry(self) -> None:
-        """Tính vị trí tooltip + arrow dựa trên target widget."""
         if not self._target:
             return
 
         fm = QFontMetrics(theme.font())
         text_w = fm.horizontalAdvance(self._text) + _PADDING_H * 2
         text_h = fm.height() + _PADDING_V * 2
-        # Account for shadow margin
-        shadow_m = _SHADOW_BLUR
-        total_w = text_w + shadow_m * 2
-        total_h = text_h + shadow_m * 2 + _ARROW_SIZE
 
-        # Target rect in global coordinates
+        # For top/bottom: arrow adds height. For left/right: arrow adds width.
         if self._target_rect_override is not None:
             target_rect = self._target_rect_override
         else:
@@ -134,36 +125,38 @@ class Tooltip(QWidget):
                 self._target.mapToGlobal(QPoint(0, 0)),
                 self._target.size(),
             )
-        tc_x = target_rect.center().x()  # target center X
-        tc_y = target_rect.center().y()  # target center Y
+        tc_x = target_rect.center().x()
+        tc_y = target_rect.center().y()
 
         pos = self._position
 
         if pos == "top":
+            total_w = text_w
+            total_h = text_h + _ARROW_SIZE
             x = tc_x - total_w // 2
-            y = target_rect.top() - total_h - _MARGIN + shadow_m
+            y = target_rect.top() - total_h - _MARGIN
         elif pos == "bottom":
+            total_w = text_w
+            total_h = text_h + _ARROW_SIZE
             x = tc_x - total_w // 2
-            y = target_rect.bottom() + _MARGIN - shadow_m
+            y = target_rect.bottom() + _MARGIN
         elif pos == "left":
-            total_w_lr = text_w + shadow_m * 2 + _ARROW_SIZE
-            total_h_lr = text_h + shadow_m * 2
-            x = target_rect.left() - total_w_lr - _MARGIN + shadow_m
-            y = tc_y - total_h_lr // 2
-            total_w = total_w_lr
-            total_h = total_h_lr
+            total_w = text_w + _ARROW_SIZE
+            total_h = text_h
+            x = target_rect.left() - total_w - _MARGIN
+            y = tc_y - total_h // 2
         elif pos == "right":
-            total_w_lr = text_w + shadow_m * 2 + _ARROW_SIZE
-            total_h_lr = text_h + shadow_m * 2
-            x = target_rect.right() + _MARGIN - shadow_m
-            y = tc_y - total_h_lr // 2
-            total_w = total_w_lr
-            total_h = total_h_lr
+            total_w = text_w + _ARROW_SIZE
+            total_h = text_h
+            x = target_rect.right() + _MARGIN
+            y = tc_y - total_h // 2
         else:
+            total_w = text_w
+            total_h = text_h + _ARROW_SIZE
             x = tc_x - total_w // 2
-            y = target_rect.top() - total_h - _MARGIN + shadow_m
+            y = target_rect.top() - total_h - _MARGIN
 
-        # Screen bounds check
+        # Screen bounds
         screen = QGuiApplication.screenAt(target_rect.center())
         if screen:
             sr = screen.availableGeometry()
@@ -173,19 +166,18 @@ class Tooltip(QWidget):
         self.setFixedSize(total_w, total_h)
         self.move(x, y)
 
-        # Arrow position relative to this widget
+        # Arrow center relative to this widget
         if pos in ("top", "bottom"):
             self._arrow_x = tc_x - x
-            self._arrow_y = (shadow_m + text_h) if pos == "top" else shadow_m
+            self._arrow_y = text_h if pos == "top" else 0
         else:
-            self._arrow_x = (shadow_m + text_w) if pos == "left" else shadow_m
+            self._arrow_x = text_w if pos == "left" else 0
             self._arrow_y = tc_y - y
 
     def paintEvent(self, event) -> None:  # type: ignore[override]
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        sm = _SHADOW_BLUR  # shadow margin
         fm = QFontMetrics(theme.font())
         text_w = fm.horizontalAdvance(self._text) + _PADDING_H * 2
         text_h = fm.height() + _PADDING_V * 2
@@ -193,42 +185,24 @@ class Tooltip(QWidget):
 
         # ── Body rect ────────────────────────────────────────────────────
         if pos == "top":
-            body = QRect(sm, sm, text_w, text_h)
+            body = QRect(0, 0, text_w, text_h)
         elif pos == "bottom":
-            body = QRect(sm, sm + _ARROW_SIZE, text_w, text_h)
+            body = QRect(0, _ARROW_SIZE, text_w, text_h)
         elif pos == "left":
-            body = QRect(sm, sm, text_w, text_h)
+            body = QRect(0, 0, text_w, text_h)
         elif pos == "right":
-            body = QRect(sm + _ARROW_SIZE, sm, text_w, text_h)
+            body = QRect(_ARROW_SIZE, 0, text_w, text_h)
         else:
-            body = QRect(sm, sm, text_w, text_h)
+            body = QRect(0, 0, text_w, text_h)
 
-        # ── Colors from palette (dark/light aware) ─────────────────────
-        pal = QGuiApplication.palette()
-        bg_color = pal.color(pal.ColorRole.ToolTipBase)
-        text_color = pal.color(pal.ColorRole.ToolTipText)
-        border_color = pal.color(pal.ColorRole.Mid)
-
-        # ── Painted shadow (multiple expanding rects with decreasing alpha) ──
-        p.setPen(Qt.PenStyle.NoPen)
-        for i in range(1, sm + 1):
-            sc = QColor(_SHADOW_COLOR)
-            sc.setAlpha(max(1, _SHADOW_COLOR.alpha() * (sm - i + 1) // (sm + 1)))
-            p.setBrush(sc)
-            p.drawRoundedRect(
-                body.x() - i, body.y() - i,
-                body.width() + i * 2, body.height() + i * 2,
-                _BORDER_RADIUS + i, _BORDER_RADIUS + i,
-            )
-
-        # ── Draw body (rounded rect with border) ────────────────────────
+        # ── Draw body ────────────────────────────────────────────────────
         path = QPainterPath()
         path.addRoundedRect(
             body.x(), body.y(), body.width(), body.height(),
             _BORDER_RADIUS, _BORDER_RADIUS,
         )
-        p.setPen(QPen(border_color, 1))
-        p.setBrush(bg_color)
+        p.setPen(QPen(_BORDER_COLOR, 1))
+        p.setBrush(_BG_COLOR)
         p.drawPath(path)
 
         # ── Draw arrow ───────────────────────────────────────────────────
@@ -238,44 +212,33 @@ class Tooltip(QWidget):
 
         arrow = QPolygonF()
         if pos == "top":
-            # Arrow pointing down (at bottom of body)
             ay = body.bottom()
             arrow.append(QPointF(ax - hs, ay))
-            arrow.append(QPointF(ax, ay + hs + 1))
+            arrow.append(QPointF(ax, ay + _ARROW_SIZE))
             arrow.append(QPointF(ax + hs, ay))
         elif pos == "bottom":
-            # Arrow pointing up (at top of body)
             ay = body.top()
             arrow.append(QPointF(ax - hs, ay))
-            arrow.append(QPointF(ax, ay - hs - 1))
+            arrow.append(QPointF(ax, ay - _ARROW_SIZE))
             arrow.append(QPointF(ax + hs, ay))
         elif pos == "left":
-            # Arrow pointing right (at right of body)
             ax = body.right()
             arrow.append(QPointF(ax, ay - hs))
-            arrow.append(QPointF(ax + hs + 1, ay))
+            arrow.append(QPointF(ax + _ARROW_SIZE, ay))
             arrow.append(QPointF(ax, ay + hs))
         elif pos == "right":
-            # Arrow pointing left (at left of body)
             ax = body.left()
             arrow.append(QPointF(ax, ay - hs))
-            arrow.append(QPointF(ax - hs - 1, ay))
+            arrow.append(QPointF(ax - _ARROW_SIZE, ay))
             arrow.append(QPointF(ax, ay + hs))
 
         if not arrow.isEmpty():
-            # Fill arrow (cover border at junction)
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(bg_color)
+            p.setBrush(_BG_COLOR)
             p.drawPolygon(arrow)
 
-            # Draw arrow border (outer two edges only)
-            p.setPen(QPen(border_color, 1))
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawLine(arrow[0], arrow[1])
-            p.drawLine(arrow[1], arrow[2])
-
         # ── Draw text ────────────────────────────────────────────────────
-        p.setPen(text_color)
+        p.setPen(_TEXT_COLOR)
         p.setFont(theme.font())
         text_rect = body.adjusted(_PADDING_H, _PADDING_V, -_PADDING_H, -_PADDING_V)
         p.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self._text)
@@ -286,18 +249,46 @@ class Tooltip(QWidget):
 # ── Global event filter — override QToolTip ──────────────────────────────────
 
 class _TooltipFilter(QObject):
-    """Event filter cài đặt trên QApplication.
-    Bắt ToolTip event, thay thế bằng custom Tooltip widget."""
+    """Event filter: intercept both ToolTip and HoverMove events.
+
+    QEvent.Type.ToolTip fires with OS delay (~700ms) — too slow.
+    We also listen to HoverMove/HoverEnter for instant tooltips on
+    widgets that have toolTip set.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._hover_widget: QWidget | None = None
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # type: ignore[override]
-        if event.type() == QEvent.Type.ToolTip:
-            widget = obj
-            if isinstance(widget, QWidget) and widget.toolTip():
-                Tooltip.show_at(widget, widget.toolTip(), "top")
-                return True  # block QToolTip mặc định
+        etype = event.type()
 
-        if event.type() == QEvent.Type.Leave:
+        # Block the default QToolTip entirely
+        if etype == QEvent.Type.ToolTip:
             if isinstance(obj, QWidget) and obj.toolTip():
+                # Already shown via HoverEnter/Move — just block default
+                return True
+
+        # Show instantly on hover enter/move
+        if etype in (QEvent.Type.HoverEnter, QEvent.Type.HoverMove):
+            if isinstance(obj, QWidget) and obj.toolTip():
+                if self._hover_widget is not obj:
+                    self._hover_widget = obj
+                    Tooltip.show_at(obj, obj.toolTip(), "top")
+                return False
+
+        # Hide on hover leave
+        if etype == QEvent.Type.HoverLeave:
+            if isinstance(obj, QWidget) and obj is self._hover_widget:
+                self._hover_widget = None
+                Tooltip.hide()
+            return False
+
+        # Also hide on Leave (for widgets without hover tracking)
+        if etype == QEvent.Type.Leave:
+            if isinstance(obj, QWidget) and obj.toolTip():
+                if obj is self._hover_widget:
+                    self._hover_widget = None
                 Tooltip.hide()
 
         return False
