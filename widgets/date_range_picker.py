@@ -17,8 +17,10 @@ from PyQt6.QtWidgets import (
     QCalendarWidget, QLabel, QFrame, QComboBox,
 )
 from PyQt6.QtCore import Qt, QDate, pyqtSignal, QPoint
-from PyQt6.QtGui import QIcon, QTextCharFormat, QColor
+from PyQt6.QtGui import QTextCharFormat, QColor
 from core import theme
+from core.icon import IconPath
+from core.theme import tinted_icon, theme_signals
 
 
 class _RangeCalendar(QCalendarWidget):
@@ -223,11 +225,13 @@ class DateRangePicker(QWidget):
         lay.setSpacing(0)
 
         self._btn = QPushButton()
-        self._btn.setIcon(QIcon("icons/material/date_range.svg"))
+        self._btn.setIcon(tinted_icon(IconPath.DATE_RANGE))
         self._btn.clicked.connect(self._show_popup)
         self._btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._update_text()
         lay.addWidget(self._btn)
+
+        theme_signals.changed.connect(self._on_theme_changed)
 
     def _update_text(self) -> None:
         if self._d_from and self._d_to:
@@ -281,3 +285,6 @@ class DateRangePicker(QWidget):
             self._d_from = QDate.currentDate()
             self._d_to = QDate.currentDate()
         self._update_text()
+
+    def _on_theme_changed(self, _dark: bool) -> None:
+        self._btn.setIcon(tinted_icon(IconPath.DATE_RANGE))

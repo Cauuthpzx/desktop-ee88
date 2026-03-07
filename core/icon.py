@@ -91,6 +91,15 @@ class _IconPath:
     ABOUT = "icons/layui/about.svg"
     FACE_SMILE = "icons/layui/face-smile.svg"
 
+    # ── Pagination ──────────────────────────────────────────
+    FIRST_PAGE = "icons/material/first_page.svg"
+    CHEVRON_LEFT = "icons/material/chevron_left.svg"
+    CHEVRON_RIGHT = "icons/material/chevron_right.svg"
+    LAST_PAGE = "icons/material/last_page.svg"
+
+    # ── Date ─────────────────────────────────────────────────
+    DATE_RANGE = "icons/material/date_range.svg"
+
     # ── Material extended ────────────────────────────────────
     GROUPS = "icons/material/groups.svg"
     CASINO = "icons/material/casino.svg"

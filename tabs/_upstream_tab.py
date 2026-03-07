@@ -14,11 +14,11 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QWidget,
 )
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QIcon
-
 from core.base_widgets import BaseTab, label, divider, hbox
 from core import theme
 from core.i18n import t
+from core.icon import Icon, IconPath
+from core.theme import tinted_icon, theme_signals
 from utils.upstream import upstream
 from utils.formatters import currency
 from utils.thread_worker import run_in_thread
@@ -167,16 +167,19 @@ class UpstreamTab(BaseTab):
 
         # Search button
         _ico = QSize(15, 15)
-        self._btn_search = QPushButton(QIcon("icons/layui/search.svg"), t("crud.search"))
+        self._btn_search = QPushButton(tinted_icon(IconPath.SEARCH, size=15), t("crud.search"))
         self._btn_search.setIconSize(_ico)
         self._btn_search.clicked.connect(self._on_filter_search)
         row.addWidget(self._btn_search)
 
         # Reset button
-        self._btn_reset = QPushButton(QIcon("icons/layui/refresh.svg"), t("crud.reset"))
+        self._btn_reset = QPushButton(tinted_icon(IconPath.REFRESH, size=15), t("crud.reset"))
         self._btn_reset.setIconSize(_ico)
         self._btn_reset.clicked.connect(self._on_filter_reset)
         row.addWidget(self._btn_reset)
+
+        # Refresh icons on theme change
+        theme_signals.changed.connect(self._on_filter_theme_changed)
 
         row.addStretch()
         layout.addLayout(row)
@@ -222,6 +225,10 @@ class UpstreamTab(BaseTab):
             elif ftype == "select":
                 w.setCurrentIndex(0)
         self._reload_fresh()
+
+    def _on_filter_theme_changed(self, _dark: bool) -> None:
+        self._btn_search.setIcon(tinted_icon(IconPath.SEARCH, size=15))
+        self._btn_reset.setIcon(tinted_icon(IconPath.REFRESH, size=15))
 
     # ── Show ─────────────────────────────────────────────────
 

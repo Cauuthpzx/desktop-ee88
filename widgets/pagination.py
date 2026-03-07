@@ -14,10 +14,11 @@ Dùng:
 import math
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QSpinBox
-from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import pyqtSignal, Qt, QSize
 from core import theme
 from core.i18n import t
+from core.icon import Icon, IconPath
+from core.theme import tinted_icon, theme_signals
 
 _ICON_SIZE = QSize(18, 18)
 _BTN_SIZE = 28
@@ -43,13 +44,13 @@ class Pagination(QWidget):
 
         lay.addStretch()
 
-        self._btn_first = self._icon_btn("icons/material/first_page.svg")
-        self._btn_prev  = self._icon_btn("icons/material/chevron_left.svg")
+        self._btn_first = self._icon_btn(IconPath.FIRST_PAGE)
+        self._btn_prev  = self._icon_btn(IconPath.CHEVRON_LEFT)
         self._lbl_info  = QLabel()
         self._lbl_info.setFont(theme.font())
         self._lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._btn_next  = self._icon_btn("icons/material/chevron_right.svg")
-        self._btn_last  = self._icon_btn("icons/material/last_page.svg")
+        self._btn_next  = self._icon_btn(IconPath.CHEVRON_RIGHT)
+        self._btn_last  = self._icon_btn(IconPath.LAST_PAGE)
 
         self._btn_first.clicked.connect(lambda: self._go(1))
         self._btn_prev.clicked.connect(lambda: self._go(self._current - 1))
@@ -76,10 +77,13 @@ class Pagination(QWidget):
         lay.addStretch()
         self._refresh()
 
+        # Refresh icons on theme change
+        theme_signals.changed.connect(self._on_theme_changed)
+
     @staticmethod
     def _icon_btn(icon_path: str) -> QPushButton:
         btn = QPushButton()
-        btn.setIcon(QIcon(icon_path))
+        btn.setIcon(tinted_icon(icon_path, size=18))
         btn.setIconSize(_ICON_SIZE)
         btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -132,3 +136,9 @@ class Pagination(QWidget):
     def offset(self) -> int:
         """Trả về offset (0-based) để dùng với SQL LIMIT/OFFSET."""
         return (self._current - 1) * self._page_size
+
+    def _on_theme_changed(self, _dark: bool) -> None:
+        self._btn_first.setIcon(tinted_icon(IconPath.FIRST_PAGE, size=18))
+        self._btn_prev.setIcon(tinted_icon(IconPath.CHEVRON_LEFT, size=18))
+        self._btn_next.setIcon(tinted_icon(IconPath.CHEVRON_RIGHT, size=18))
+        self._btn_last.setIcon(tinted_icon(IconPath.LAST_PAGE, size=18))
