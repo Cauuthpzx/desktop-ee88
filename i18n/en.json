@@ -73,7 +73,8 @@
         "export": "Export",
         "export_empty": "No data to export.",
         "export_success": "Export successful!",
-        "export_error": "Failed to export file."
+        "export_error": "Failed to export file.",
+        "exporting": "Loading data ({current}/{total})..."
     },
     "search": {
         "all": "All",

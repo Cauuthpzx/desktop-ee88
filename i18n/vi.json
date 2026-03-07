@@ -73,7 +73,8 @@
         "export": "Xuất file",
         "export_empty": "Không có dữ liệu để xuất.",
         "export_success": "Xuất file thành công!",
-        "export_error": "Không thể xuất file."
+        "export_error": "Không thể xuất file.",
+        "exporting": "Đang tải dữ liệu ({current}/{total})..."
     },
     "search": {
         "all": "Tất cả",

@@ -73,7 +73,8 @@
         "export": "导出",
         "export_empty": "没有数据可导出。",
         "export_success": "导出成功！",
-        "export_error": "无法导出文件。"
+        "export_error": "无法导出文件。",
+        "exporting": "正在加载数据 ({current}/{total})..."
     },
     "search": {
         "all": "全部",

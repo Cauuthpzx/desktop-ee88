@@ -28,7 +28,10 @@ from widgets.error_state import ErrorState
 from widgets.date_range_picker import DateRangePicker
 from dialogs.confirm_dialog import error
 
+import math
+
 PAGE_SIZE = 100
+EXPORT_PAGE_SIZE = 500
 
 
 def _fmt_currency(v) -> str:
@@ -237,8 +240,83 @@ class UpstreamTab(BaseTab):
         self._reload_fresh()
 
     def _on_export(self) -> None:
-        from utils.export_table import export_table
-        export_table(self.window(), self.crud.table)
+        """Xuất toàn bộ dữ liệu (tất cả page) ra Excel."""
+        if not self._current_agent_id:
+            return
+        if self._is_loading:
+            return
+
+        self._btn_export.setEnabled(False)
+        self._export_all_rows: list[dict] = []
+        self._export_total = 0
+        self._export_page = 0
+        self._fetch_export_page()
+
+    def _fetch_export_page(self) -> None:
+        aid = self._current_agent_id
+        params = self._get_search_params()
+        page = self._export_page + 1
+
+        run_in_thread(
+            lambda: self._fetch_upstream(aid, page, EXPORT_PAGE_SIZE, **params),
+            on_result=lambda data: self._on_export_page(data, page),
+            on_error=self._on_export_error,
+        )
+        self._loading.start(t("crud.exporting", current=len(self._export_all_rows), total="..."))
+
+    def _on_export_page(self, data: dict, page: int) -> None:
+        rows = data.get("data", [])
+        self._export_total = data.get("count", 0)
+        self._export_page = page
+        self._export_all_rows.extend(rows)
+
+        loaded = len(self._export_all_rows)
+        total_pages = math.ceil(self._export_total / EXPORT_PAGE_SIZE) if self._export_total else 1
+
+        if loaded < self._export_total and page < total_pages:
+            self._loading.start(t("crud.exporting", current=loaded, total=self._export_total))
+            self._fetch_export_page()
+        else:
+            self._loading.stop()
+            self._btn_export.setEnabled(True)
+            self._do_export_data()
+
+    def _on_export_error(self, exc: Exception) -> None:
+        self._loading.stop()
+        self._btn_export.setEnabled(True)
+        self._export_all_rows = []
+        error(self.window(), t("crud.export_error"))
+
+    def _do_export_data(self) -> None:
+        from utils.export_table import export_data
+
+        headers = [t(ck[0]) for ck in self._columns_keys]
+        keys = [ck[1] for ck in self._columns_keys]
+        default_name = self._build_export_filename()
+
+        export_data(
+            self.window(), headers, self._export_all_rows,
+            keys, self._formatters(), default_name,
+        )
+        self._export_all_rows = []
+
+    def _build_export_filename(self) -> str:
+        """Tạo tên file mặc định: 'Title - dd/mm - dd/mm.xlsx'."""
+        title = t(self._title_key)
+        # Tìm date range trong filter widgets
+        date_part = ""
+        for field in self._search_fields:
+            if field.get("type") == "date_range":
+                w = self._filter_widgets.get(field["key"])
+                if w and w.date_from() and w.date_to():
+                    d_from = w.date_from().toString("dd/MM")
+                    d_to = w.date_to().toString("dd/MM")
+                    if d_from == d_to:
+                        date_part = f" - {d_from}"
+                    else:
+                        date_part = f" - {d_from} - {d_to}"
+                break
+        return f"{title}{date_part}.xlsx"
 
     def _on_filter_theme_changed(self, _dark: bool) -> None:
         self._btn_search.setIcon(tinted_icon(IconPath.SEARCH, size=15))
