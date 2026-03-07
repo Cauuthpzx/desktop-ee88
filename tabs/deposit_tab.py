@@ -21,21 +21,21 @@ class DepositTab(UpstreamTab):
          "label": "search.create_time", "default": "today"},
         {"key": "username", "type": "text",
          "label": "search.username", "placeholder": "search.username_ph",
-         "width": 160},
+         "width": 200},
         {"key": "type", "type": "select", "label": "search.transaction_type",
          "options": [
              ("search.all", ""),
-             ("search.deposit_online", "1"),
-             ("search.deposit_manual", "2"),
-             ("search.deposit_activity", "3"),
-         ], "width": 140},
-        {"key": "status", "type": "select", "label": "search.status",
+             ("search.type_deposit", "1"),
+             ("search.type_withdraw", "2"),
+         ], "width": 180},
+        {"key": "status", "type": "select", "label": "search.transaction_status",
          "options": [
              ("search.all", ""),
-             ("search.status_pending", "0"),
-             ("search.status_success", "1"),
-             ("search.status_rejected", "2"),
-         ], "width": 130},
+             ("search.txn_pending", "0"),
+             ("search.txn_complete", "1"),
+             ("search.txn_processing", "2"),
+             ("search.txn_failed", "3"),
+         ], "width": 180},
     ]
 
     def _fetch_upstream(self, agent_id, page, limit, **params):

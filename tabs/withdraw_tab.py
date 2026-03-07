@@ -27,14 +27,15 @@ class WithdrawTab(UpstreamTab):
          "width": 150},
         {"key": "serial_no", "type": "text",
          "label": "search.serial_no", "placeholder": "search.serial_no_ph",
-         "width": 200},
-        {"key": "status", "type": "select", "label": "search.status",
+         "width": 300},
+        {"key": "status", "type": "select", "label": "search.transaction_status",
          "options": [
              ("search.all", ""),
-             ("search.status_pending", "0"),
-             ("search.status_success", "1"),
-             ("search.status_rejected", "2"),
-         ], "width": 130},
+             ("search.txn_pending", "0"),
+             ("search.txn_complete", "1"),
+             ("search.txn_processing", "2"),
+             ("search.txn_failed", "3"),
+         ], "width": 200},
     ]
 
     def _fetch_upstream(self, agent_id, page, limit, **params):

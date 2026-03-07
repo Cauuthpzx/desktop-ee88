@@ -2,6 +2,7 @@
 tabs/lottery_tab.py — Tab Xổ số (upstream: /agent/reportLottery.html)
 """
 from tabs._upstream_tab import UpstreamTab, _fmt_currency
+from tabs.bet_lottery_tab import _LOTTERY_OPTIONS
 from utils.upstream import upstream
 
 
@@ -25,7 +26,9 @@ class LotteryTab(UpstreamTab):
          "label": "search.date", "default": "today"},
         {"key": "username", "type": "text",
          "label": "search.username", "placeholder": "search.username_ph",
-         "width": 160},
+         "width": 200},
+        {"key": "lottery_id", "type": "select", "label": "search.lottery_name",
+         "options": _LOTTERY_OPTIONS, "width": 200},
     ]
 
     def _fetch_upstream(self, agent_id, page, limit, **params):

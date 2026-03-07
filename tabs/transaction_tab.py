@@ -25,6 +25,9 @@ class TransactionTab(UpstreamTab):
     _search_fields = [
         {"key": "date", "type": "date_range",
          "label": "search.date", "default": "today"},
+        {"key": "username", "type": "text",
+         "label": "search.username", "placeholder": "search.username_ph",
+         "width": 200},
     ]
 
     def _fetch_upstream(self, agent_id, page, limit, **params):
