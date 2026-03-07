@@ -298,6 +298,95 @@ class UpstreamClient:
         return self._fetch(agent_id, "/agent/inviteList.html",
                            page=page, limit=limit, **kwargs)
 
+    # ══════════════════════════════════════════════════════════
+    #  GROUP — Parallel fetch from multiple agents
+    # ══════════════════════════════════════════════════════════
+
+    def save_group_agents_local(self, group_id: int, agents: list[dict]) -> None:
+        """Cache group agents + cookies vao QSettings."""
+        s = _settings()
+        for ag in agents:
+            cookie = ag.get("session_cookie")
+            if cookie:
+                s.set(f"agent/{ag['id']}/cookie", cookie)
+                s.set(f"agent/{ag['id']}/base_url",
+                      ag.get("base_url") or UPSTREAM_BASE_URL)
+        s.set(f"group/{group_id}/agents", json.dumps(agents))
+
+    def get_group_agents_local(self, group_id: int) -> list[dict]:
+        """Doc group agents tu QSettings cache (0ms)."""
+        raw = _settings().get_str(f"group/{group_id}/agents")
+        if not raw:
+            return []
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return []
+
+    def parallel_fetch(
+        self,
+        agents: list[dict],
+        path: str,
+        page: int = 1,
+        limit: int = 50,
+        extra_params: str = "",
+    ) -> dict[str, Any]:
+        """Fetch song song tu nhieu agents. Chay trong worker thread.
+
+        Returns: {data: [...], agents_fetched: [...], agents_errors: [...]}
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        all_data: list[dict] = []
+        agents_fetched: list[dict] = []
+        agents_errors: list[dict] = []
+
+        params = f"page={page}&limit={limit}"
+        if extra_params:
+            params += f"&{extra_params}"
+
+        def _fetch_one(ag: dict) -> tuple[dict, list[dict]]:
+            cookie_info = self.get_cookie(ag["id"])
+            if not cookie_info:
+                raise ValueError("no_session")
+            cookie, base_url = cookie_info
+            result = self._post(cookie, base_url, path, params)
+            if result.get("code") != 0:
+                raise ConnectionError(result.get("msg", "error"))
+            rows = result.get("data", [])
+            # Tag moi row voi agent info
+            for row in rows:
+                row["_agentId"] = ag["id"]
+                row["_agentName"] = ag.get("name", "")
+            return ag, rows
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(_fetch_one, ag): ag for ag in agents}
+
+            for future in as_completed(futures):
+                ag = futures[future]
+                try:
+                    _, rows = future.result()
+                    all_data.extend(rows)
+                    agents_fetched.append({
+                        "id": ag["id"],
+                        "name": ag.get("name", ""),
+                        "row_count": len(rows),
+                    })
+                except Exception as e:
+                    agents_errors.append({
+                        "id": ag["id"],
+                        "name": ag.get("name", ""),
+                        "error": str(e),
+                    })
+
+        return {
+            "data": all_data,
+            "count": len(all_data),
+            "agents_fetched": agents_fetched,
+            "agents_errors": agents_errors,
+        }
+
 
 # Singleton
 upstream = UpstreamClient()

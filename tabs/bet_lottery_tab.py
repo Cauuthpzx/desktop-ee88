@@ -82,6 +82,7 @@ _LOTTERY_OPTIONS = [
 
 class BetLotteryTab(UpstreamTab):
     _title_key = "bet_lottery.title"
+    _data_type = "bet_lottery"
     _columns_keys = [
         ("bet_lottery.col_agent",    "_agentName"),
         ("bet_lottery.col_serial",   "serial_no"),

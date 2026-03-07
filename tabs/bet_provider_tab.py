@@ -7,6 +7,7 @@ from utils.upstream import upstream
 
 class BetProviderTab(UpstreamTab):
     _title_key = "bet_provider.title"
+    _data_type = "bet_provider"
     _columns_keys = [
         ("bet_provider.col_agent",      "_agentName"),
         ("bet_provider.col_serial",     "serial_no"),

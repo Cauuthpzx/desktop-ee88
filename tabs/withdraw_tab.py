@@ -7,6 +7,7 @@ from utils.upstream import upstream
 
 class WithdrawTab(UpstreamTab):
     _title_key = "withdraw.title"
+    _data_type = "withdrawals"
     _columns_keys = [
         ("withdraw.col_agent",      "_agentName"),
         ("withdraw.col_serial",     "serial_no"),

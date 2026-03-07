@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QTableWidgetItem, QLineEdit,
     QPushButton, QLabel, QWidget,
 )
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, QTimer
 from core.base_widgets import BaseTab, label, divider, hbox
 from core import theme
 from core.i18n import t
@@ -61,6 +61,7 @@ class UpstreamTab(BaseTab):
     _columns_keys: list[tuple[str, str]] = []
     _search_fields: list[dict] = []
     _summary_keys: list[tuple[str, str]] = []  # [(i18n_key, data_key), ...]
+    _data_type: str = ""  # cache key cho group sync (e.g. "customers", "lottery")
 
     def _build(self, layout) -> None:
         self._title_lbl = label(t(self._title_key), bold=True, size=theme.FONT_SIZE_LG)
@@ -79,7 +80,7 @@ class UpstreamTab(BaseTab):
 
         layout.addWidget(divider())
 
-        # Agent selector
+        # Agent + Group selector row
         agent_row = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         self._agent_label = label(t("customer.agent_select"))
         agent_row.addWidget(self._agent_label)
@@ -88,6 +89,19 @@ class UpstreamTab(BaseTab):
             QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._agent_combo.currentIndexChanged.connect(self._on_agent_changed)
         agent_row.addWidget(self._agent_combo)
+
+        agent_row.addSpacing(theme.SPACING_LG)
+
+        # Group selector
+        self._group_label = label(t("group.select"))
+        agent_row.addWidget(self._group_label)
+        self._group_combo = QComboBox()
+        self._group_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self._group_combo.addItem(t("group.none"), None)
+        self._group_combo.currentIndexChanged.connect(self._on_group_changed)
+        agent_row.addWidget(self._group_combo)
+
         agent_row.addStretch()
         layout.addLayout(agent_row)
 
@@ -129,6 +143,13 @@ class UpstreamTab(BaseTab):
         self._total_count = 0
         self._is_loading = False
         self._all_rows: list[dict] = []
+
+        # Group mode state
+        self._groups: list[dict] = []
+        self._current_group_id: int | None = None
+        self._group_mode = False
+        self._cache_version = 0
+        self._poll_timer: QTimer | None = None
 
     # ── Search filter row ──────────────────────────────────
 
@@ -358,6 +379,8 @@ class UpstreamTab(BaseTab):
                 self._apply_agents(agents)
             else:
                 self._agent_combo.addItem(t("customer.no_active_agent"))
+            # Load groups list (background)
+            self._load_groups()
 
     # ── Agent combo ──────────────────────────────────────────
 
@@ -381,9 +404,247 @@ class UpstreamTab(BaseTab):
     def _on_agent_changed(self, index: int) -> None:
         if index < 0 or not self._agents:
             return
+        if self._group_mode:
+            return  # Ignore agent changes in group mode
         self._current_agent_id = self._agent_combo.currentData()
         if self._current_agent_id:
             self._reload_fresh()
+
+    # ── Group mode ────────────────────────────────────────────
+
+    def _load_groups(self) -> None:
+        """Load groups from server (background)."""
+        from utils.api import api
+        run_in_thread(
+            lambda: api.get("/api/groups"),
+            on_result=self._on_groups_loaded,
+        )
+
+    def _on_groups_loaded(self, result) -> None:
+        ok, data = result
+        if not ok or not data.get("ok"):
+            return
+        self._groups = data.get("groups", [])
+        self._group_combo.blockSignals(True)
+        self._group_combo.clear()
+        self._group_combo.addItem(t("group.none"), None)
+        for g in self._groups:
+            self._group_combo.addItem(g["name"], g["id"])
+        self._group_combo.blockSignals(False)
+
+    def _on_group_changed(self, index: int) -> None:
+        group_id = self._group_combo.currentData()
+        self._stop_polling()
+
+        if group_id is None:
+            # Switch back to agent mode
+            self._group_mode = False
+            self._current_group_id = None
+            self._agent_combo.setEnabled(True)
+            if self._current_agent_id:
+                self._reload_fresh()
+            return
+
+        # Switch to group mode
+        self._group_mode = True
+        self._current_group_id = group_id
+        self._agent_combo.setEnabled(False)
+        self._load_group_data()
+
+    def _load_group_data(self) -> None:
+        """Load group data — try cache first, fallback to parallel fetch."""
+        if not self._current_group_id or not self._data_type:
+            return
+        from utils.api import api
+        gid = self._current_group_id
+        self._loading.start(t("loading.loading_data"))
+
+        run_in_thread(
+            lambda: api.get(f"/api/groups/{gid}/cache?data_type={self._data_type}"),
+            on_result=self._on_cache_result,
+            on_error=lambda e: self._fetch_and_sync(),
+        )
+
+    def _on_cache_result(self, result) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            synced_at = data.get("synced_at", "")
+            if self._is_cache_stale(synced_at, max_age_seconds=300):
+                self._fetch_and_sync()
+            else:
+                self._render_group_result(data)
+                self._cache_version = data.get("version", 0)
+                self._loading.stop()
+                self._start_polling()
+        else:
+            self._fetch_and_sync()
+
+    def _is_cache_stale(self, synced_at: str, max_age_seconds: int = 300) -> bool:
+        """Check if cache is older than max_age_seconds."""
+        if not synced_at:
+            return True
+        from datetime import datetime, timezone
+        try:
+            dt = datetime.fromisoformat(synced_at)
+            age = (datetime.now(timezone.utc) - dt).total_seconds()
+            return age > max_age_seconds
+        except (ValueError, TypeError):
+            return True
+
+    def _fetch_and_sync(self) -> None:
+        """Fetch directly from all group agents → display → push to server."""
+        if not self._current_group_id or not self._data_type:
+            self._loading.stop()
+            return
+
+        gid = self._current_group_id
+        self._loading.start(t("group.fetching_agents"))
+
+        # First, get group agents with cookies from server
+        from utils.api import api
+        run_in_thread(
+            lambda: api.get(f"/api/groups/{gid}/agents"),
+            on_result=self._on_group_agents_for_fetch,
+            on_error=lambda e: self._on_group_fetch_error(e),
+        )
+
+    def _on_group_agents_for_fetch(self, result) -> None:
+        ok, data = result
+        if not ok or not data.get("ok"):
+            self._loading.stop()
+            return
+
+        agents = data.get("agents", [])
+        if not agents:
+            self._loading.stop()
+            return
+
+        gid = self._current_group_id
+        # Cache group agents + cookies locally
+        upstream.save_group_agents_local(gid, agents)
+
+        # Filter only active agents with cookies
+        active_agents = [a for a in agents if a.get("session_cookie")]
+        if not active_agents:
+            self._loading.stop()
+            return
+
+        # Build upstream path + params for this tab
+        path, extra = self._get_upstream_path_and_params()
+
+        self._loading.start(t("group.fetching_data"))
+
+        run_in_thread(
+            lambda: upstream.parallel_fetch(
+                active_agents, path, page=1, limit=2000,
+                extra_params=extra,
+            ),
+            on_result=self._on_parallel_done,
+            on_error=lambda e: self._on_group_fetch_error(e),
+        )
+
+    def _on_parallel_done(self, result) -> None:
+        # 1. Display immediately
+        self._render_group_result(result)
+        self._loading.stop()
+
+        # 2. Push to server cache (background)
+        if self._current_group_id and self._data_type:
+            from utils.api import api
+            gid = self._current_group_id
+            run_in_thread(
+                lambda: api.post(f"/api/groups/{gid}/sync", {
+                    "data_type": self._data_type,
+                    "data": result.get("data", []),
+                    "agents_fetched": result.get("agents_fetched", []),
+                    "agents_errors": result.get("agents_errors", []),
+                }),
+                on_result=self._on_sync_done,
+            )
+
+        self._start_polling()
+
+    def _on_sync_done(self, result) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._cache_version = data.get("version", 0)
+
+    def _render_group_result(self, data: dict) -> None:
+        """Render group data (from cache or parallel fetch)."""
+        rows = data.get("data", [])
+        self._all_rows = rows
+        self._total_count = data.get("total_count", data.get("count", len(rows)))
+        self._current_page = 1
+        self._render_table(rows)
+        self.crud.set_total(self._total_count, reset_page=False)
+        self._update_summary()
+
+    def _on_group_fetch_error(self, exc) -> None:
+        self._loading.stop()
+        self._is_loading = False
+
+    def _get_upstream_path_and_params(self) -> tuple[str, str]:
+        """Return (path, extra_params) for upstream fetch.
+        Override in subclass if needed, default: derive from _fetch_upstream."""
+        # Build search params
+        params = self._get_search_params()
+        extra = "&".join(f"{k}={v}" for k, v in params.items() if v)
+        # Path is determined by _data_type mapping
+        path_map = {
+            "customers": "/agent/user.html",
+            "deposits": "/agent/depositAndWithdrawal.html",
+            "withdrawals": "/agent/withdrawalsRecord.html",
+            "transactions": "/agent/reportFunds.html",
+            "bet_lottery": "/agent/bet.html",
+            "bet_provider": "/agent/betOrder.html",
+            "lottery": "/agent/reportLottery.html",
+            "provider": "/agent/reportThirdGame.html",
+            "referrals": "/agent/inviteList.html",
+        }
+        path = path_map.get(self._data_type, "")
+        # Some paths need extra default params
+        if self._data_type == "customers":
+            extra = f"hs_search=true&{extra}" if extra else "hs_search=true"
+        elif self._data_type == "bet_lottery":
+            extra = f"es=1&is_summary=0&{extra}" if extra else "es=1&is_summary=0"
+        elif self._data_type == "bet_provider":
+            extra = f"es=1&{extra}" if extra else "es=1"
+        return path, extra
+
+    # ── Polling ───────────────────────────────────────────────
+
+    def _start_polling(self) -> None:
+        """Start 30s polling for cache version changes."""
+        self._stop_polling()
+        if not self._group_mode or not self._current_group_id:
+            return
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(30_000)
+        self._poll_timer.timeout.connect(self._check_version)
+        self._poll_timer.start()
+
+    def _stop_polling(self) -> None:
+        if self._poll_timer:
+            self._poll_timer.stop()
+            self._poll_timer.deleteLater()
+            self._poll_timer = None
+
+    def _check_version(self) -> None:
+        """Lightweight poll — only check version number."""
+        if not self._current_group_id or not self._data_type:
+            return
+        from utils.api import api
+        gid = self._current_group_id
+        dt = self._data_type
+        run_in_thread(
+            lambda: api.get(f"/api/groups/{gid}/cache/version?data_type={dt}"),
+            on_result=self._on_version_check,
+        )
+
+    def _on_version_check(self, result) -> None:
+        ok, data = result
+        if ok and data.get("version", 0) > self._cache_version:
+            self._load_group_data()
 
     # ── Data loading (infinite scroll) ───────────────────────
 
@@ -589,6 +850,10 @@ class UpstreamTab(BaseTab):
         for i18n_key, _data_key, card in self._summary_cards:
             card.set_title(t(i18n_key))
         self._agent_label.setText(t("customer.agent_select"))
+        self._group_label.setText(t("group.select"))
+        # Retranslate group combo first item
+        if self._group_combo.count() > 0:
+            self._group_combo.setItemText(0, t("group.none"))
         columns = [t(ck[0]) for ck in self._columns_keys]
         self.crud.table.setHorizontalHeaderLabels(columns)
 

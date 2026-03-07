@@ -7,6 +7,7 @@ from utils.upstream import upstream
 
 class TransactionTab(UpstreamTab):
     _title_key = "transaction.title"
+    _data_type = "transactions"
     _columns_keys = [
         ("transaction.col_agent",       "_agentName"),
         ("transaction.col_account",     "username"),

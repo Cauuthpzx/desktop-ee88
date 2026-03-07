@@ -52,6 +52,7 @@ _PROVIDER_OPTIONS = [
 
 class ProviderTab(UpstreamTab):
     _title_key = "provider.title"
+    _data_type = "provider"
     _columns_keys = [
         ("provider.col_agent",    "_agentName"),
         ("provider.col_account",  "username"),

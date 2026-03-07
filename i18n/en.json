@@ -494,5 +494,11 @@
         "title_500": "Server Error",
         "desc_500": "A server error occurred. Please try again later.",
         "retry": "Retry"
+    },
+    "group": {
+        "select": "Group:",
+        "none": "-- None --",
+        "fetching_agents": "Loading group agents...",
+        "fetching_data": "Loading group data..."
     }
 }

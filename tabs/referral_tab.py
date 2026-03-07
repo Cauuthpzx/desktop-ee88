@@ -7,6 +7,7 @@ from utils.upstream import upstream
 
 class ReferralTab(UpstreamTab):
     _title_key = "referral.title"
+    _data_type = "referrals"
     _columns_keys = [
         ("referral.col_agent",          "_agentName"),
         ("referral.col_code",           "invite_code"),

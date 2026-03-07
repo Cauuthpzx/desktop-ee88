@@ -7,6 +7,7 @@ from utils.upstream import upstream
 
 class DepositTab(UpstreamTab):
     _title_key = "deposit.title"
+    _data_type = "deposits"
     _columns_keys = [
         ("deposit.col_agent",   "_agentName"),
         ("deposit.col_account", "username"),

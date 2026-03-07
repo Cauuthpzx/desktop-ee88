@@ -494,5 +494,11 @@
         "title_500": "Lỗi máy chủ",
         "desc_500": "Đã xảy ra lỗi từ máy chủ. Vui lòng thử lại sau.",
         "retry": "Thử lại"
+    },
+    "group": {
+        "select": "Nhóm:",
+        "none": "-- Không --",
+        "fetching_agents": "Đang tải danh sách đại lý nhóm...",
+        "fetching_data": "Đang tải dữ liệu nhóm..."
     }
 }

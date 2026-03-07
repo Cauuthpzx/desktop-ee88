@@ -8,6 +8,7 @@ from utils.upstream import upstream
 
 class LotteryTab(UpstreamTab):
     _title_key = "lottery.title"
+    _data_type = "lottery"
     _columns_keys = [
         ("lottery.col_agent",    "_agentName"),
         ("lottery.col_account",  "username"),
