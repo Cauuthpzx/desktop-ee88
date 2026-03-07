@@ -20,6 +20,12 @@ class BetProviderTab(UpstreamTab):
         ("bet_provider.col_result",     "win_lose"),
         ("bet_provider.col_time",       "bet_time"),
     ]
+    _summary_keys = [
+        ("bet_provider.col_bet",    "bet_amount"),
+        ("bet_provider.col_valid",  "turnover"),
+        ("bet_provider.col_prize",  "prize"),
+        ("bet_provider.col_result", "win_lose"),
+    ]
     _search_fields = [
         {"key": "bet_time", "type": "date_range",
          "label": "search.bet_time", "default": "today"},

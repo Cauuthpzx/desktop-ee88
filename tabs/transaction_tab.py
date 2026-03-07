@@ -22,6 +22,15 @@ class TransactionTab(UpstreamTab):
         ("transaction.col_3rd_bonus",   "third_activity_amount"),
         ("transaction.col_date",        "date"),
     ]
+    _summary_keys = [
+        ("transaction.col_deposit_amt",  "deposit_amount"),
+        ("transaction.col_withdraw_amt", "withdrawal_amount"),
+        ("transaction.col_fee",          "charge_fee"),
+        ("transaction.col_commission",   "agent_commission"),
+        ("transaction.col_promo",        "promotion"),
+        ("transaction.col_3rd_rebate",   "third_rebate"),
+        ("transaction.col_3rd_bonus",    "third_activity_amount"),
+    ]
     _search_fields = [
         {"key": "date", "type": "date_range",
          "label": "search.date", "default": "today"},

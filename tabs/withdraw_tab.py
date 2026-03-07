@@ -19,6 +19,11 @@ class WithdrawTab(UpstreamTab):
         ("withdraw.col_status",     "status_format"),
         ("withdraw.col_action",     "operation"),
     ]
+    _summary_keys = [
+        ("withdraw.col_amount",  "amount"),
+        ("withdraw.col_fee",     "user_fee"),
+        ("withdraw.col_actual",  "true_amount"),
+    ]
     _search_fields = [
         {"key": "create_time", "type": "date_range",
          "label": "search.create_time", "default": "today"},

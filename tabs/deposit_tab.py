@@ -16,6 +16,9 @@ class DepositTab(UpstreamTab):
         ("deposit.col_status",  "status"),
         ("deposit.col_time",    "create_time"),
     ]
+    _summary_keys = [
+        ("deposit.col_amount", "amount"),
+    ]
     _search_fields = [
         {"key": "create_time", "type": "date_range",
          "label": "search.create_time", "default": "today"},

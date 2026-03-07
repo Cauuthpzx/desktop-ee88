@@ -26,6 +26,7 @@ from widgets.table_crud import TableCrud
 from widgets.loading import LoadingOverlay
 from widgets.error_state import ErrorState
 from widgets.date_range_picker import DateRangePicker
+from widgets.stat_card import StatCard
 from dialogs.confirm_dialog import error
 
 import math
@@ -59,10 +60,23 @@ class UpstreamTab(BaseTab):
     _title_key: str = ""
     _columns_keys: list[tuple[str, str]] = []
     _search_fields: list[dict] = []
+    _summary_keys: list[tuple[str, str]] = []  # [(i18n_key, data_key), ...]
 
     def _build(self, layout) -> None:
         self._title_lbl = label(t(self._title_key), bold=True, size=theme.FONT_SIZE_LG)
         layout.addWidget(self._title_lbl)
+
+        # Summary cards row (chỉ hiện khi tab khai báo _summary_keys)
+        self._summary_cards: list[tuple[str, str, StatCard]] = []
+        if self._summary_keys:
+            summary_row = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
+            for i18n_key, data_key in self._summary_keys:
+                card = StatCard(t(i18n_key), "0")
+                self._summary_cards.append((i18n_key, data_key, card))
+                summary_row.addWidget(card)
+            summary_row.addStretch()
+            layout.addLayout(summary_row)
+
         layout.addWidget(divider())
 
         # Agent selector
@@ -409,6 +423,20 @@ class UpstreamTab(BaseTab):
         """Override to provide column formatters. Default: no formatting."""
         return {}
 
+    def _update_summary(self) -> None:
+        """Tính tổng các cột trong _summary_keys từ _all_rows và cập nhật StatCard."""
+        if not self._summary_cards:
+            return
+        for i18n_key, data_key, card in self._summary_cards:
+            total = 0.0
+            for row in self._all_rows:
+                val = row.get(data_key, 0)
+                try:
+                    total += float(str(val).replace(",", "")) if val else 0
+                except (TypeError, ValueError):
+                    pass
+            card.update_value(_fmt_currency(total))
+
     def _on_page_data(self, data: dict, page: int) -> None:
         rows = data.get("data", [])
         self._total_count = data.get("count", 0)
@@ -425,6 +453,7 @@ class UpstreamTab(BaseTab):
         if self.crud._pager:
             self.crud._pager._current = page
             self.crud._pager._refresh()
+        self._update_summary()
 
     def _render_table(self, rows: list[dict]) -> None:
         keys = [ck[1] for ck in self._columns_keys]
@@ -466,6 +495,7 @@ class UpstreamTab(BaseTab):
         if self.crud._pager:
             self.crud._pager._current = page
             self.crud._pager._refresh()
+        self._update_summary()
 
     def _on_load_finished(self) -> None:
         self._is_loading = False
@@ -556,6 +586,8 @@ class UpstreamTab(BaseTab):
 
     def retranslate(self) -> None:
         self._title_lbl.setText(t(self._title_key))
+        for i18n_key, _data_key, card in self._summary_cards:
+            card.set_title(t(i18n_key))
         self._agent_label.setText(t("customer.agent_select"))
         columns = [t(ck[0]) for ck in self._columns_keys]
         self.crud.table.setHorizontalHeaderLabels(columns)

@@ -21,6 +21,14 @@ class LotteryTab(UpstreamTab):
         ("lottery.col_prize",    "prize"),
         ("lottery.col_name",     "lottery_name"),
     ]
+    _summary_keys = [
+        ("lottery.col_bet_amt",  "bet_amount"),
+        ("lottery.col_valid",    "valid_amount"),
+        ("lottery.col_rebate",   "rebate_amount"),
+        ("lottery.col_result",   "result"),
+        ("lottery.col_winlose",  "win_lose"),
+        ("lottery.col_prize",    "prize"),
+    ]
     _search_fields = [
         {"key": "date", "type": "date_range",
          "label": "search.date", "default": "today"},

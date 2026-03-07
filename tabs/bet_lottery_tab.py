@@ -97,6 +97,11 @@ class BetLotteryTab(UpstreamTab):
         ("bet_lottery.col_result",   "result"),
         ("bet_lottery.col_status",   "status_text"),
     ]
+    _summary_keys = [
+        ("bet_lottery.col_amount",  "money"),
+        ("bet_lottery.col_rebate",  "rebate_amount"),
+        ("bet_lottery.col_result",  "result"),
+    ]
     _search_fields = [
         {"key": "create_time", "type": "date_range",
          "label": "search.bet_time", "default": "today"},

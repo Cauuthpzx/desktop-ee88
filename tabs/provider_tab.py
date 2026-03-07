@@ -62,6 +62,12 @@ class ProviderTab(UpstreamTab):
         ("provider.col_prize",    "t_prize"),
         ("provider.col_result",   "t_win_lose"),
     ]
+    _summary_keys = [
+        ("provider.col_bet_amt",  "t_bet_amount"),
+        ("provider.col_valid",    "t_turnover"),
+        ("provider.col_prize",    "t_prize"),
+        ("provider.col_result",   "t_win_lose"),
+    ]
     _search_fields = [
         {"key": "date", "type": "date_range",
          "label": "search.date", "default": "today"},
