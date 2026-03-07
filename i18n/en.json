@@ -82,7 +82,7 @@
         "serial_no": "Serial No.:",
         "serial_no_ph": "Enter serial number",
         "invite_code": "Invite code:",
-        "invite_code_ph": "Enter full invite code",
+        "invite_code_ph": "Enter invite code",
         "platform_account": "Platform account:",
         "platform_account_ph": "Enter platform account name",
         "status": "Status:",

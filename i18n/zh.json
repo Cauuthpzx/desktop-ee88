@@ -82,7 +82,7 @@
         "serial_no": "交易号：",
         "serial_no_ph": "请输入交易号",
         "invite_code": "邀请码：",
-        "invite_code_ph": "请输入完整邀请码",
+        "invite_code_ph": "输入邀请码",
         "platform_account": "平台账号：",
         "platform_account_ph": "请输入平台账号",
         "status": "状态：",

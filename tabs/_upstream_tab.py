@@ -56,7 +56,8 @@ class UpstreamTab(BaseTab):
         self._agent_label = label(t("customer.agent_select"))
         agent_row.addWidget(self._agent_label)
         self._agent_combo = QComboBox()
-        self._agent_combo.setMinimumWidth(200)
+        self._agent_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._agent_combo.currentIndexChanged.connect(self._on_agent_changed)
         agent_row.addWidget(self._agent_combo)
         agent_row.addStretch()
@@ -123,7 +124,11 @@ class UpstreamTab(BaseTab):
 
             if ftype == "text":
                 w = QLineEdit()
-                w.setPlaceholderText(t(field.get("placeholder", "crud.search")))
+                ph = t(field.get("placeholder", "crud.search"))
+                w.setPlaceholderText(ph)
+                # Width based on placeholder text length
+                fm = w.fontMetrics()
+                w.setMinimumWidth(fm.horizontalAdvance(ph) + 24)
                 w.returnPressed.connect(self._on_filter_search)
                 row.addWidget(w)
 
@@ -144,6 +149,8 @@ class UpstreamTab(BaseTab):
                 w = QComboBox()
                 for opt_label, opt_val in field.get("options", []):
                     w.addItem(t(opt_label), opt_val)
+                w.setSizeAdjustPolicy(
+                    QComboBox.SizeAdjustPolicy.AdjustToContents)
                 row.addWidget(w)
 
             self._filter_widgets[key] = w
