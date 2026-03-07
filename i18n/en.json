@@ -482,5 +482,16 @@
         "minutes_ago": "{n} min ago",
         "hours_ago": "{n}h ago",
         "days_ago": "{n}d ago"
+    },
+    "error_state": {
+        "title_401": "Session Expired",
+        "desc_401": "Please log in again to continue.",
+        "title_403": "Access Denied",
+        "desc_403": "You do not have permission to access this data.",
+        "title_404": "Not Found",
+        "desc_404": "The requested data does not exist or has been removed.",
+        "title_500": "Server Error",
+        "desc_500": "A server error occurred. Please try again later.",
+        "retry": "Retry"
     }
 }

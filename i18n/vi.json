@@ -482,5 +482,16 @@
         "minutes_ago": "{n} phút trước",
         "hours_ago": "{n} giờ trước",
         "days_ago": "{n} ngày trước"
+    },
+    "error_state": {
+        "title_401": "Phiên đã hết hạn",
+        "desc_401": "Vui lòng đăng nhập lại đại lý để tiếp tục.",
+        "title_403": "Truy cập bị từ chối",
+        "desc_403": "Bạn không có quyền truy cập dữ liệu này.",
+        "title_404": "Không tìm thấy",
+        "desc_404": "Dữ liệu yêu cầu không tồn tại hoặc đã bị xoá.",
+        "title_500": "Lỗi máy chủ",
+        "desc_500": "Đã xảy ra lỗi từ máy chủ. Vui lòng thử lại sau.",
+        "retry": "Thử lại"
     }
 }

@@ -24,6 +24,7 @@ from utils.formatters import currency
 from utils.thread_worker import run_in_thread
 from widgets.table_crud import TableCrud
 from widgets.loading import LoadingOverlay
+from widgets.error_state import ErrorState
 from widgets.date_range_picker import DateRangePicker
 from dialogs.confirm_dialog import error
 
@@ -92,6 +93,10 @@ class UpstreamTab(BaseTab):
             btn.hide()
         self.crud._toolbar.hide()
         layout.addWidget(self.crud)
+
+        # Error state (hidden by default)
+        self._error_state: ErrorState | None = None
+        self._error_layout = layout
 
         # Infinite scroll
         self._scrollbar = self.crud.table.verticalScrollBar()
@@ -282,6 +287,7 @@ class UpstreamTab(BaseTab):
     # ── Data loading (infinite scroll) ───────────────────────
 
     def _reload_fresh(self) -> None:
+        self._hide_error_state()
         self._current_page = 0
         self._total_count = 0
         self._all_rows = []
@@ -379,10 +385,48 @@ class UpstreamTab(BaseTab):
         self._loading.stop()
 
     def _on_error(self, exc: Exception) -> None:
-        if isinstance(exc, (PermissionError, ValueError)):
-            error(self.window(), t("customer.session_expired"))
-        else:
-            error(self.window(), t("customer.error_load"))
+        code = self._parse_error_code(exc)
+        self._show_error_state(code, exc)
+
+    @staticmethod
+    def _parse_error_code(exc: Exception) -> int:
+        """Extract HTTP error code from exception message."""
+        msg = str(exc)
+        if isinstance(exc, PermissionError) or "session" in msg.lower():
+            return 401
+        if "403" in msg:
+            return 403
+        if "404" in msg:
+            return 404
+        if isinstance(exc, ValueError):
+            return 401
+        return 500
+
+    def _show_error_state(self, code: int, exc: Exception | None = None) -> None:
+        """Show error page with SVG illustration, hide table."""
+        self._hide_error_state()
+        self.crud.hide()
+
+        title = t(f"error_state.title_{code}")
+        desc = t(f"error_state.desc_{code}")
+        self._error_state = ErrorState(
+            code=code, title=title, description=desc,
+            on_retry=self._on_retry,
+        )
+        self._error_layout.addWidget(self._error_state)
+
+    def _hide_error_state(self) -> None:
+        """Remove error state and show table again."""
+        if self._error_state:
+            self._error_state.setParent(None)
+            self._error_state.deleteLater()
+            self._error_state = None
+        self.crud.show()
+
+    def _on_retry(self) -> None:
+        """Retry loading data — hide error state and reload."""
+        self._hide_error_state()
+        self._reload_fresh()
 
     # ── Infinite scroll ──────────────────────────────────────
 
