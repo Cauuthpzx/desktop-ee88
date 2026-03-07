@@ -223,11 +223,14 @@ class _TickIcon(QWidget):
 # ── Overlay ───────────────────────────────────────────────
 
 class LoadingOverlay(QWidget):
-    """Overlay với loading dots kiểu Win10 + tick xanh khi hoàn tất."""
+    """Overlay nền đen 70% với loading dots + tick xanh khi hoàn tất."""
+
+    _BG_COLOR = QColor(0, 0, 0, 178)  # 70% opacity
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.hide()
 
         lay = QVBoxLayout(self)
@@ -239,19 +242,21 @@ class LoadingOverlay(QWidget):
         c_lay.setSpacing(theme.SPACING_MD)
         c_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Dots
-        self._dots = _LoadingDots(parent=container)
+        # Dots (white on dark bg)
+        self._dots = _LoadingDots(
+            color=QColor(255, 255, 255), parent=container)
         c_lay.addWidget(self._dots, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Tick (hidden initially)
-        self._tick = _TickIcon(24, parent=container)
+        self._tick = _TickIcon(28, parent=container)
         self._tick.hide()
         c_lay.addWidget(self._tick, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Label
+        # Label (white text)
         self._label = QLabel(t("loading.processing"))
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFont(theme.font())
+        self._label.setStyleSheet("color: white;")
         c_lay.addWidget(self._label)
 
         lay.addWidget(container)
@@ -294,6 +299,11 @@ class LoadingOverlay(QWidget):
         self._tick.hide()
         self._tick._progress = 0.0
         self._dots.show()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.fillRect(self.rect(), self._BG_COLOR)
+        p.end()
 
     def resizeEvent(self, event):
         if self.parent():
