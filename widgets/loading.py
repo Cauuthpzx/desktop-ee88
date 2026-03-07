@@ -405,10 +405,12 @@ class LoadingOverlay(QWidget):
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self._final_hide)
         self._icon_anim: QPropertyAnimation | None = None
+        self._loading = False
 
     def start(self, text: str = "") -> None:
         self._hide_timer.stop()
         self._stop_anim()
+        self._loading = True
         self._notify_card.hide()
         self._notify_card.icon._progress = 0.0
         self._dots.show()
@@ -422,7 +424,14 @@ class LoadingOverlay(QWidget):
         self.raise_()
 
     def stop(self) -> None:
-        """Stop loading and show success tick (backward compatible)."""
+        """Stop loading and show success tick (backward compatible).
+
+        Safe to call multiple times — only the first call after start()
+        triggers the notification. Subsequent calls are no-ops.
+        """
+        if not self._loading:
+            return
+        self._loading = False
         self.notify("success", t("loading.complete"))
 
     def notify(self, notify_type: str, text: str = "") -> None:
@@ -432,6 +441,8 @@ class LoadingOverlay(QWidget):
             notify_type: "success" | "error" | "warn" | "info"
             text: Message to display.
         """
+        self._loading = False
+        self._hide_timer.stop()
         self._dots.stop()
         self._dots.hide()
         self._loading_label.hide()
