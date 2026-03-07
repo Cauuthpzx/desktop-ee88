@@ -527,34 +527,34 @@ def check_session(session_id: str, base_url: str) -> bool:
 
         try:
             data = resp.json()
-            code = data.get("code")
-
-            # code == 0 with actual data list = valid
-            if code == 0 and isinstance(data.get("data"), list):
-                return True
-
-            # code in (0, 1) = generally valid
-            if code in (0, 1):
-                return True
-
-            # Check for login redirect in message
-            msg_text = str(data.get("msg", "")).lower()
-            if "login" in msg_text or "đăng nhập" in msg_text:
-                return False
-
-            # "jump" in data = redirect to login
-            resp_data = data.get("data", {})
-            if isinstance(resp_data, dict) and "jump" in resp_data:
-                return False
-
-            return True
-
         except ValueError:
             # Response is HTML (login page)
             text = resp.text[:200].lower()
-            if "login" in text or "đăng nhập" in text:
-                return False
+            return "login" not in text and "đăng nhập" not in text
+
+        # Redirect to login in response
+        url_field = str(data.get("url", "")).lower()
+        if url_field.startswith("/agent/login"):
+            return False
+
+        msg_text = str(data.get("msg", "")).lower()
+        if "login" in msg_text or "đăng nhập" in msg_text:
+            return False
+
+        # "jump" in data = redirect to login
+        resp_data = data.get("data", {})
+        if isinstance(resp_data, dict) and "jump" in resp_data:
+            return False
+
+        # code == 0 with data list = valid session
+        if data.get("code") == 0 and isinstance(resp_data, list):
             return True
+
+        # code == 0 but no data = still valid (empty result)
+        if data.get("code") == 0:
+            return True
+
+        return False
 
     except Exception:
         return False

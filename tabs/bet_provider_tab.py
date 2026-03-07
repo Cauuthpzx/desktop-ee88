@@ -23,7 +23,7 @@ class BetProviderTab(UpstreamTab):
     ]
     _search_fields = [
         {"key": "bet_time", "type": "date_range",
-         "label": "search.bet_time"},
+         "label": "search.bet_time", "default": "today"},
         {"key": "serial_no", "type": "text",
          "label": "search.serial_no", "placeholder": "search.serial_no_ph",
          "width": 200},

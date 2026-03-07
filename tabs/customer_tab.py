@@ -26,7 +26,7 @@ class CustomerTab(UpstreamTab):
          "label": "search.username", "placeholder": "search.username_ph",
          "width": 160},
         {"key": "first_deposit_time", "type": "date_range",
-         "label": "search.first_deposit_time"},
+         "label": "search.first_deposit_time", "optional": True},
         {"key": "status", "type": "select", "label": "search.status",
          "options": [
              ("search.all", ""),

@@ -98,7 +98,18 @@
         "bet_won": "赢",
         "bet_lost": "输",
         "bet_tie": "平",
-        "bet_cancelled": "已取消"
+        "bet_cancelled": "已取消",
+        "date_from": "开始日期",
+        "date_to": "结束日期",
+        "pick_start": "选择开始日期",
+        "pick_end": "选择结束日期",
+        "confirm": "确定",
+        "preset_label": "-- 快速选择 --",
+        "preset_today": "今天",
+        "preset_yesterday": "昨天",
+        "preset_this_week": "本周",
+        "preset_this_month": "本月",
+        "preset_last_month": "上月"
     },
     "pagination": {
         "info": "第 {page} / {pages} 页  (共 {total} 条记录)",

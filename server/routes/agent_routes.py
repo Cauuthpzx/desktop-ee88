@@ -188,9 +188,12 @@ def login_agent(
         row = cur.fetchone()
         attempts = result.get("captcha_attempts", 0)
         logger.info("Agent %s logged in, captcha_attempts=%d", agent["name"], attempts)
+        agent_dict = _agent_row_to_dict(row)
+        # Include session_cookie in login response so client can cache it
+        agent_dict["session_cookie"] = result["session_id"]
         return AgentResp(
             ok=True,
-            agent=_agent_row_to_dict(row),
+            agent=agent_dict,
             captcha_attempts=attempts,
         )
 

@@ -21,7 +21,7 @@ class ReferralTab(UpstreamTab):
     ]
     _search_fields = [
         {"key": "create_time", "type": "date_range",
-         "label": "search.create_time"},
+         "label": "search.create_time", "optional": True},
         {"key": "invite_code", "type": "text",
          "label": "search.invite_code", "placeholder": "search.invite_code_ph",
          "width": 200},

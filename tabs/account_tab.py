@@ -508,6 +508,9 @@ class AccountTab(BaseTab):
         if ok and data.get("ok"):
             self._agents_data = data.get("agents", [])
             self._populate_agent_table()
+            # Sync agent list (status, name) to QSettings — cookies saved separately
+            from utils.upstream import upstream
+            upstream.save_agents_local(self._agents_data)
 
     def _on_add_agent(self) -> None:
         dlg = _AgentDialog(self.window())
@@ -615,6 +618,15 @@ class AccountTab(BaseTab):
                 t("account.agent_login_success", n=str(attempts)),
                 error=False,
             )
+            # Save cookie to QSettings immediately so tabs can use it
+            agent = data.get("agent", {})
+            cookie = agent.get("session_cookie")
+            if cookie and agent.get("id"):
+                from utils.upstream import upstream
+                upstream.save_cookie(
+                    agent["id"], cookie,
+                    agent.get("base_url", ""),
+                )
             self._load_agents()
         else:
             error_msg = data.get("message", t("api.error_unknown"))

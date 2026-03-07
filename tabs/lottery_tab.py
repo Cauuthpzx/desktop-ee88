@@ -23,7 +23,7 @@ class LotteryTab(UpstreamTab):
     ]
     _search_fields = [
         {"key": "date", "type": "date_range",
-         "label": "search.date"},
+         "label": "search.date", "default": "today"},
         {"key": "username", "type": "text",
          "label": "search.username", "placeholder": "search.username_ph",
          "width": 160},

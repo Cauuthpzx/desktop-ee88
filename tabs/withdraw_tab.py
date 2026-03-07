@@ -22,7 +22,7 @@ class WithdrawTab(UpstreamTab):
     ]
     _search_fields = [
         {"key": "create_time", "type": "date_range",
-         "label": "search.create_time"},
+         "label": "search.create_time", "default": "today"},
         {"key": "username", "type": "text",
          "label": "search.username", "placeholder": "search.username_ph",
          "width": 150},

@@ -10,10 +10,10 @@ Pattern chung:
   _fetch_upstream(), _formatters()
 """
 from PyQt6.QtWidgets import (
-    QComboBox, QTableWidgetItem, QLineEdit, QDateEdit,
-    QHBoxLayout, QPushButton, QLabel, QWidget,
+    QComboBox, QTableWidgetItem, QLineEdit,
+    QPushButton, QLabel, QWidget,
 )
-from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtCore import Qt
 
 from core.base_widgets import BaseTab, label, divider, hbox
 from core import theme
@@ -23,6 +23,7 @@ from utils.formatters import currency
 from utils.thread_worker import run_in_thread
 from widgets.table_crud import TableCrud
 from widgets.loading import LoadingOverlay
+from widgets.date_range_picker import DateRangePicker
 from dialogs.confirm_dialog import error
 
 PAGE_SIZE = 100
@@ -127,27 +128,16 @@ class UpstreamTab(BaseTab):
                 row.addWidget(w)
 
             elif ftype == "date_range":
-                w = QWidget()
-                dl = QHBoxLayout(w)
-                dl.setContentsMargins(0, 0, 0, 0)
-                dl.setSpacing(theme.SPACING_XS)
-
-                d_from = QDateEdit()
-                d_from.setCalendarPopup(True)
-                d_from.setDate(QDate.currentDate().addDays(-7))
-                d_from.setDisplayFormat("yyyy-MM-dd")
-                dl.addWidget(d_from)
-
-                dl.addWidget(QLabel("~"))
-
-                d_to = QDateEdit()
-                d_to.setCalendarPopup(True)
-                d_to.setDate(QDate.currentDate())
-                d_to.setDisplayFormat("yyyy-MM-dd")
-                dl.addWidget(d_to)
-
-                w._d_from = d_from
-                w._d_to = d_to
+                default = field.get("default", "")
+                if default == "today":
+                    from PyQt6.QtCore import QDate
+                    today = QDate.currentDate()
+                    w = DateRangePicker(
+                        d_from=today, d_to=today,
+                        optional=field.get("optional", False),
+                    )
+                else:
+                    w = DateRangePicker(optional=field.get("optional", False))
                 row.addWidget(w)
 
             elif ftype == "select":
@@ -185,9 +175,9 @@ class UpstreamTab(BaseTab):
                     params[param_key] = val
 
             elif ftype == "date_range":
-                d_from = w._d_from.date().toString("yyyy-MM-dd")
-                d_to = w._d_to.date().toString("yyyy-MM-dd")
-                params[param_key] = f"{d_from}|{d_to}"
+                val = w.text()
+                if val:
+                    params[param_key] = val
 
             elif ftype == "select":
                 val = w.currentData()

@@ -98,7 +98,18 @@
         "bet_won": "Won",
         "bet_lost": "Lost",
         "bet_tie": "Tie",
-        "bet_cancelled": "Cancelled"
+        "bet_cancelled": "Cancelled",
+        "date_from": "From",
+        "date_to": "To",
+        "pick_start": "Pick start date",
+        "pick_end": "pick end date",
+        "confirm": "OK",
+        "preset_label": "-- Quick select --",
+        "preset_today": "Today",
+        "preset_yesterday": "Yesterday",
+        "preset_this_week": "This week",
+        "preset_this_month": "This month",
+        "preset_last_month": "Last month"
     },
     "pagination": {
         "info": "Page {page} / {pages}  ({total} records)",

@@ -98,7 +98,18 @@
         "bet_won": "Thắng",
         "bet_lost": "Thua",
         "bet_tie": "Hòa",
-        "bet_cancelled": "Đã hủy"
+        "bet_cancelled": "Đã hủy",
+        "date_from": "Từ ngày",
+        "date_to": "Đến ngày",
+        "pick_start": "Chọn ngày bắt đầu",
+        "pick_end": "chọn ngày kết thúc",
+        "confirm": "Xác nhận",
+        "preset_label": "-- Chọn nhanh --",
+        "preset_today": "Hôm nay",
+        "preset_yesterday": "Hôm qua",
+        "preset_this_week": "Tuần này",
+        "preset_this_month": "Tháng này",
+        "preset_last_month": "Tháng trước"
     },
     "pagination": {
         "info": "Trang {page} / {pages}  ({total} bản ghi)",
