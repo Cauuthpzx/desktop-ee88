@@ -30,6 +30,16 @@ from dialogs.confirm_dialog import error
 PAGE_SIZE = 100
 
 
+def _fmt_currency(v) -> str:
+    """Safely format upstream monetary values (may contain commas, e.g. '39,810.1500')."""
+    if not v and v != 0:
+        return "0"
+    try:
+        return currency(float(str(v).replace(",", "")))
+    except (TypeError, ValueError):
+        return str(v)
+
+
 class UpstreamTab(BaseTab):
     """Base tab cho cac tab fetch data tu upstream EE88.
 

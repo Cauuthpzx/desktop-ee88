@@ -1,9 +1,8 @@
 """
 tabs/bet_lottery_tab.py — Tab Đơn cược xổ số (upstream: /agent/bet.html)
 """
-from tabs._upstream_tab import UpstreamTab
+from tabs._upstream_tab import UpstreamTab, _fmt_currency
 from utils.upstream import upstream
-from utils.formatters import currency
 
 
 class BetLotteryTab(UpstreamTab):
@@ -49,9 +48,8 @@ class BetLotteryTab(UpstreamTab):
         )
 
     def _formatters(self):
-        fmt = lambda v: currency(float(v)) if v else "0"
         return {
-            "money": fmt,
-            "rebate_amount": fmt,
-            "result": fmt,
+            "money": _fmt_currency,
+            "rebate_amount": _fmt_currency,
+            "result": _fmt_currency,
         }

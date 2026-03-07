@@ -1,9 +1,8 @@
 """
 tabs/withdraw_tab.py — Tab Rút tiền (upstream: /agent/withdrawalsRecord.html)
 """
-from tabs._upstream_tab import UpstreamTab
+from tabs._upstream_tab import UpstreamTab, _fmt_currency
 from utils.upstream import upstream
-from utils.formatters import currency
 
 
 class WithdrawTab(UpstreamTab):
@@ -45,7 +44,7 @@ class WithdrawTab(UpstreamTab):
 
     def _formatters(self):
         return {
-            "amount": lambda v: currency(float(v)) if v else "0",
-            "user_fee": lambda v: currency(float(v)) if v else "0",
-            "true_amount": lambda v: currency(float(v)) if v else "0",
+            "amount": _fmt_currency,
+            "user_fee": _fmt_currency,
+            "true_amount": _fmt_currency,
         }

@@ -1,9 +1,8 @@
 """
 tabs/transaction_tab.py — Tab Giao dịch / Sao kê (upstream: /agent/reportFunds.html)
 """
-from tabs._upstream_tab import UpstreamTab
+from tabs._upstream_tab import UpstreamTab, _fmt_currency
 from utils.upstream import upstream
-from utils.formatters import currency
 
 
 class TransactionTab(UpstreamTab):
@@ -34,13 +33,12 @@ class TransactionTab(UpstreamTab):
         )
 
     def _formatters(self):
-        fmt = lambda v: currency(float(v)) if v else "0"
         return {
-            "deposit_amount": fmt,
-            "withdrawal_amount": fmt,
-            "charge_fee": fmt,
-            "agent_commission": fmt,
-            "promotion": fmt,
-            "third_rebate": fmt,
-            "third_activity_amount": fmt,
+            "deposit_amount": _fmt_currency,
+            "withdrawal_amount": _fmt_currency,
+            "charge_fee": _fmt_currency,
+            "agent_commission": _fmt_currency,
+            "promotion": _fmt_currency,
+            "third_rebate": _fmt_currency,
+            "third_activity_amount": _fmt_currency,
         }

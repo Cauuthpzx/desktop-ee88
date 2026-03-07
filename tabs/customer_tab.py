@@ -1,9 +1,8 @@
 """
 tabs/customer_tab.py — Tab Khách hàng (upstream: /agent/user.html)
 """
-from tabs._upstream_tab import UpstreamTab
+from tabs._upstream_tab import UpstreamTab, _fmt_currency
 from utils.upstream import upstream
-from utils.formatters import currency
 
 
 class CustomerTab(UpstreamTab):
@@ -57,9 +56,8 @@ class CustomerTab(UpstreamTab):
         )
 
     def _formatters(self):
-        fmt = lambda v: currency(float(v)) if v else "0"
         return {
-            "money": fmt,
-            "deposit_amount": fmt,
-            "withdrawal_amount": fmt,
+            "money": _fmt_currency,
+            "deposit_amount": _fmt_currency,
+            "withdrawal_amount": _fmt_currency,
         }

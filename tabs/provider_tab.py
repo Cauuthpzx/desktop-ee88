@@ -2,9 +2,8 @@
 tabs/provider_tab.py — Tab Nhà cung cấp (upstream: /agent/reportThirdGame.html)
 Note: reportThirdGame.html không có search form trên upstream.
 """
-from tabs._upstream_tab import UpstreamTab
+from tabs._upstream_tab import UpstreamTab, _fmt_currency
 from utils.upstream import upstream
-from utils.formatters import currency
 
 
 class ProviderTab(UpstreamTab):
@@ -27,10 +26,9 @@ class ProviderTab(UpstreamTab):
         )
 
     def _formatters(self):
-        fmt = lambda v: currency(float(v)) if v else "0"
         return {
-            "t_bet_amount": fmt,
-            "t_turnover": fmt,
-            "t_prize": fmt,
-            "t_win_lose": fmt,
+            "t_bet_amount": _fmt_currency,
+            "t_turnover": _fmt_currency,
+            "t_prize": _fmt_currency,
+            "t_win_lose": _fmt_currency,
         }
