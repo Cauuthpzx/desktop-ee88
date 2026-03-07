@@ -36,8 +36,8 @@ SIDEBAR_ANIM_MS         = 150   # animation duration in milliseconds
 HEADER_HEIGHT           = 48
 
 # ── Window defaults ───────────────────────────────────────
-WINDOW_DEFAULT_W = 1300
-WINDOW_DEFAULT_H = 800
+WINDOW_DEFAULT_W = 1400
+WINDOW_DEFAULT_H = 900
 WINDOW_MIN_W  = 960
 WINDOW_MIN_H  = 640
 
