@@ -16,15 +16,19 @@ Dùng:
     overlay.start("Đang tải...")
     overlay.stop()  # hiện tick xanh → tự ẩn sau 800ms
 """
+from __future__ import annotations
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QProgressBar, QLabel,
 )
 from PyQt6.QtCore import (
-    Qt, QTimer, QPropertyAnimation,
-    QEasingCurve, pyqtProperty,
+    Qt, QTimer, QPropertyAnimation, QEasingCurve,
 )
-from PyQt6.QtGui import QPainter, QColor, QPalette, QPen, QPainterPath
+from PyQt6.QtCore import pyqtProperty  # type: ignore[attr-defined]
+from PyQt6.QtGui import (
+    QPainter, QColor, QPalette, QPen, QPainterPath, QPaintEvent, QResizeEvent,
+)
 from core import theme
 from core.i18n import t
 
@@ -52,15 +56,15 @@ class LoadingBar(QWidget):
         lay.addWidget(self._bar)
         self.hide()
 
-    def start(self, text: str | None = None):
+    def start(self, text: str | None = None) -> None:
         if text:
             self._label.setText(text)
         self.show()
 
-    def stop(self):
+    def stop(self) -> None:
         self.hide()
 
-    def set_text(self, text: str):
+    def set_text(self, text: str) -> None:
         self._label.setText(text)
 
 
@@ -69,7 +73,8 @@ class LoadingBar(QWidget):
 class _Dot(QWidget):
     """Single animated dot."""
 
-    def __init__(self, color: QColor, size: int = 6, parent=None):
+    def __init__(self, color: QColor, size: int = 6,
+                 parent: QWidget | None = None):
         super().__init__(parent)
         self._color = color
         self._size = size
@@ -85,7 +90,7 @@ class _Dot(QWidget):
 
     opacity = pyqtProperty(float, _get_opacity, _set_opacity)
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         c = QColor(self._color)
@@ -99,8 +104,8 @@ class _Dot(QWidget):
 class _LoadingDots(QWidget):
     """5 dots pulse animation (Win10 style)."""
 
-    def __init__(self, color: QColor = None, dot_size: int = 6,
-                 gap: int = 6, parent=None):
+    def __init__(self, color: QColor | None = None, dot_size: int = 6,
+                 gap: int = 6, parent: QWidget | None = None):
         super().__init__(parent)
         if color is None:
             color = self.palette().color(QPalette.ColorRole.Highlight)
@@ -160,7 +165,7 @@ class _LoadingDots(QWidget):
 class _TickIcon(QWidget):
     """Animated green checkmark."""
 
-    def __init__(self, size: int = 24, parent=None):
+    def __init__(self, size: int = 24, parent: QWidget | None = None):
         super().__init__(parent)
         self._size = size
         self._progress = 0.0  # 0..1 for draw animation
@@ -175,7 +180,7 @@ class _TickIcon(QWidget):
 
     progress = pyqtProperty(float, _get_progress, _set_progress)
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         if self._progress <= 0:
             return
         p = QPainter(self)
@@ -191,30 +196,23 @@ class _TickIcon(QWidget):
         p.drawEllipse(margin, margin, s - margin * 2, s - margin * 2)
 
         # Draw checkmark (proportional to progress)
-        # Points: start(30%, 52%) → mid(45%, 65%) → end(72%, 35%)
         x1, y1 = s * 0.28, s * 0.52
         x2, y2 = s * 0.43, s * 0.67
         x3, y3 = s * 0.72, s * 0.35
 
         prog = self._progress
         if prog <= 0.5:
-            # First segment: start → mid
-            t = prog / 0.5
-            ex = x1 + (x2 - x1) * t
-            ey = y1 + (y2 - y1) * t
+            frac = prog / 0.5
             path = QPainterPath()
             path.moveTo(x1, y1)
-            path.lineTo(ex, ey)
+            path.lineTo(x1 + (x2 - x1) * frac, y1 + (y2 - y1) * frac)
             p.drawPath(path)
         else:
-            # Full first segment + partial second
-            t = (prog - 0.5) / 0.5
-            ex = x2 + (x3 - x2) * t
-            ey = y2 + (y3 - y2) * t
+            frac = (prog - 0.5) / 0.5
             path = QPainterPath()
             path.moveTo(x1, y1)
             path.lineTo(x2, y2)
-            path.lineTo(ex, ey)
+            path.lineTo(x2 + (x3 - x2) * frac, y2 + (y3 - y2) * frac)
             p.drawPath(path)
 
         p.end()
@@ -265,18 +263,20 @@ class LoadingOverlay(QWidget):
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self._final_hide)
 
-    def start(self, text: str = ""):
+    def start(self, text: str = "") -> None:
         self._hide_timer.stop()
         self._tick.hide()
         self._tick._progress = 0.0
         self._dots.show()
         self._label.setText(text or t("loading.processing"))
-        self.resize(self.parent().size())
+        parent = self.parentWidget()
+        if parent:
+            self.resize(parent.size())
         self._dots.start()
         self.show()
         self.raise_()
 
-    def stop(self):
+    def stop(self) -> None:
         self._dots.stop()
         self._dots.hide()
 
@@ -294,18 +294,19 @@ class LoadingOverlay(QWidget):
         # Auto-hide after 800ms
         self._hide_timer.start(800)
 
-    def _final_hide(self):
+    def _final_hide(self) -> None:
         self.hide()
         self._tick.hide()
         self._tick._progress = 0.0
         self._dots.show()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         p = QPainter(self)
         p.fillRect(self.rect(), self._BG_COLOR)
         p.end()
 
-    def resizeEvent(self, event):
-        if self.parent():
-            self.resize(self.parent().size())
+    def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
+        parent = self.parentWidget()
+        if parent:
+            self.resize(parent.size())
         super().resizeEvent(event)
