@@ -16,6 +16,8 @@ Dùng:
     tb.set_enabled("Sửa", True)
 """
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QFrame
+from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import QSize
 from widgets.search_bar import SearchBar
 from core import theme
 
@@ -59,6 +61,16 @@ class ContentToolbar(QWidget):
         self._lay.addWidget(bar)
         self._search = bar
         return bar
+
+    def add_icon_button(self, label: str, icon: QIcon, slot=None,
+                        icon_size: int = 15) -> QPushButton:
+        btn = QPushButton(icon, label)
+        btn.setIconSize(QSize(icon_size, icon_size))
+        if slot:
+            btn.clicked.connect(slot)
+        self._buttons[label] = btn
+        self._lay.addWidget(btn)
+        return btn
 
     def set_enabled(self, label: str, enabled: bool):
         if label in self._buttons:

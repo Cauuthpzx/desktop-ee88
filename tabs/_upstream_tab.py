@@ -90,7 +90,6 @@ class UpstreamTab(BaseTab):
         )
         for btn in self.crud._toolbar._buttons.values():
             btn.hide()
-        # Hide toolbar completely since we have our own filter row
         self.crud._toolbar.hide()
         layout.addWidget(self.crud)
 
@@ -181,7 +180,13 @@ class UpstreamTab(BaseTab):
         # Refresh icons on theme change
         theme_signals.changed.connect(self._on_filter_theme_changed)
 
+        # Export button
         row.addStretch()
+        self._btn_export = QPushButton(tinted_icon(IconPath.EXPORT, size=15), t("crud.export"))
+        self._btn_export.setIconSize(_ico)
+        self._btn_export.clicked.connect(self._on_export)
+        row.addWidget(self._btn_export)
+
         layout.addLayout(row)
 
     def _get_search_params(self) -> dict[str, str]:
@@ -226,9 +231,15 @@ class UpstreamTab(BaseTab):
                 w.setCurrentIndex(0)
         self._reload_fresh()
 
+    def _on_export(self) -> None:
+        from utils.export_table import export_table
+        export_table(self.window(), self.crud.table)
+
     def _on_filter_theme_changed(self, _dark: bool) -> None:
         self._btn_search.setIcon(tinted_icon(IconPath.SEARCH, size=15))
         self._btn_reset.setIcon(tinted_icon(IconPath.REFRESH, size=15))
+        if hasattr(self, "_btn_export"):
+            self._btn_export.setIcon(tinted_icon(IconPath.EXPORT, size=15))
 
     # ── Show ─────────────────────────────────────────────────
 
@@ -434,3 +445,5 @@ class UpstreamTab(BaseTab):
             self._btn_search.setText(t("crud.search"))
         if hasattr(self, "_btn_reset"):
             self._btn_reset.setText(t("crud.reset"))
+        if hasattr(self, "_btn_export"):
+            self._btn_export.setText(t("crud.export"))

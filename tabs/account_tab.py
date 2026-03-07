@@ -21,7 +21,7 @@ from PyQt6.QtGui import QAction
 from core import theme
 from core.base_widgets import BaseTab, BaseDialog, vbox, hbox, form_layout, label, divider
 from core.icon import Icon, IconPath
-from core.theme import theme_signals
+from core.theme import tinted_icon, theme_signals
 from core.i18n import t
 from utils.api import api
 from utils.auth import auth
@@ -347,6 +347,14 @@ class AccountTab(BaseTab):
         self._btn_add_agent.clicked.connect(self._on_add_agent)
         tb.addWidget(self._btn_add_agent)
         tb.addStretch()
+
+        from PyQt6.QtCore import QSize
+        _ico = QSize(15, 15)
+        self._btn_export_agent = QPushButton(tinted_icon(IconPath.EXPORT, size=15), t("crud.export"))
+        self._btn_export_agent.setIconSize(_ico)
+        self._btn_export_agent.clicked.connect(self._on_export_agents)
+        tb.addWidget(self._btn_export_agent)
+
         agent_lay.addLayout(tb)
 
         # Table
@@ -511,6 +519,10 @@ class AccountTab(BaseTab):
             # Sync agent list (status, name) to QSettings — cookies saved separately
             from utils.upstream import upstream
             upstream.save_agents_local(self._agents_data)
+
+    def _on_export_agents(self) -> None:
+        from utils.export_table import export_table
+        export_table(self.window(), self._agent_table)
 
     def _on_add_agent(self) -> None:
         dlg = _AgentDialog(self.window())
@@ -688,6 +700,7 @@ class AccountTab(BaseTab):
         self._pwd_action.setIcon(Icon.PASSWORD)
         self._new_pwd_action.setIcon(Icon.KEY)
         self._confirm_pwd_action.setIcon(Icon.KEY)
+        self._btn_export_agent.setIcon(tinted_icon(IconPath.EXPORT, size=15))
         for eye, le in zip(self._eye_actions,
                            [self._current_pwd, self._new_pwd, self._confirm_pwd]):
             is_hidden = le.echoMode() == QLineEdit.EchoMode.Password

@@ -36,6 +36,8 @@ from widgets.empty_state    import EmptyState
 from utils.table_helper     import setup_table, load_table, get_selected_id
 from core import theme
 from core.i18n import t
+from core.icon import IconPath
+from core.theme import tinted_icon, theme_signals
 
 
 class TableCrud(QWidget):
@@ -77,6 +79,14 @@ class TableCrud(QWidget):
                                      on_change=on_search)
         else:
             self._toolbar.add_stretch()
+
+        # Export button (far right)
+        self._export_btn = self._toolbar.add_icon_button(
+            t("crud.export"), tinted_icon(IconPath.EXPORT, size=15),
+            slot=self._on_export,
+        )
+        theme_signals.changed.connect(self._on_theme_changed)
+
         root.addWidget(self._toolbar)
 
         # ── Table ─────────────────────────────────────────
@@ -134,6 +144,13 @@ class TableCrud(QWidget):
         return self._toolbar
 
     # ── Internal ──────────────────────────────────────────
+
+    def _on_export(self) -> None:
+        from utils.export_table import export_table
+        export_table(self.window(), self.table)
+
+    def _on_theme_changed(self, _dark: bool) -> None:
+        self._export_btn.setIcon(tinted_icon(IconPath.EXPORT, size=15))
 
     def _on_select(self):
         has = bool(self.table.selectionModel().selectedRows())
