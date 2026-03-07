@@ -123,6 +123,7 @@ class _LoadingDots(QWidget):
 
         self.setFixedSize(dot_size * 5 + gap * 4, dot_size)
         self._timers: list[QTimer] = []
+        self._anims: list[QPropertyAnimation] = []
 
     def start(self) -> None:
         self._stop_all()
@@ -137,6 +138,7 @@ class _LoadingDots(QWidget):
             anim.setEndValue(0.2)
             anim.setEasingCurve(QEasingCurve.Type.InOutSine)
             anim.setLoopCount(-1)
+            self._anims.append(anim)
 
             timer = QTimer(self)
             timer.setSingleShot(True)
@@ -155,9 +157,9 @@ class _LoadingDots(QWidget):
         for timer in self._timers:
             timer.stop()
         self._timers.clear()
-        for child in self.findChildren(QPropertyAnimation):
-            child.stop()
-            child.deleteLater()
+        for anim in self._anims:
+            anim.stop()
+        self._anims.clear()
 
 
 # ── Tick icon ─────────────────────────────────────────────
@@ -262,9 +264,13 @@ class LoadingOverlay(QWidget):
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self._final_hide)
+        self._tick_anim: QPropertyAnimation | None = None
 
     def start(self, text: str = "") -> None:
         self._hide_timer.stop()
+        if self._tick_anim:
+            self._tick_anim.stop()
+            self._tick_anim = None
         self._tick.hide()
         self._tick._progress = 0.0
         self._dots.show()
@@ -284,12 +290,12 @@ class LoadingOverlay(QWidget):
         self._tick.show()
         self._label.setText(t("loading.complete"))
 
-        anim = QPropertyAnimation(self._tick, b"progress", self)
-        anim.setDuration(350)
-        anim.setStartValue(0.0)
-        anim.setEndValue(1.0)
-        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-        anim.start()
+        self._tick_anim = QPropertyAnimation(self._tick, b"progress", self)
+        self._tick_anim.setDuration(350)
+        self._tick_anim.setStartValue(0.0)
+        self._tick_anim.setEndValue(1.0)
+        self._tick_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._tick_anim.start()
 
         # Auto-hide after 800ms
         self._hide_timer.start(800)
