@@ -234,7 +234,7 @@
         "col_status": "状态"
     },
     "deposit": {
-        "title": "充值",
+        "title": "充值汇总数据:",
         "col_agent": "代理",
         "col_account": "账号",
         "col_parent": "上级管理",
@@ -244,7 +244,7 @@
         "col_time": "时间"
     },
     "withdraw": {
-        "title": "提现",
+        "title": "提现汇总数据:",
         "col_agent": "代理",
         "col_serial": "序列号",
         "col_time": "创建时间",
@@ -257,7 +257,7 @@
         "col_action": "操作"
     },
     "transaction": {
-        "title": "交易",
+        "title": "交易汇总数据:",
         "col_agent": "代理",
         "col_account": "账号",
         "col_parent": "上级管理",
@@ -273,7 +273,7 @@
         "col_date": "日期"
     },
     "bet_lottery": {
-        "title": "彩票投注单",
+        "title": "彩票投注汇总数据:",
         "col_agent": "代理",
         "col_serial": "序列号",
         "col_user": "用户",
@@ -289,7 +289,7 @@
         "col_status": "状态"
     },
     "bet_provider": {
-        "title": "供应商投注单",
+        "title": "供应商投注汇总数据:",
         "col_agent": "代理",
         "col_serial": "序列号",
         "col_provider": "供应商",
@@ -303,7 +303,7 @@
         "col_time": "投注时间"
     },
     "lottery": {
-        "title": "彩票",
+        "title": "彩票汇总数据:",
         "col_agent": "代理",
         "col_account": "账号",
         "col_parent": "上级管理",
@@ -317,7 +317,7 @@
         "col_name": "彩票名称"
     },
     "provider": {
-        "title": "供应商",
+        "title": "供应商汇总数据:",
         "col_agent": "代理",
         "col_account": "账号",
         "col_provider": "供应商",

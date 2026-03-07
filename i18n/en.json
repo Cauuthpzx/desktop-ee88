@@ -234,7 +234,7 @@
         "col_status": "Status"
     },
     "deposit": {
-        "title": "Deposit",
+        "title": "Deposit Summary:",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_parent": "Parent",
@@ -244,7 +244,7 @@
         "col_time": "Time"
     },
     "withdraw": {
-        "title": "Withdraw",
+        "title": "Withdrawal Summary:",
         "col_agent": "Agent",
         "col_serial": "Serial No.",
         "col_time": "Time",
@@ -257,7 +257,7 @@
         "col_action": "Action"
     },
     "transaction": {
-        "title": "Transaction",
+        "title": "Transaction Summary:",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_parent": "Parent",
@@ -273,7 +273,7 @@
         "col_date": "Date"
     },
     "bet_lottery": {
-        "title": "Lottery Bets",
+        "title": "Lottery Bets Summary:",
         "col_agent": "Agent",
         "col_serial": "Serial No.",
         "col_user": "User",
@@ -289,7 +289,7 @@
         "col_status": "Status"
     },
     "bet_provider": {
-        "title": "Provider Bets",
+        "title": "Provider Bets Summary:",
         "col_agent": "Agent",
         "col_serial": "Serial No.",
         "col_provider": "Provider",
@@ -303,7 +303,7 @@
         "col_time": "Bet Time"
     },
     "lottery": {
-        "title": "Lottery",
+        "title": "Lottery Summary:",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_parent": "Parent",
@@ -317,7 +317,7 @@
         "col_name": "Lottery Name"
     },
     "provider": {
-        "title": "Provider",
+        "title": "Provider Summary:",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_provider": "Provider",

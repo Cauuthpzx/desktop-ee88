@@ -234,7 +234,7 @@
         "col_status": "Trạng thái"
     },
     "deposit": {
-        "title": "Nạp tiền",
+        "title": "Dữ liệu tổng hợp Nạp Tiền:",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_parent": "Đơn vị quản lý",
@@ -244,7 +244,7 @@
         "col_time": "Thời gian"
     },
     "withdraw": {
-        "title": "Rút tiền",
+        "title": "Dữ liệu tổng hợp Rút Tiền:",
         "col_agent": "Đại lý",
         "col_serial": "Số serial",
         "col_time": "Thời gian tạo",
@@ -257,7 +257,7 @@
         "col_action": "Hành động"
     },
     "transaction": {
-        "title": "Giao dịch",
+        "title": "Dữ liệu tổng hợp Sao Kê:",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_parent": "Đơn vị quản lý",
@@ -273,7 +273,7 @@
         "col_date": "Ngày"
     },
     "bet_lottery": {
-        "title": "Đơn cược xổ số",
+        "title": "Dữ liệu tổng hợp Đơn Cược Xổ Số:",
         "col_agent": "Đại lý",
         "col_serial": "Số serial",
         "col_user": "Người dùng",
@@ -289,7 +289,7 @@
         "col_status": "Trạng thái"
     },
     "bet_provider": {
-        "title": "Đơn cược nhà cung cấp",
+        "title": "Dữ liệu tổng hợp Đơn Cược Nhà Cung Cấp:",
         "col_agent": "Đại lý",
         "col_serial": "Số serial",
         "col_provider": "Nhà cung cấp",
@@ -303,7 +303,7 @@
         "col_time": "Thời gian cược"
     },
     "lottery": {
-        "title": "Xổ số",
+        "title": "Dữ liệu tổng hợp Xổ Số:",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_parent": "Đơn vị quản lý",
@@ -317,7 +317,7 @@
         "col_name": "Tên xổ số"
     },
     "provider": {
-        "title": "Nhà cung cấp",
+        "title": "Dữ liệu tổng hợp Nhà Cung Cấp:",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_provider": "Nhà cung cấp",
