@@ -1,6 +1,6 @@
 """
 widgets/loading.py
-Loading indicators: LoadingBar (inline), LoadingOverlay (overlay with dots).
+Loading indicators: LoadingBar (inline), LoadingOverlay (overlay with dots + notify).
 
 Dùng:
     from widgets.loading import LoadingBar, LoadingOverlay
@@ -15,6 +15,12 @@ Dùng:
     overlay = LoadingOverlay(parent_widget)
     overlay.start("Đang tải...")
     overlay.stop()  # hiện tick xanh → tự ẩn sau 800ms
+
+    # 3. Toast notification (thay dialog):
+    overlay.notify("success", "Xuất file thành công!")
+    overlay.notify("error", "Không thể kết nối.")
+    overlay.notify("warn", "Dữ liệu đã thay đổi.")
+    overlay.notify("info", "Đã cập nhật phiên bản mới.")
 """
 from __future__ import annotations
 
@@ -32,7 +38,26 @@ from PyQt6.QtGui import (
 from core import theme
 from core.i18n import t
 
-_TICK_COLOR = QColor(76, 175, 80)  # Material Green 500
+# Icon colors per notification type
+_COLOR_SUCCESS = QColor(76, 175, 80)    # Material Green 500
+_COLOR_ERROR = QColor(244, 67, 54)      # Material Red 500
+_COLOR_WARN = QColor(255, 152, 0)       # Material Orange 500
+_COLOR_INFO = QColor(33, 150, 243)      # Material Blue 500
+
+_COLORS = {
+    "success": _COLOR_SUCCESS,
+    "error": _COLOR_ERROR,
+    "warn": _COLOR_WARN,
+    "info": _COLOR_INFO,
+}
+
+# Auto-hide duration per type (ms)
+_DURATIONS = {
+    "success": 800,
+    "error": 2000,
+    "warn": 1500,
+    "info": 1200,
+}
 
 
 class LoadingBar(QWidget):
@@ -162,16 +187,24 @@ class _LoadingDots(QWidget):
         self._anims.clear()
 
 
-# ── Tick icon ─────────────────────────────────────────────
+# ── Notification icons ───────────────────────────────────
 
-class _TickIcon(QWidget):
-    """Animated green checkmark."""
+class _NotifyIcon(QWidget):
+    """Animated icon for success/error/warn/info notifications."""
 
-    def __init__(self, size: int = 24, parent: QWidget | None = None):
+    def __init__(self, size: int = 28, parent: QWidget | None = None):
         super().__init__(parent)
         self._size = size
-        self._progress = 0.0  # 0..1 for draw animation
+        self._progress = 0.0
+        self._icon_type = "success"
+        self._color = _COLOR_SUCCESS
         self.setFixedSize(size, size)
+
+    def set_type(self, icon_type: str) -> None:
+        self._icon_type = icon_type
+        self._color = _COLORS.get(icon_type, _COLOR_SUCCESS)
+        self._progress = 0.0
+        self.update()
 
     def _get_progress(self) -> float:
         return self._progress
@@ -189,20 +222,30 @@ class _TickIcon(QWidget):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         s = self._size
-        pen = QPen(_TICK_COLOR, 2.5, Qt.PenStyle.SolidLine,
+        pen = QPen(self._color, 2.5, Qt.PenStyle.SolidLine,
                    Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
         p.setPen(pen)
 
-        # Draw circle
-        margin = 2
-        p.drawEllipse(margin, margin, s - margin * 2, s - margin * 2)
+        # Circle
+        m = 2
+        p.drawEllipse(m, m, s - m * 2, s - m * 2)
 
-        # Draw checkmark (proportional to progress)
+        prog = self._progress
+        if self._icon_type == "success":
+            self._draw_tick(p, s, prog)
+        elif self._icon_type == "error":
+            self._draw_cross(p, s, prog)
+        elif self._icon_type == "warn":
+            self._draw_exclamation(p, s, prog)
+        elif self._icon_type == "info":
+            self._draw_info(p, s, prog)
+
+        p.end()
+
+    def _draw_tick(self, p: QPainter, s: int, prog: float) -> None:
         x1, y1 = s * 0.28, s * 0.52
         x2, y2 = s * 0.43, s * 0.67
         x3, y3 = s * 0.72, s * 0.35
-
-        prog = self._progress
         if prog <= 0.5:
             frac = prog / 0.5
             path = QPainterPath()
@@ -217,13 +260,74 @@ class _TickIcon(QWidget):
             path.lineTo(x2 + (x3 - x2) * frac, y2 + (y3 - y2) * frac)
             p.drawPath(path)
 
-        p.end()
+    def _draw_cross(self, p: QPainter, s: int, prog: float) -> None:
+        cx, cy = s * 0.5, s * 0.5
+        arm = s * 0.18
+        if prog <= 0.5:
+            frac = prog / 0.5
+            path = QPainterPath()
+            path.moveTo(cx - arm, cy - arm)
+            path.lineTo(cx - arm + 2 * arm * frac, cy - arm + 2 * arm * frac)
+            p.drawPath(path)
+        else:
+            frac = (prog - 0.5) / 0.5
+            p.drawLine(int(cx - arm), int(cy - arm),
+                       int(cx + arm), int(cy + arm))
+            path = QPainterPath()
+            path.moveTo(cx + arm, cy - arm)
+            path.lineTo(cx + arm - 2 * arm * frac, cy - arm + 2 * arm * frac)
+            p.drawPath(path)
+
+    def _draw_exclamation(self, p: QPainter, s: int, prog: float) -> None:
+        cx = s * 0.5
+        if prog <= 0.6:
+            frac = prog / 0.6
+            top_y = s * 0.25
+            bot_y = s * 0.58
+            path = QPainterPath()
+            path.moveTo(cx, top_y)
+            path.lineTo(cx, top_y + (bot_y - top_y) * frac)
+            p.drawPath(path)
+        else:
+            p.drawLine(int(cx), int(s * 0.25), int(cx), int(s * 0.58))
+            frac = (prog - 0.6) / 0.4
+            if frac > 0.5:
+                dot_y = s * 0.72
+                p.setPen(Qt.PenStyle.NoPen)
+                p.setBrush(self._color)
+                p.drawEllipse(int(cx - 2.5), int(dot_y - 2.5), 5, 5)
+
+    def _draw_info(self, p: QPainter, s: int, prog: float) -> None:
+        cx = s * 0.5
+        if prog <= 0.4:
+            frac = prog / 0.4
+            if frac > 0.5:
+                dot_y = s * 0.28
+                p.setPen(Qt.PenStyle.NoPen)
+                p.setBrush(self._color)
+                p.drawEllipse(int(cx - 2.5), int(dot_y - 2.5), 5, 5)
+        else:
+            dot_y = s * 0.28
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(self._color)
+            p.drawEllipse(int(cx - 2.5), int(dot_y - 2.5), 5, 5)
+
+            pen = QPen(self._color, 2.5, Qt.PenStyle.SolidLine,
+                       Qt.PenCapStyle.RoundCap)
+            p.setPen(pen)
+            frac = (prog - 0.4) / 0.6
+            top_y = s * 0.42
+            bot_y = s * 0.75
+            path = QPainterPath()
+            path.moveTo(cx, top_y)
+            path.lineTo(cx, top_y + (bot_y - top_y) * frac)
+            p.drawPath(path)
 
 
-# ── Overlay ───────────────────────────────────────────────
+# ── Notify card ──────────────────────────────────────────
 
-class _DoneCard(QWidget):
-    """Rounded dark card showing tick + label."""
+class _NotifyCard(QWidget):
+    """Rounded dark card showing icon + label for any notification type."""
 
     _BG = QColor(0, 0, 0, 178)  # 70% opacity
     _RADIUS = 10
@@ -233,26 +337,31 @@ class _DoneCard(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(20, 12, 20, 12)
+        lay.setContentsMargins(24, 14, 24, 14)
         lay.setSpacing(theme.SPACING_SM)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self._tick = _TickIcon(28, parent=self)
-        lay.addWidget(self._tick, alignment=Qt.AlignmentFlag.AlignCenter)
+        self._icon = _NotifyIcon(28, parent=self)
+        lay.addWidget(self._icon, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self._label = QLabel(t("loading.complete"))
+        self._label = QLabel()
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFont(theme.font())
         self._label.setStyleSheet("color: white;")
+        self._label.setWordWrap(True)
+        self._label.setMaximumWidth(280)
         lay.addWidget(self._label)
 
     @property
-    def tick(self) -> _TickIcon:
-        return self._tick
+    def icon(self) -> _NotifyIcon:
+        return self._icon
 
     @property
     def label(self) -> QLabel:
         return self._label
+
+    def set_type(self, notify_type: str) -> None:
+        self._icon.set_type(notify_type)
 
     def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         p = QPainter(self)
@@ -263,8 +372,10 @@ class _DoneCard(QWidget):
         p.end()
 
 
+# ── Overlay ──────────────────────────────────────────────
+
 class LoadingOverlay(QWidget):
-    """Overlay với loading dots + tick card khi hoàn tất."""
+    """Overlay with loading dots + notify card (success/error/warn/info)."""
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
@@ -285,23 +396,21 @@ class LoadingOverlay(QWidget):
         self._loading_label.setFont(theme.font())
         lay.addWidget(self._loading_label)
 
-        # Done card (dark bg, hidden initially)
-        self._done_card = _DoneCard(parent=self)
-        self._done_card.hide()
-        lay.addWidget(self._done_card, alignment=Qt.AlignmentFlag.AlignCenter)
+        # Notify card (dark bg, hidden initially)
+        self._notify_card = _NotifyCard(parent=self)
+        self._notify_card.hide()
+        lay.addWidget(self._notify_card, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self._final_hide)
-        self._tick_anim: QPropertyAnimation | None = None
+        self._icon_anim: QPropertyAnimation | None = None
 
     def start(self, text: str = "") -> None:
         self._hide_timer.stop()
-        if self._tick_anim:
-            self._tick_anim.stop()
-            self._tick_anim = None
-        self._done_card.hide()
-        self._done_card.tick._progress = 0.0
+        self._stop_anim()
+        self._notify_card.hide()
+        self._notify_card.icon._progress = 0.0
         self._dots.show()
         self._loading_label.show()
         self._loading_label.setText(text or t("loading.processing"))
@@ -313,29 +422,52 @@ class LoadingOverlay(QWidget):
         self.raise_()
 
     def stop(self) -> None:
+        """Stop loading and show success tick (backward compatible)."""
+        self.notify("success", t("loading.complete"))
+
+    def notify(self, notify_type: str, text: str = "") -> None:
+        """Show notification overlay with animated icon.
+
+        Args:
+            notify_type: "success" | "error" | "warn" | "info"
+            text: Message to display.
+        """
         self._dots.stop()
         self._dots.hide()
         self._loading_label.hide()
+        self._stop_anim()
 
-        # Show done card with tick animation
-        self._done_card.label.setText(t("loading.complete"))
-        self._done_card.show()
+        self._notify_card.set_type(notify_type)
+        self._notify_card.label.setText(text)
+        self._notify_card.icon._progress = 0.0
+        self._notify_card.show()
 
-        self._tick_anim = QPropertyAnimation(
-            self._done_card.tick, b"progress", self)
-        self._tick_anim.setDuration(350)
-        self._tick_anim.setStartValue(0.0)
-        self._tick_anim.setEndValue(1.0)
-        self._tick_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self._tick_anim.start()
+        parent = self.parentWidget()
+        if parent:
+            self.resize(parent.size())
+        self.show()
+        self.raise_()
 
-        # Auto-hide after 800ms
-        self._hide_timer.start(800)
+        self._icon_anim = QPropertyAnimation(
+            self._notify_card.icon, b"progress", self)
+        self._icon_anim.setDuration(350)
+        self._icon_anim.setStartValue(0.0)
+        self._icon_anim.setEndValue(1.0)
+        self._icon_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._icon_anim.start()
+
+        duration = _DURATIONS.get(notify_type, 1000)
+        self._hide_timer.start(duration)
+
+    def _stop_anim(self) -> None:
+        if self._icon_anim:
+            self._icon_anim.stop()
+            self._icon_anim = None
 
     def _final_hide(self) -> None:
         self.hide()
-        self._done_card.hide()
-        self._done_card.tick._progress = 0.0
+        self._notify_card.hide()
+        self._notify_card.icon._progress = 0.0
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         parent = self.parentWidget()

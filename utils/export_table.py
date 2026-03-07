@@ -16,36 +16,33 @@ import logging
 
 from PyQt6.QtWidgets import QTableWidget, QWidget
 
-from core.i18n import t
 from dialogs.file_dialog import save_file, EXCEL_FILES
 
 logger = logging.getLogger(__name__)
 
 
 def export_table(parent: QWidget, table: QTableWidget,
-                 default_name: str = "export.xlsx") -> bool:
-    """Xuất toàn bộ dữ liệu trong QTableWidget ra file Excel."""
+                 default_name: str = "export.xlsx") -> bool | None:
+    """Xuất toàn bộ dữ liệu trong QTableWidget ra file Excel.
+
+    Returns: True (ok), False (lỗi), None (huỷ/trống).
+    Caller tự hiển thị thông báo qua overlay.notify().
+    """
     if table.rowCount() == 0:
-        from dialogs.confirm_dialog import warn
-        warn(parent, t("crud.export_empty"))
-        return False
+        return None
 
     path = save_file(parent, default_name=default_name, filters=EXCEL_FILES)
     if not path:
-        return False
+        return None
 
     if not path.lower().endswith(".xlsx"):
         path += ".xlsx"
 
     try:
         _write_xlsx_from_table(table, path)
-        from dialogs.confirm_dialog import success
-        success(parent, t("crud.export_success"))
         return True
     except Exception as e:
         logger.error("Export failed: %s", e, exc_info=True)
-        from dialogs.confirm_dialog import error
-        error(parent, t("crud.export_error"))
         return False
 
 
@@ -54,29 +51,27 @@ def export_data(parent: QWidget,
                 rows: list[dict],
                 keys: list[str],
                 formatters: dict | None = None,
-                default_name: str = "export.xlsx") -> bool:
-    """Xuất raw data (list[dict]) ra file Excel."""
+                default_name: str = "export.xlsx") -> bool | None:
+    """Xuất raw data (list[dict]) ra file Excel.
+
+    Returns: True (ok), False (lỗi), None (huỷ/trống).
+    Caller tự hiển thị thông báo qua overlay.notify().
+    """
     if not rows:
-        from dialogs.confirm_dialog import warn
-        warn(parent, t("crud.export_empty"))
-        return False
+        return None
 
     path = save_file(parent, default_name=default_name, filters=EXCEL_FILES)
     if not path:
-        return False
+        return None
 
     if not path.lower().endswith(".xlsx"):
         path += ".xlsx"
 
     try:
         _write_xlsx_from_data(headers, rows, keys, formatters or {}, path)
-        from dialogs.confirm_dialog import success
-        success(parent, t("crud.export_success"))
         return True
     except Exception as e:
         logger.error("Export failed: %s", e, exc_info=True)
-        from dialogs.confirm_dialog import error
-        error(parent, t("crud.export_error"))
         return False
 
 

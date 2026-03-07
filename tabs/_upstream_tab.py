@@ -289,10 +289,9 @@ class UpstreamTab(BaseTab):
             self._do_export_data()
 
     def _on_export_error(self, exc: Exception) -> None:
-        self._loading.stop()
         self._btn_export.setEnabled(True)
         self._export_all_rows = []
-        error(self.window(), t("crud.export_error"))
+        self._loading.notify("error", t("crud.export_error"))
 
     def _do_export_data(self) -> None:
         from utils.export_table import export_data
@@ -301,11 +300,15 @@ class UpstreamTab(BaseTab):
         keys = [ck[1] for ck in self._columns_keys]
         default_name = self._build_export_filename()
 
-        export_data(
+        ok = export_data(
             self.window(), headers, self._export_all_rows,
             keys, self._formatters(), default_name,
         )
         self._export_all_rows = []
+        if ok:
+            self._loading.notify("success", t("crud.export_success"))
+        elif ok is False:
+            self._loading.notify("error", t("crud.export_error"))
 
     def _build_export_filename(self) -> str:
         """Tạo tên file mặc định: 'Title - dd/mm - dd/mm.xlsx'."""
