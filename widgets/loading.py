@@ -222,10 +222,49 @@ class _TickIcon(QWidget):
 
 # ── Overlay ───────────────────────────────────────────────
 
-class LoadingOverlay(QWidget):
-    """Overlay nền đen 70% với loading dots + tick xanh khi hoàn tất."""
+class _DoneCard(QWidget):
+    """Rounded dark card showing tick + label."""
 
-    _BG_COLOR = QColor(0, 0, 0, 178)  # 70% opacity
+    _BG = QColor(0, 0, 0, 178)  # 70% opacity
+    _RADIUS = 10
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 12, 20, 12)
+        lay.setSpacing(theme.SPACING_SM)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self._tick = _TickIcon(28, parent=self)
+        lay.addWidget(self._tick, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self._label = QLabel(t("loading.complete"))
+        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._label.setFont(theme.font())
+        self._label.setStyleSheet("color: white;")
+        lay.addWidget(self._label)
+
+    @property
+    def tick(self) -> _TickIcon:
+        return self._tick
+
+    @property
+    def label(self) -> QLabel:
+        return self._label
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setBrush(self._BG)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(self.rect(), self._RADIUS, self._RADIUS)
+        p.end()
+
+
+class LoadingOverlay(QWidget):
+    """Overlay với loading dots + tick card khi hoàn tất."""
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
@@ -236,30 +275,20 @@ class LoadingOverlay(QWidget):
         lay = QVBoxLayout(self)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        container = QWidget()
-        c_lay = QVBoxLayout(container)
-        c_lay.setContentsMargins(0, 0, 0, 0)
-        c_lay.setSpacing(theme.SPACING_MD)
-        c_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Loading dots (no dark bg)
+        self._dots = _LoadingDots(parent=self)
+        lay.addWidget(self._dots, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Dots (white on dark bg)
-        self._dots = _LoadingDots(
-            color=QColor(255, 255, 255), parent=container)
-        c_lay.addWidget(self._dots, alignment=Qt.AlignmentFlag.AlignCenter)
+        # Loading label
+        self._loading_label = QLabel(t("loading.processing"))
+        self._loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._loading_label.setFont(theme.font())
+        lay.addWidget(self._loading_label)
 
-        # Tick (hidden initially)
-        self._tick = _TickIcon(28, parent=container)
-        self._tick.hide()
-        c_lay.addWidget(self._tick, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # Label (white text)
-        self._label = QLabel(t("loading.processing"))
-        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._label.setFont(theme.font())
-        self._label.setStyleSheet("color: white;")
-        c_lay.addWidget(self._label)
-
-        lay.addWidget(container)
+        # Done card (dark bg, hidden initially)
+        self._done_card = _DoneCard(parent=self)
+        self._done_card.hide()
+        lay.addWidget(self._done_card, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
@@ -271,10 +300,11 @@ class LoadingOverlay(QWidget):
         if self._tick_anim:
             self._tick_anim.stop()
             self._tick_anim = None
-        self._tick.hide()
-        self._tick._progress = 0.0
+        self._done_card.hide()
+        self._done_card.tick._progress = 0.0
         self._dots.show()
-        self._label.setText(text or t("loading.processing"))
+        self._loading_label.show()
+        self._loading_label.setText(text or t("loading.processing"))
         parent = self.parentWidget()
         if parent:
             self.resize(parent.size())
@@ -285,12 +315,14 @@ class LoadingOverlay(QWidget):
     def stop(self) -> None:
         self._dots.stop()
         self._dots.hide()
+        self._loading_label.hide()
 
-        # Show tick with animation
-        self._tick.show()
-        self._label.setText(t("loading.complete"))
+        # Show done card with tick animation
+        self._done_card.label.setText(t("loading.complete"))
+        self._done_card.show()
 
-        self._tick_anim = QPropertyAnimation(self._tick, b"progress", self)
+        self._tick_anim = QPropertyAnimation(
+            self._done_card.tick, b"progress", self)
         self._tick_anim.setDuration(350)
         self._tick_anim.setStartValue(0.0)
         self._tick_anim.setEndValue(1.0)
@@ -302,14 +334,8 @@ class LoadingOverlay(QWidget):
 
     def _final_hide(self) -> None:
         self.hide()
-        self._tick.hide()
-        self._tick._progress = 0.0
-        self._dots.show()
-
-    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
-        p = QPainter(self)
-        p.fillRect(self.rect(), self._BG_COLOR)
-        p.end()
+        self._done_card.hide()
+        self._done_card.tick._progress = 0.0
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         parent = self.parentWidget()
