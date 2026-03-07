@@ -311,16 +311,15 @@ class UpstreamTab(BaseTab):
             self._loading.notify("error", t("crud.export_error"))
 
     def _build_export_filename(self) -> str:
-        """Tạo tên file mặc định: 'Title - dd/mm - dd/mm.xlsx'."""
+        """Tạo tên file mặc định: 'Title - dd.MM - dd.MM.xlsx'."""
         title = t(self._title_key)
-        # Tìm date range trong filter widgets
         date_part = ""
         for field in self._search_fields:
             if field.get("type") == "date_range":
                 w = self._filter_widgets.get(field["key"])
                 if w and w.date_from() and w.date_to():
-                    d_from = w.date_from().toString("dd/MM")
-                    d_to = w.date_to().toString("dd/MM")
+                    d_from = w.date_from().toString("dd.MM")
+                    d_to = w.date_to().toString("dd.MM")
                     if d_from == d_to:
                         date_part = f" - {d_from}"
                     else:
