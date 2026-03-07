@@ -271,3 +271,13 @@ class DateRangePicker(QWidget):
         self._d_from = d_from
         self._d_to = d_to
         self._update_text()
+
+    def reset(self) -> None:
+        """Reset to initial state (optional → clear, otherwise → default range)."""
+        if self._optional:
+            self._d_from = None
+            self._d_to = None
+        else:
+            self._d_from = QDate.currentDate()
+            self._d_to = QDate.currentDate()
+        self._update_text()

@@ -68,7 +68,8 @@
         "add": "Add",
         "edit": "Edit",
         "delete": "Delete",
-        "search": "Search"
+        "search": "Search",
+        "reset": "Reset"
     },
     "search": {
         "all": "All",
@@ -85,8 +86,10 @@
         "platform_account": "Platform account:",
         "platform_account_ph": "Enter platform account name",
         "status": "Status:",
+        "status_unrated": "Unrated",
         "status_normal": "Normal",
         "status_frozen": "Frozen",
+        "status_locked": "Locked",
         "status_pending": "Pending",
         "status_success": "Success",
         "status_rejected": "Rejected",
@@ -109,7 +112,17 @@
         "preset_yesterday": "Yesterday",
         "preset_this_week": "This week",
         "preset_this_month": "This month",
-        "preset_last_month": "Last month"
+        "preset_last_month": "Last month",
+        "sort_field": "Sort by:",
+        "sort_select": "Select",
+        "sort_balance": "Balance",
+        "sort_last_login": "Last login",
+        "sort_register": "Register time",
+        "sort_deposit": "Total deposit",
+        "sort_withdraw": "Total withdrawal",
+        "sort_direction": "Order:",
+        "sort_desc": "Descending",
+        "sort_asc": "Ascending"
     },
     "pagination": {
         "info": "Page {page} / {pages}  ({total} records)",

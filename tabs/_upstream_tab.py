@@ -13,7 +13,8 @@ from PyQt6.QtWidgets import (
     QComboBox, QTableWidgetItem, QLineEdit,
     QPushButton, QLabel, QWidget,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QIcon
 
 from core.base_widgets import BaseTab, label, divider, hbox
 from core import theme
@@ -123,7 +124,6 @@ class UpstreamTab(BaseTab):
             if ftype == "text":
                 w = QLineEdit()
                 w.setPlaceholderText(t(field.get("placeholder", "crud.search")))
-                w.setMinimumWidth(field.get("width", 150))
                 w.returnPressed.connect(self._on_filter_search)
                 row.addWidget(w)
 
@@ -144,15 +144,22 @@ class UpstreamTab(BaseTab):
                 w = QComboBox()
                 for opt_label, opt_val in field.get("options", []):
                     w.addItem(t(opt_label), opt_val)
-                w.setMinimumWidth(field.get("width", 120))
                 row.addWidget(w)
 
             self._filter_widgets[key] = w
 
         # Search button
-        self._btn_search = QPushButton(t("crud.search"))
+        _ico = QSize(15, 15)
+        self._btn_search = QPushButton(QIcon("icons/layui/search.svg"), t("crud.search"))
+        self._btn_search.setIconSize(_ico)
         self._btn_search.clicked.connect(self._on_filter_search)
         row.addWidget(self._btn_search)
+
+        # Reset button
+        self._btn_reset = QPushButton(QIcon("icons/layui/refresh.svg"), t("crud.reset"))
+        self._btn_reset.setIconSize(_ico)
+        self._btn_reset.clicked.connect(self._on_filter_reset)
+        row.addWidget(self._btn_reset)
 
         row.addStretch()
         layout.addLayout(row)
@@ -170,23 +177,33 @@ class UpstreamTab(BaseTab):
             param_key = field.get("param", key)
 
             if ftype == "text":
-                val = w.text().strip()
-                if val:
-                    params[param_key] = val
+                params[param_key] = w.text().strip()
 
             elif ftype == "date_range":
-                val = w.text()
-                if val:
-                    params[param_key] = val
+                params[param_key] = w.text()
 
             elif ftype == "select":
-                val = w.currentData()
-                if val:
-                    params[param_key] = val
+                params[param_key] = w.currentData() or ""
 
         return params
 
     def _on_filter_search(self) -> None:
+        self._reload_fresh()
+
+    def _on_filter_reset(self) -> None:
+        """Reset all filter widgets to default values."""
+        for field in self._search_fields:
+            key = field["key"]
+            w = self._filter_widgets.get(key)
+            if not w:
+                continue
+            ftype = field.get("type", "text")
+            if ftype == "text":
+                w.clear()
+            elif ftype == "date_range":
+                w.reset()
+            elif ftype == "select":
+                w.setCurrentIndex(0)
         self._reload_fresh()
 
     # ── Show ─────────────────────────────────────────────────
@@ -391,3 +408,5 @@ class UpstreamTab(BaseTab):
 
         if hasattr(self, "_btn_search"):
             self._btn_search.setText(t("crud.search"))
+        if hasattr(self, "_btn_reset"):
+            self._btn_reset.setText(t("crud.reset"))

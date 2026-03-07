@@ -68,7 +68,8 @@
         "add": "Thêm",
         "edit": "Sửa",
         "delete": "Xoá",
-        "search": "Tìm kiếm"
+        "search": "Tìm kiếm",
+        "reset": "Đặt lại"
     },
     "search": {
         "all": "Tất cả",
@@ -85,8 +86,10 @@
         "platform_account": "TK nhà cái:",
         "platform_account_ph": "Nhập tên tài khoản nhà cái",
         "status": "Trạng thái:",
+        "status_unrated": "Chưa đánh giá",
         "status_normal": "Bình thường",
         "status_frozen": "Đóng băng",
+        "status_locked": "Khoá",
         "status_pending": "Đang chờ",
         "status_success": "Thành công",
         "status_rejected": "Từ chối",
@@ -109,7 +112,17 @@
         "preset_yesterday": "Hôm qua",
         "preset_this_week": "Tuần này",
         "preset_this_month": "Tháng này",
-        "preset_last_month": "Tháng trước"
+        "preset_last_month": "Tháng trước",
+        "sort_field": "Sắp xếp:",
+        "sort_select": "Chọn",
+        "sort_balance": "Số dư",
+        "sort_last_login": "Đăng nhập cuối",
+        "sort_register": "Thời gian đăng ký",
+        "sort_deposit": "Tổng tiền nạp",
+        "sort_withdraw": "Tổng tiền rút",
+        "sort_direction": "Thứ tự:",
+        "sort_desc": "Từ lớn đến bé",
+        "sort_asc": "Từ bé đến lớn"
     },
     "pagination": {
         "info": "Trang {page} / {pages}  ({total} bản ghi)",

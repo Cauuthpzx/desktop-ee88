@@ -30,9 +30,25 @@ class CustomerTab(UpstreamTab):
         {"key": "status", "type": "select", "label": "search.status",
          "options": [
              ("search.all", ""),
-             ("search.status_normal", "0"),
-             ("search.status_frozen", "1"),
+             ("search.status_unrated", "0"),
+             ("search.status_normal", "1"),
+             ("search.status_frozen", "2"),
+             ("search.status_locked", "3"),
          ]},
+        {"key": "sort_field", "type": "select", "label": "search.sort_field",
+         "options": [
+             ("search.sort_select", ""),
+             ("search.sort_balance", "money"),
+             ("search.sort_last_login", "login_time"),
+             ("search.sort_register", "register_time"),
+             ("search.sort_deposit", "deposit_money"),
+             ("search.sort_withdraw", "withdrawal_money"),
+         ], "width": 150},
+        {"key": "sort_direction", "type": "select", "label": "search.sort_direction",
+         "options": [
+             ("search.sort_desc", "desc"),
+             ("search.sort_asc", "asc"),
+         ], "width": 150},
     ]
 
     def _fetch_upstream(self, agent_id, page, limit, **params):

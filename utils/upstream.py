@@ -215,7 +215,7 @@ class UpstreamClient:
     def fetch_customers(self, agent_id: int, page: int = 1, limit: int = 50,
                         **kwargs: str) -> dict[str, Any]:
         return self._fetch(agent_id, "/agent/user.html",
-                           page=page, limit=limit, **kwargs)
+                           page=page, limit=limit, hs_search="true", **kwargs)
 
     def fetch_deposits(self, agent_id: int, page: int = 1, limit: int = 50,
                        **kwargs: str) -> dict[str, Any]:
