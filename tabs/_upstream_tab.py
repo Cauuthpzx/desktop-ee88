@@ -31,7 +31,7 @@ from dialogs.confirm_dialog import error
 import math
 
 PAGE_SIZE = 100
-EXPORT_PAGE_SIZE = 500
+EXPORT_PAGE_SIZE = 2000
 
 
 def _fmt_currency(v) -> str:
@@ -256,13 +256,16 @@ class UpstreamTab(BaseTab):
         aid = self._current_agent_id
         params = self._get_search_params()
         page = self._export_page + 1
+        total_display = self._export_total or "..."
 
         run_in_thread(
             lambda: self._fetch_upstream(aid, page, EXPORT_PAGE_SIZE, **params),
             on_result=lambda data: self._on_export_page(data, page),
             on_error=self._on_export_error,
         )
-        self._loading.start(t("crud.exporting", current=len(self._export_all_rows), total="..."))
+        self._loading.start(
+            t("crud.exporting",
+              current=len(self._export_all_rows), total=total_display))
 
     def _on_export_page(self, data: dict, page: int) -> None:
         rows = data.get("data", [])
@@ -271,10 +274,14 @@ class UpstreamTab(BaseTab):
         self._export_all_rows.extend(rows)
 
         loaded = len(self._export_all_rows)
-        total_pages = math.ceil(self._export_total / EXPORT_PAGE_SIZE) if self._export_total else 1
+        total_pages = math.ceil(
+            self._export_total / EXPORT_PAGE_SIZE) if self._export_total else 1
+
+        # Cập nhật progress ngay với số thực tế
+        self._loading._loading_label.setText(
+            t("crud.exporting", current=loaded, total=self._export_total))
 
         if loaded < self._export_total and page < total_pages:
-            self._loading.start(t("crud.exporting", current=loaded, total=self._export_total))
             self._fetch_export_page()
         else:
             self._loading.stop()

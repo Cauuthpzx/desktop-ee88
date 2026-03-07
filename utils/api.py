@@ -102,7 +102,7 @@ class ApiClient:
         return self._token is not None
 
     # ── HTTP helpers ────────────────────────────────────────
-    def _request(
+    def _raw_request(
         self,
         method: str,
         path: str,
@@ -111,7 +111,7 @@ class ApiClient:
         timeout: int = 15,
     ) -> tuple[bool, dict]:
         """
-        Goi API. Tra ve (ok, data_dict).
+        Goi API (khong auto-refresh). Tra ve (ok, data_dict).
         Neu loi mang/server → (False, {"message": "..."})
         """
         url = self._base + path
@@ -131,11 +131,47 @@ class ApiClient:
                 detail = json.loads(e.read().decode())
             except (json.JSONDecodeError, ValueError):
                 detail = {"message": f"HTTP {e.code}"}
+            detail["_http_code"] = e.code
             logger.error("API %s %s → %s: %s", method, path, e.code, detail)
             return False, detail
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             logger.error("API %s %s → network error: %s", method, path, e)
             return False, {"message": t("api.error_connect")}
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        body: dict | None = None,
+        auth: bool = True,
+        timeout: int = 15,
+    ) -> tuple[bool, dict]:
+        """Goi API voi auto-refresh token khi nhan 401."""
+        ok, data = self._raw_request(method, path, body, auth, timeout)
+        if ok:
+            return ok, data
+
+        # Nhan 401 + co token → thu refresh token
+        http_code = data.get("_http_code", 0)
+        if http_code == 401 and self._token and path != "/api/refresh":
+            logger.info("Got 401 on %s, attempting token refresh...", path)
+            if self._try_refresh():
+                # Retry request voi token moi
+                return self._raw_request(method, path, body, auth, timeout)
+        return ok, data
+
+    def _try_refresh(self) -> bool:
+        """Thu gia han JWT token. Tra ve True neu thanh cong."""
+        ok, data = self._raw_request("POST", "/api/refresh")
+        if ok and data.get("ok"):
+            self._token = data.get("token", self._token)
+            self._username = data.get("username", self._username)
+            self._role = data.get("role", self._role)
+            self.save_session()
+            logger.info("Token refreshed successfully for %s", self._username)
+            return True
+        logger.warning("Token refresh failed: %s", data)
+        return False
 
     def get(self, path: str, **kw) -> tuple[bool, dict]:
         return self._request("GET", path, **kw)

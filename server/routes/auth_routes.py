@@ -7,7 +7,7 @@ import bcrypt
 from fastapi import APIRouter, Depends
 
 from server.database import get_db
-from server.auth import create_token
+from server.auth import create_token, get_current_user
 from server.models import RegisterReq, LoginReq, TokenResp, MsgResp
 
 logger = logging.getLogger(__name__)
@@ -50,4 +50,12 @@ def login(req: LoginReq, db=Depends(get_db)):
     cur.execute("UPDATE users SET last_login_at = NOW() WHERE id = %s", (user["id"],))
     token = create_token(user["id"], user["username"], user["role"], user["token_version"])
     logger.info("User logged in: %s", user["username"])
+    return TokenResp(ok=True, token=token, username=user["username"], role=user["role"])
+
+
+@router.post("/refresh", response_model=TokenResp)
+def refresh_token(user=Depends(get_current_user), db=Depends(get_db)):
+    """Gia han JWT token. Client gui token cu (con hop le) → nhan token moi."""
+    token = create_token(user["id"], user["username"], user["role"], user["token_version"])
+    logger.info("Token refreshed for: %s", user["username"])
     return TokenResp(ok=True, token=token, username=user["username"], role=user["role"])

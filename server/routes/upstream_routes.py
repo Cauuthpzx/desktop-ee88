@@ -37,7 +37,7 @@ def _get_agent_session(agent_id: int, user_id: int, db) -> tuple[str, str]:
     """
     cur = db.cursor()
     cur.execute(
-        "SELECT session_cookie, base_url, status FROM agents "
+        "SELECT id, session_cookie, base_url, status, ext_username, ext_password FROM agents "
         "WHERE id = %s AND user_id = %s AND is_active = TRUE",
         (agent_id, user_id),
     )
@@ -53,13 +53,69 @@ def _get_agent_session(agent_id: int, user_id: int, db) -> tuple[str, str]:
     return agent["session_cookie"], base_url.rstrip("/")
 
 
+def _auto_relogin_agent(agent_id: int, user_id: int, db) -> tuple[str, str] | None:
+    """Try to auto re-login agent when upstream session expired.
+
+    Returns (new_session_cookie, base_url) or None if failed.
+    """
+    from datetime import datetime, timezone
+    from utils.upstream_auth import login_upstream
+
+    cur = db.cursor()
+    cur.execute(
+        "SELECT id, ext_username, ext_password, base_url FROM agents "
+        "WHERE id = %s AND user_id = %s AND is_active = TRUE",
+        (agent_id, user_id),
+    )
+    agent = cur.fetchone()
+    if not agent or not agent["ext_password"]:
+        return None
+
+    base_url = agent.get("base_url") or UPSTREAM_BASE_URL
+    logger.info("Auto re-login agent %s (id=%d)...", agent["ext_username"], agent_id)
+
+    result = login_upstream(
+        username=agent["ext_username"],
+        password=agent["ext_password"],
+        base_url=base_url,
+    )
+
+    if not result["success"]:
+        logger.warning("Auto re-login failed for agent %d: %s", agent_id, result["error"])
+        cur.execute(
+            "UPDATE agents SET status = 'error', login_error = %s WHERE id = %s",
+            (result["error"], agent_id),
+        )
+        return None
+
+    now = datetime.now(timezone.utc)
+    cookie_expires = datetime.fromtimestamp(now.timestamp() + 24 * 3600, tz=timezone.utc)
+    cur.execute(
+        """UPDATE agents SET
+            session_cookie = %s, cookie_expires = %s,
+            status = 'active', last_login_at = %s,
+            login_error = NULL, updated_at = NOW()
+           WHERE id = %s""",
+        (result["session_id"], cookie_expires, now, agent_id),
+    )
+    logger.info("Auto re-login success for agent %d", agent_id)
+    return result["session_id"], base_url.rstrip("/")
+
+
+class _UpstreamSessionExpired(Exception):
+    """Raised internally when upstream session is detected as expired."""
+
+
 def _upstream_post(
     session_cookie: str,
     base_url: str,
     path: str,
     data: str,
 ) -> dict[str, Any]:
-    """POST to upstream with PHPSESSID cookie. Returns parsed JSON."""
+    """POST to upstream with PHPSESSID cookie. Returns parsed JSON.
+
+    Raises _UpstreamSessionExpired if session is expired (for auto re-login).
+    """
     url = f"{base_url}{path}"
     try:
         resp = requests.post(
@@ -77,7 +133,7 @@ def _upstream_post(
     if resp.status_code in (301, 302):
         location = resp.headers.get("Location", "").lower()
         if "login" in location:
-            raise HTTPException(401, "Upstream session expired. Please re-login agent.")
+            raise _UpstreamSessionExpired()
         raise HTTPException(502, f"Upstream redirect: {resp.status_code}")
 
     if resp.status_code != 200:
@@ -88,14 +144,34 @@ def _upstream_post(
     except ValueError:
         text = resp.text[:200].lower()
         if "login" in text:
-            raise HTTPException(401, "Upstream session expired.")
+            raise _UpstreamSessionExpired()
         raise HTTPException(502, "Upstream returned non-JSON response.")
 
     # Check for login redirect in response body
     if result.get("url", "").startswith("/agent/login"):
-        raise HTTPException(401, "Upstream session expired. Please re-login agent.")
+        raise _UpstreamSessionExpired()
 
     return result
+
+
+def _upstream_post_with_retry(
+    agent_id: int,
+    user_id: int,
+    db,
+    path: str,
+    data: str,
+) -> dict[str, Any]:
+    """POST to upstream, auto re-login agent if session expired."""
+    session_cookie, base_url = _get_agent_session(agent_id, user_id, db)
+    try:
+        return _upstream_post(session_cookie, base_url, path, data)
+    except _UpstreamSessionExpired:
+        logger.info("Upstream session expired for agent %d, attempting re-login...", agent_id)
+        new_session = _auto_relogin_agent(agent_id, user_id, db)
+        if not new_session:
+            raise HTTPException(401, "Upstream session expired. Auto re-login failed.")
+        new_cookie, new_base = new_session
+        return _upstream_post(new_cookie, new_base, path, data)
 
 
 # ── Customers (users) ──────────────────────────────────────────
@@ -110,14 +186,11 @@ def get_customers(
     db=Depends(get_db),
 ):
     """Fetch customer list from upstream via agent session."""
-    session_cookie, base_url = _get_agent_session(agent_id, user["id"], db)
-
-    # Build form data
     params = f"page={page}&limit={limit}"
     if username:
         params += f"&username={username}"
 
-    result = _upstream_post(session_cookie, base_url, "/agent/user.html", params)
+    result = _upstream_post_with_retry(agent_id, user["id"], db, "/agent/user.html", params)
 
     code = result.get("code")
     if code != 0:

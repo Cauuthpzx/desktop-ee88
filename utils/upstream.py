@@ -182,11 +182,43 @@ class UpstreamClient:
 
         return result
 
+    def _auto_relogin(self, agent_id: int) -> tuple[str, str] | None:
+        """Auto re-login agent khi upstream session het han.
+
+        Goi API server /api/agents/{id}/login → nhan cookie moi → luu QSettings.
+        Returns (cookie, base_url) hoac None.
+        """
+        from utils.api import api
+        logger.info("Auto re-login agent %d...", agent_id)
+        ok, data = api.post(f"/api/agents/{agent_id}/login")
+        if not ok:
+            logger.warning("Auto re-login failed for agent %d: %s", agent_id, data)
+            return None
+
+        agent_data = data.get("agent", {})
+        new_cookie = agent_data.get("session_cookie", "")
+        new_base = agent_data.get("base_url", UPSTREAM_BASE_URL)
+        if not new_cookie:
+            logger.warning("Auto re-login returned no cookie for agent %d", agent_id)
+            return None
+
+        self.save_cookie(agent_id, new_cookie, new_base)
+        # Update agent status trong local cache
+        agents = self.get_agents_local()
+        for ag in agents:
+            if ag["id"] == agent_id:
+                ag["status"] = "active"
+        self.save_agents_local(agents)
+
+        logger.info("Auto re-login success for agent %d", agent_id)
+        return new_cookie, new_base.rstrip("/")
+
     def _fetch(
         self, agent_id: int, path: str,
         page: int = 1, limit: int = 50, **kwargs: str,
     ) -> dict[str, Any]:
-        """Generic fetch upstream. Doc cookie tu QSettings (0ms)."""
+        """Generic fetch upstream. Doc cookie tu QSettings (0ms).
+        Tu dong re-login neu session het han."""
         cached = self.get_cookie(agent_id)
         if not cached:
             raise ValueError("No session. Login agent first.")
@@ -197,7 +229,15 @@ class UpstreamClient:
             if v:
                 params += f"&{k}={v}"
 
-        result = self._post(cookie, base_url, path, params)
+        try:
+            result = self._post(cookie, base_url, path, params)
+        except PermissionError:
+            # Session expired → auto re-login
+            new_session = self._auto_relogin(agent_id)
+            if not new_session:
+                raise PermissionError("Session expired. Auto re-login failed.")
+            cookie, base_url = new_session
+            result = self._post(cookie, base_url, path, params)
 
         if result.get("code") != 0:
             raise ConnectionError(f"Upstream: {result.get('msg', 'error')}")

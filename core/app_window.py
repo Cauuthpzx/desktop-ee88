@@ -87,9 +87,29 @@ class AppWindow(QMainWindow):
         super().show()
         settings.restore_window(self)
         self._check_for_updates()
+        self._start_token_refresh_timer()
+
+    def _start_token_refresh_timer(self) -> None:
+        """Refresh JWT token moi 1 gio de khong bao gio het han."""
+        from PyQt6.QtCore import QTimer
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setInterval(60 * 60 * 1000)  # 1 gio
+        self._refresh_timer.timeout.connect(self._refresh_token)
+        self._refresh_timer.start()
+
+    def _refresh_token(self) -> None:
+        from utils.thread_worker import run_in_thread
+        from utils.api import api
+        run_in_thread(
+            api._try_refresh,
+            on_result=lambda ok: logger.info("Token refresh: %s", "ok" if ok else "failed"),
+            on_error=lambda e: logger.debug("Token refresh error: %s", e),
+        )
 
     def closeEvent(self, event):
         settings.save_window(self)
+        if hasattr(self, "_refresh_timer"):
+            self._refresh_timer.stop()
         i18n_signals.language_changed.disconnect(self._retranslate)
         theme_signals.changed.disconnect(self._on_theme_changed)
         self._bell.cleanup()
