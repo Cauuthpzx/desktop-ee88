@@ -137,7 +137,8 @@
     "loading": {
         "processing": "处理中...",
         "loading_data": "加载数据中...",
-        "loading": "加载中..."
+        "loading": "加载中...",
+        "complete": "完成"
     },
     "dialog": {
         "confirm": "确认",

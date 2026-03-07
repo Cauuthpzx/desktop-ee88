@@ -137,7 +137,8 @@
     "loading": {
         "processing": "Đang xử lý...",
         "loading_data": "Đang tải dữ liệu...",
-        "loading": "Đang tải..."
+        "loading": "Đang tải...",
+        "complete": "Hoàn tất"
     },
     "dialog": {
         "confirm": "Xác nhận",

@@ -1,6 +1,6 @@
 """
 widgets/loading.py
-Loading indicator dùng QProgressBar indeterminate.
+Loading indicators: LoadingBar (inline), LoadingOverlay (overlay with dots).
 
 Dùng:
     from widgets.loading import LoadingBar, LoadingOverlay
@@ -11,19 +11,24 @@ Dùng:
     bar.start()
     bar.stop()
 
-    # 2. Overlay che toàn bộ widget cha:
+    # 2. Overlay với loading dots + tick xanh khi hoàn tất:
     overlay = LoadingOverlay(parent_widget)
-    overlay.show()
-    # sau khi xong:
-    overlay.hide()
+    overlay.start("Đang tải...")
+    overlay.stop()  # hiện tick xanh → tự ẩn sau 800ms
 """
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QProgressBar, QLabel, QFrame,
+    QProgressBar, QLabel,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import (
+    Qt, QTimer, QPropertyAnimation,
+    QEasingCurve, pyqtProperty,
+)
+from PyQt6.QtGui import QPainter, QColor, QPalette, QPen, QPainterPath
 from core import theme
 from core.i18n import t
+
+_TICK_COLOR = QColor(76, 175, 80)  # Material Green 500
 
 
 class LoadingBar(QWidget):
@@ -59,8 +64,167 @@ class LoadingBar(QWidget):
         self._label.setText(text)
 
 
+# ── Dot animation ────────────────────────────────────────
+
+class _Dot(QWidget):
+    """Single animated dot."""
+
+    def __init__(self, color: QColor, size: int = 6, parent=None):
+        super().__init__(parent)
+        self._color = color
+        self._size = size
+        self._opacity = 0.2
+        self.setFixedSize(size, size)
+
+    def _get_opacity(self) -> float:
+        return self._opacity
+
+    def _set_opacity(self, val: float) -> None:
+        self._opacity = val
+        self.update()
+
+    opacity = pyqtProperty(float, _get_opacity, _set_opacity)
+
+    def paintEvent(self, event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        c = QColor(self._color)
+        c.setAlphaF(self._opacity)
+        p.setBrush(c)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(0, 0, self._size, self._size)
+        p.end()
+
+
+class _LoadingDots(QWidget):
+    """5 dots pulse animation (Win10 style)."""
+
+    def __init__(self, color: QColor = None, dot_size: int = 6,
+                 gap: int = 6, parent=None):
+        super().__init__(parent)
+        if color is None:
+            color = self.palette().color(QPalette.ColorRole.Highlight)
+        self._dots: list[_Dot] = []
+
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(gap)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        for _ in range(5):
+            dot = _Dot(color, dot_size, self)
+            self._dots.append(dot)
+            lay.addWidget(dot)
+
+        self.setFixedSize(dot_size * 5 + gap * 4, dot_size)
+        self._timers: list[QTimer] = []
+
+    def start(self) -> None:
+        self._stop_all()
+        for i, dot in enumerate(self._dots):
+            dot._opacity = 0.2
+            dot.update()
+
+            anim = QPropertyAnimation(dot, b"opacity", self)
+            anim.setDuration(600)
+            anim.setStartValue(0.2)
+            anim.setKeyValueAt(0.5, 1.0)
+            anim.setEndValue(0.2)
+            anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+            anim.setLoopCount(-1)
+
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.setInterval(i * 200)
+            timer.timeout.connect(anim.start)
+            timer.start()
+            self._timers.append(timer)
+
+    def stop(self) -> None:
+        self._stop_all()
+        for dot in self._dots:
+            dot._opacity = 0.2
+            dot.update()
+
+    def _stop_all(self) -> None:
+        for timer in self._timers:
+            timer.stop()
+        self._timers.clear()
+        for child in self.findChildren(QPropertyAnimation):
+            child.stop()
+            child.deleteLater()
+
+
+# ── Tick icon ─────────────────────────────────────────────
+
+class _TickIcon(QWidget):
+    """Animated green checkmark."""
+
+    def __init__(self, size: int = 24, parent=None):
+        super().__init__(parent)
+        self._size = size
+        self._progress = 0.0  # 0..1 for draw animation
+        self.setFixedSize(size, size)
+
+    def _get_progress(self) -> float:
+        return self._progress
+
+    def _set_progress(self, val: float) -> None:
+        self._progress = val
+        self.update()
+
+    progress = pyqtProperty(float, _get_progress, _set_progress)
+
+    def paintEvent(self, event) -> None:
+        if self._progress <= 0:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        s = self._size
+        pen = QPen(_TICK_COLOR, 2.5, Qt.PenStyle.SolidLine,
+                   Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+        p.setPen(pen)
+
+        # Draw circle
+        margin = 2
+        p.drawEllipse(margin, margin, s - margin * 2, s - margin * 2)
+
+        # Draw checkmark (proportional to progress)
+        # Points: start(30%, 52%) → mid(45%, 65%) → end(72%, 35%)
+        x1, y1 = s * 0.28, s * 0.52
+        x2, y2 = s * 0.43, s * 0.67
+        x3, y3 = s * 0.72, s * 0.35
+
+        prog = self._progress
+        if prog <= 0.5:
+            # First segment: start → mid
+            t = prog / 0.5
+            ex = x1 + (x2 - x1) * t
+            ey = y1 + (y2 - y1) * t
+            path = QPainterPath()
+            path.moveTo(x1, y1)
+            path.lineTo(ex, ey)
+            p.drawPath(path)
+        else:
+            # Full first segment + partial second
+            t = (prog - 0.5) / 0.5
+            ex = x2 + (x3 - x2) * t
+            ey = y2 + (y3 - y2) * t
+            path = QPainterPath()
+            path.moveTo(x1, y1)
+            path.lineTo(x2, y2)
+            path.lineTo(ex, ey)
+            p.drawPath(path)
+
+        p.end()
+
+
+# ── Overlay ───────────────────────────────────────────────
+
 class LoadingOverlay(QWidget):
-    """Overlay mờ che phủ toàn bộ widget cha khi đang xử lý."""
+    """Overlay với loading dots kiểu Win10 + tick xanh khi hoàn tất."""
+
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
@@ -69,35 +233,67 @@ class LoadingOverlay(QWidget):
         lay = QVBoxLayout(self)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        frame = QFrame()
-        frame.setFrameShape(QFrame.Shape.Box)
-        frame.setFixedSize(280, 80)
-        frame_lay = QVBoxLayout(frame)
-        frame_lay.setContentsMargins(*[theme.SPACING_LG] * 4)
-        frame_lay.setSpacing(theme.SPACING_SM)
+        container = QWidget()
+        c_lay = QVBoxLayout(container)
+        c_lay.setContentsMargins(0, 0, 0, 0)
+        c_lay.setSpacing(theme.SPACING_MD)
+        c_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        # Dots
+        self._dots = _LoadingDots(parent=container)
+        c_lay.addWidget(self._dots, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Tick (hidden initially)
+        self._tick = _TickIcon(24, parent=container)
+        self._tick.hide()
+        c_lay.addWidget(self._tick, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Label
         self._label = QLabel(t("loading.processing"))
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFont(theme.font())
+        c_lay.addWidget(self._label)
 
-        self._bar = QProgressBar()
-        self._bar.setRange(0, 0)
-        self._bar.setTextVisible(False)
-        self._bar.setFixedHeight(4)
-        self._bar.setFixedWidth(240)
+        lay.addWidget(container)
 
-        frame_lay.addWidget(self._label)
-        frame_lay.addWidget(self._bar)
-        lay.addWidget(frame)
+        self._hide_timer = QTimer(self)
+        self._hide_timer.setSingleShot(True)
+        self._hide_timer.timeout.connect(self._final_hide)
 
     def start(self, text: str = ""):
+        self._hide_timer.stop()
+        self._tick.hide()
+        self._tick._progress = 0.0
+        self._dots.show()
         self._label.setText(text or t("loading.processing"))
         self.resize(self.parent().size())
+        self._dots.start()
         self.show()
         self.raise_()
 
     def stop(self):
+        self._dots.stop()
+        self._dots.hide()
+
+        # Show tick with animation
+        self._tick.show()
+        self._label.setText(t("loading.complete"))
+
+        anim = QPropertyAnimation(self._tick, b"progress", self)
+        anim.setDuration(350)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        anim.start()
+
+        # Auto-hide after 800ms
+        self._hide_timer.start(800)
+
+    def _final_hide(self):
         self.hide()
+        self._tick.hide()
+        self._tick._progress = 0.0
+        self._dots.show()
 
     def resizeEvent(self, event):
         if self.parent():

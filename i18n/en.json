@@ -137,7 +137,8 @@
     "loading": {
         "processing": "Processing...",
         "loading_data": "Loading data...",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "complete": "Complete"
     },
     "dialog": {
         "confirm": "Confirm",
