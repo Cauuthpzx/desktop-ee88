@@ -167,9 +167,14 @@ class WebSocketManager:
             except Exception:
                 dead.append(info)
 
-        # Cleanup dead connections
+        # Cleanup dead connections from ALL rooms they belong to
         for info in dead:
-            room.discard(info)
+            for gid in info.group_ids:
+                room_set = self._rooms.get(gid)
+                if room_set:
+                    room_set.discard(info)
+                    if not room_set:
+                        del self._rooms[gid]
             self._connections.pop(info.websocket, None)
 
         return sent
@@ -255,6 +260,16 @@ class WebSocketManager:
                     logger.info("Heartbeat cleaned %d dead connections", len(dead))
 
         self._heartbeat_task = asyncio.create_task(_loop())
+
+    async def stop_heartbeat(self) -> None:
+        """Cancel heartbeat task cleanly."""
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except asyncio.CancelledError:
+                pass
+            self._heartbeat_task = None
 
     # -- Stats --------------------------------------------------------------
 

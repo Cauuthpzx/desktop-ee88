@@ -799,12 +799,34 @@ for row_idx, row in enumerate(data_rows):
 
 ---
 
+## DEV / DEPLOY WORKFLOW
+
+**2 thu muc tach biet:**
+```
+Desktop/
+├── TEMPLE-PYQT6/          ← dev + test local (.env tro localhost)
+└── Deploy VPS/            ← ban production (.env tro VPS DB)
+```
+
+- **Luon dev o local** (TEMPLE-PYQT6), test xong moi deploy
+- Khi user noi **"deploy"**, lam 3 buoc:
+  1. Sync code tu `TEMPLE-PYQT6` → `Deploy VPS` (tru `.env`, `venv`, `__pycache__`, `.git`)
+  2. Upload `Deploy VPS` len VPS qua SFTP (paramiko)
+  3. `systemctl restart maxhub-api` tren VPS
+
+**KHONG tu y deploy** — chi khi user yeu cau.
+
+---
+
 ## SERVER — FastAPI (server/main.py)
 
-Ban local cua code chay tren VPS. Khi sua:
-1. Sua `server/main.py` tai local
-2. Upload len VPS qua SFTP hoac SSH
-3. `systemctl restart maxhub-api` tren VPS
+Ban local cua code chay tren VPS.
+VPS workers=1 (bat buoc cho WebSocket).
+
+Khi sua server code:
+1. Sua tai local (TEMPLE-PYQT6/server/)
+2. Test local truoc
+3. Khi user noi "deploy" → sync + upload + restart
 
 ### API Endpoints hien co
 | Method | Path | Auth | Mo ta |

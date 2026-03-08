@@ -48,6 +48,7 @@ async def lifespan(app: FastAPI):
     logger.info("MaxHub API started.")
     await ws_manager.start_heartbeat(interval=30)
     yield
+    await ws_manager.stop_heartbeat()
     logger.info("Shutting down.")
 
 

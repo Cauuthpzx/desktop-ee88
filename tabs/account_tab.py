@@ -130,6 +130,9 @@ class AccountTab(BaseTab):
         # Agent card — full width below columns
         layout.addWidget(self._build_agent_card())
 
+        # Group management card — full width below agent card
+        layout.addWidget(self._build_group_card())
+
         # Logout
         logout_lay = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
         logout_lay.addStretch()
@@ -152,6 +155,7 @@ class AccountTab(BaseTab):
             self._profile_loaded = True
             self._load_profile()
             self._load_agents()
+            self._load_groups()
 
     # ── Card builders ─────────────────────────────────────────
 
@@ -383,7 +387,7 @@ class AccountTab(BaseTab):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         # Actions — fixed
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
-        self._agent_table.setColumnWidth(5, 300)
+        self._agent_table.setColumnWidth(5, 380)
         agent_lay.addWidget(self._agent_table)
 
         # Message
@@ -490,6 +494,11 @@ class AccountTab(BaseTab):
             btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_del.clicked.connect(lambda _, aid=agent_id: self._on_delete_agent(aid))
             actions_lay.addWidget(btn_del)
+
+            btn_key = QPushButton(t("group.generate_key"))
+            btn_key.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_key.clicked.connect(lambda _, aid=agent_id, aname=ag.get("name", ""): self._on_generate_key(aid, aname))
+            actions_lay.addWidget(btn_key)
 
             table.setCellWidget(row, 5, actions_w)
 
@@ -674,6 +683,248 @@ class AccountTab(BaseTab):
             self._show_msg(self._agent_msg, t("account.agent_session_expired_msg", error=msg), error=True)
         self._load_agents()
 
+    # ── Agent key generation ─────────────────────────────────
+
+    def _on_generate_key(self, agent_id: int, agent_name: str) -> None:
+        """Generate agent key and show dialog to copy."""
+        run_in_thread(
+            lambda: api.post(f"/api/groups/agent-key/{agent_id}"),
+            on_result=lambda r: self._on_key_generated(r, agent_name),
+            on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
+        )
+
+    def _on_key_generated(self, result: tuple[bool, dict], agent_name: str) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            key = data.get("agent_key", "")
+            from PyQt6.QtWidgets import QMessageBox, QApplication
+            msg_text = t("group.key_generate_msg", name=agent_name, key=key)
+            dlg = QMessageBox(self.window())
+            dlg.setWindowTitle(t("group.key_generate_title"))
+            dlg.setText(msg_text)
+            dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            # Copy to clipboard
+            QApplication.clipboard().setText(key)
+            self._show_msg(self._agent_msg, t("group.key_copied", key=key), error=False)
+            dlg.exec()
+        else:
+            self._show_msg(self._agent_msg, data.get("message", t("api.error_generic")), error=True)
+
+    # ── Group management card ─────────────────────────────────
+
+    def _build_group_card(self) -> ExpandCard:
+        self._card_group = ExpandCard(
+            icon=IconPath.GROUPS,
+            title=t("group.manage_title"),
+        )
+
+        group_w = QWidget()
+        group_lay = vbox(margins=theme.MARGIN_ZERO)
+        group_w.setLayout(group_lay)
+
+        # Toolbar
+        tb = hbox(spacing=theme.SPACING_SM, margins=theme.MARGIN_ZERO)
+        self._btn_create_group = QPushButton(t("group.create"))
+        self._btn_create_group.setIcon(Icon.ADD)
+        self._btn_create_group.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_create_group.clicked.connect(self._on_create_group)
+        tb.addWidget(self._btn_create_group)
+        tb.addStretch()
+        group_lay.addLayout(tb)
+
+        # Table
+        self._group_table = QTableWidget()
+        self._group_table.setColumnCount(5)
+        self._group_headers = [
+            t("group.name"),
+            t("group.description"),
+            t("group.role_owner"),
+            t("group.members"),
+            t("group.actions"),
+        ]
+        self._group_table.setHorizontalHeaderLabels(self._group_headers)
+        self._group_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._group_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._group_table.setAlternatingRowColors(True)
+        self._group_table.verticalHeader().setVisible(False)
+        gh = self._group_table.horizontalHeader()
+        gh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        gh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        gh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        gh.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        gh.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        self._group_table.setColumnWidth(4, 300)
+        group_lay.addWidget(self._group_table)
+
+        # Message
+        self._group_msg = QLabel()
+        self._group_msg.setWordWrap(True)
+        self._group_msg.hide()
+        group_lay.addWidget(self._group_msg)
+
+        # Cache
+        self._groups_data: list[dict] = []
+
+        self._card_group.add_widget(group_w)
+        return self._card_group
+
+    def _load_groups(self) -> None:
+        run_in_thread(
+            lambda: api.get("/api/groups"),
+            on_result=self._on_groups_loaded,
+            on_error=lambda e: logger.error("Load groups failed: %s", e),
+        )
+
+    def _on_groups_loaded(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._groups_data = data.get("groups", [])
+            self._populate_group_table()
+
+    def _populate_group_table(self) -> None:
+        table = self._group_table
+        table.setUpdatesEnabled(False)
+        table.setRowCount(len(self._groups_data))
+        center = Qt.AlignmentFlag.AlignCenter
+
+        for row, g in enumerate(self._groups_data):
+            # Name
+            item = QTableWidgetItem(g.get("name", ""))
+            item.setTextAlignment(center)
+            item.setData(Qt.ItemDataRole.UserRole, g.get("id"))
+            table.setItem(row, 0, item)
+
+            # Description
+            item = QTableWidgetItem(g.get("description", ""))
+            item.setTextAlignment(center)
+            table.setItem(row, 1, item)
+
+            # Role
+            role_text = t("group.role_owner") if g.get("is_owner") else t("group.role_member")
+            item = QTableWidgetItem(role_text)
+            item.setTextAlignment(center)
+            table.setItem(row, 2, item)
+
+            # Member count
+            item = QTableWidgetItem(str(g.get("member_count", "—")))
+            item.setTextAlignment(center)
+            table.setItem(row, 3, item)
+
+            # Actions
+            actions_w = QWidget()
+            actions_lay = QHBoxLayout(actions_w)
+            actions_lay.setContentsMargins(2, 2, 2, 2)
+            actions_lay.setSpacing(theme.SPACING_XS)
+
+            gid = g.get("id")
+            is_owner = g.get("is_owner", False)
+
+            if is_owner:
+                btn_add = QPushButton(t("group.add_agent"))
+                btn_add.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn_add.clicked.connect(lambda _, gid=gid: self._on_add_agent_to_group(gid))
+                actions_lay.addWidget(btn_add)
+
+            btn_members = QPushButton(t("group.view_members"))
+            btn_members.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_members.clicked.connect(lambda _, gid=gid, gname=g.get("name", ""): self._on_view_members(gid, gname))
+            actions_lay.addWidget(btn_members)
+
+            if is_owner:
+                btn_del = QPushButton(t("group.delete_group"))
+                btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn_del.clicked.connect(lambda _, gid=gid, gname=g.get("name", ""): self._on_delete_group(gid, gname))
+                actions_lay.addWidget(btn_del)
+
+            table.setCellWidget(row, 4, actions_w)
+
+        table.setUpdatesEnabled(True)
+
+        count = len(self._groups_data)
+        self._card_group.set_description(f"{count} " + t("group.manage_title").lower() if count else t("group.no_groups"))
+
+    # ── Group CRUD ─────────────────────────────────────────────
+
+    def _on_create_group(self) -> None:
+        from dialogs.input_dialog import get_text
+        name = get_text(self.window(), t("group.create_title"), t("group.name") + ":")
+        if not name:
+            return
+        run_in_thread(
+            lambda: api.post("/api/groups", {"name": name}),
+            on_result=self._on_group_created,
+            on_error=lambda e: self._show_msg(self._group_msg, str(e), error=True),
+        )
+
+    def _on_group_created(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._group_msg, t("group.created"), error=False)
+            self._load_groups()
+        else:
+            self._show_msg(self._group_msg, data.get("message", t("api.error_generic")), error=True)
+
+    def _on_add_agent_to_group(self, group_id: int) -> None:
+        from dialogs.input_dialog import get_text
+        key = get_text(
+            self.window(),
+            t("group.add_agent_title"),
+            t("group.agent_key") + ":",
+        )
+        if not key:
+            return
+        run_in_thread(
+            lambda: api.post(f"/api/groups/{group_id}/agents", {"agent_key": key.strip().upper()}),
+            on_result=self._on_agent_added_to_group,
+            on_error=lambda e: self._show_msg(self._group_msg, str(e), error=True),
+        )
+
+    def _on_agent_added_to_group(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._group_msg, t("group.agent_added"), error=False)
+            self._load_groups()
+        else:
+            self._show_msg(self._group_msg, data.get("message", t("api.error_generic")), error=True)
+
+    def _on_view_members(self, group_id: int, group_name: str) -> None:
+        """Show dialog listing group members."""
+        from dialogs.confirm_dialog import alert
+        run_in_thread(
+            lambda: api.get(f"/api/groups/{group_id}/agents"),
+            on_result=lambda r: self._show_members_dialog(r, group_name),
+            on_error=lambda e: self._show_msg(self._group_msg, str(e), error=True),
+        )
+
+    def _show_members_dialog(self, result: tuple[bool, dict], group_name: str) -> None:
+        ok, data = result
+        if not ok or not data.get("ok"):
+            return
+        agents = data.get("agents", [])
+        lines = [f"  {a['name']} ({a['ext_username']}) — {'online' if a.get('status') == 'active' else a.get('status', '?')}"
+                 for a in agents]
+        text = "\n".join(lines) if lines else t("group.no_groups")
+        from dialogs.confirm_dialog import alert
+        alert(self.window(), f"{group_name}\n\n{text}")
+
+    def _on_delete_group(self, group_id: int, group_name: str) -> None:
+        from dialogs.confirm_dialog import confirm
+        if not confirm(self.window(), t("group.delete_group_confirm", name=group_name)):
+            return
+        run_in_thread(
+            lambda: api.delete(f"/api/groups/{group_id}"),
+            on_result=self._on_group_deleted,
+            on_error=lambda e: self._show_msg(self._group_msg, str(e), error=True),
+        )
+
+    def _on_group_deleted(self, result: tuple[bool, dict]) -> None:
+        ok, data = result
+        if ok and data.get("ok"):
+            self._show_msg(self._group_msg, t("group.deleted"), error=False)
+            self._load_groups()
+        else:
+            self._show_msg(self._group_msg, data.get("message", t("api.error_generic")), error=True)
+
     # ── Theme ─────────────────────────────────────────────────
 
     def _apply_logout_style(self) -> None:
@@ -756,6 +1007,19 @@ class AccountTab(BaseTab):
         # Re-populate to update status texts and action buttons
         if self._agents_data:
             self._populate_agent_table()
+
+        # Group card
+        self._card_group.set_title(t("group.manage_title"))
+        self._btn_create_group.setText(t("group.create"))
+        self._group_table.setHorizontalHeaderLabels([
+            t("group.name"),
+            t("group.description"),
+            t("group.role_owner"),
+            t("group.members"),
+            t("group.actions"),
+        ])
+        if self._groups_data:
+            self._populate_group_table()
 
     # ── Load profile ──────────────────────────────────────────
 

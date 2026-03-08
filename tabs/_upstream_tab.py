@@ -872,6 +872,14 @@ class UpstreamTab(BaseTab):
 
     # ── Retranslate ──────────────────────────────────────────
 
+    def closeEvent(self, event) -> None:
+        self._stop_polling()
+        try:
+            ws_client.data_updated.disconnect(self._on_ws_data_updated)
+        except TypeError:
+            pass
+        super().closeEvent(event)
+
     def retranslate(self) -> None:
         self._title_lbl.setText(t(self._title_key))
         for i18n_key, _data_key, card in self._summary_cards:
