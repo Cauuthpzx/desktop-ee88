@@ -734,13 +734,23 @@ class AccountTab(BaseTab):
         group_lay = vbox(margins=theme.MARGIN_ZERO)
         group_w.setLayout(group_lay)
 
-        # Toolbar
+        # Toolbar (admin only: create group)
         tb = hbox(spacing=theme.SPACING_SM, margins=theme.MARGIN_ZERO)
         self._btn_create_group = QPushButton(t("group.create"))
         self._btn_create_group.setIcon(Icon.ADD)
         self._btn_create_group.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_create_group.clicked.connect(self._on_create_group)
+        self._is_admin = api.role == "admin"
+        self._btn_create_group.setVisible(self._is_admin)
         tb.addWidget(self._btn_create_group)
+
+        # Hint for non-admin users
+        self._admin_hint = QLabel(t("group.admin_only_hint"))
+        self._admin_hint.setWordWrap(True)
+        self._admin_hint.setStyleSheet("color: gray; font-style: italic;")
+        self._admin_hint.setVisible(not self._is_admin)
+        tb.addWidget(self._admin_hint)
+
         tb.addStretch()
         group_lay.addLayout(tb)
 
@@ -831,7 +841,7 @@ class AccountTab(BaseTab):
             gid = g.get("id")
             is_owner = g.get("is_owner", False)
 
-            if is_owner:
+            if self._is_admin and is_owner:
                 btn_add = QPushButton(t("group.add_agent"))
                 btn_add.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn_add.clicked.connect(lambda _, gid=gid: self._on_add_agent_to_group(gid))
@@ -842,7 +852,7 @@ class AccountTab(BaseTab):
             btn_members.clicked.connect(lambda _, gid=gid, gname=g.get("name", ""): self._on_view_members(gid, gname))
             actions_lay.addWidget(btn_members)
 
-            if is_owner:
+            if self._is_admin and is_owner:
                 btn_del = QPushButton(t("group.delete_group"))
                 btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn_del.clicked.connect(lambda _, gid=gid, gname=g.get("name", ""): self._on_delete_group(gid, gname))

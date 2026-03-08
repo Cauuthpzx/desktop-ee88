@@ -532,6 +532,7 @@
         "change_key_confirm": "更换代理 {name} 的密钥？\n\n旧密钥将失效。如果代理已用旧密钥加入群组，需要用新密钥重新添加。",
         "key_copied": "密钥已复制: {key}",
         "key_changed_msg": "代理 {name} 的新密钥:\n\n{key}\n\n已复制到剪贴板。将此密钥发送给群主以加入群组。",
-        "view_members": "查看成员"
+        "view_members": "查看成员",
+        "admin_only_hint": "只有管理员可以创建和管理群组。请将代理密钥发送给管理员审批。"
     }
 }

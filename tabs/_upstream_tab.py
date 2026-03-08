@@ -100,8 +100,16 @@ class UpstreamTab(BaseTab):
 
         layout.addWidget(divider())
 
-        # Agent + Group selector row
+        # Agent + Group row (hidden by default, shown when user has a group)
+        self._agent_row_widget = QWidget()
         agent_row = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
+        self._agent_row_widget.setLayout(agent_row)
+
+        # Group info label
+        self._group_info_label = label("")
+        agent_row.addWidget(self._group_info_label)
+
+        # Agent selector
         self._agent_label = label(t("customer.agent_select"))
         agent_row.addWidget(self._agent_label)
         self._agent_combo = QComboBox()
@@ -110,20 +118,9 @@ class UpstreamTab(BaseTab):
         self._agent_combo.currentIndexChanged.connect(self._on_agent_changed)
         agent_row.addWidget(self._agent_combo)
 
-        agent_row.addSpacing(theme.SPACING_LG)
-
-        # Group selector
-        self._group_label = label(t("group.select"))
-        agent_row.addWidget(self._group_label)
-        self._group_combo = QComboBox()
-        self._group_combo.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self._group_combo.addItem(t("group.none"), None)
-        self._group_combo.currentIndexChanged.connect(self._on_group_changed)
-        agent_row.addWidget(self._group_combo)
-
         agent_row.addStretch()
-        layout.addLayout(agent_row)
+        self._agent_row_widget.hide()
+        layout.addWidget(self._agent_row_widget)
 
         # Search filter row
         self._filter_widgets: dict[str, QWidget] = {}
@@ -227,7 +224,7 @@ class UpstreamTab(BaseTab):
                     w.addItem(t(opt_label), opt_val)
                 w.setSizeAdjustPolicy(
                     QComboBox.SizeAdjustPolicy.AdjustToContents)
-                w.setMaxVisibleItems(20)
+                w.setMaxVisibleItems(12)
                 row.addWidget(w)
 
             self._filter_widgets[key] = w
@@ -399,12 +396,13 @@ class UpstreamTab(BaseTab):
         super().showEvent(event)
         if self._first_show:
             self._first_show = False
+            # Load personal agents first
             agents = upstream.get_agents_local()
             if agents:
                 self._apply_agents(agents)
             else:
                 self._agent_combo.addItem(t("customer.no_active_agent"))
-            # Load groups list (background)
+            # Then check group membership — if user has group, override with group agents
             self._load_groups()
 
     # ── Agent combo ──────────────────────────────────────────
@@ -429,8 +427,6 @@ class UpstreamTab(BaseTab):
     def _on_agent_changed(self, index: int) -> None:
         if index < 0 or not self._agents:
             return
-        if self._group_mode:
-            return  # Ignore agent changes in group mode
         self._current_agent_id = self._agent_combo.currentData()
         if self._current_agent_id:
             self._reload_fresh()
@@ -450,30 +446,52 @@ class UpstreamTab(BaseTab):
         if not ok or not data.get("ok"):
             return
         self._groups = data.get("groups", [])
-        self._group_combo.blockSignals(True)
-        self._group_combo.clear()
-        self._group_combo.addItem(t("group.none"), None)
-        for g in self._groups:
-            self._group_combo.addItem(g["name"], g["id"])
-        self._group_combo.blockSignals(False)
 
-    def _on_group_changed(self, index: int) -> None:
-        group_id = self._group_combo.currentData()
-        self._stop_polling()
-
-        if group_id is None:
-            # Switch back to agent mode
-            self._group_mode = False
-            self._current_group_id = None
-            self._agent_combo.setEnabled(True)
-            if self._current_agent_id:
-                self._reload_fresh()
+        if not self._groups:
+            # No group — nothing to show
             return
 
-        # Switch to group mode
+        # User belongs to a group — show agent row + enter group mode
+        g = self._groups[0]
         self._group_mode = True
-        self._current_group_id = group_id
-        self._agent_combo.setEnabled(False)
+        self._current_group_id = g["id"]
+        self._group_info_label.setText(
+            f"{t('group.select')} {g['name']}")
+        self._agent_row_widget.show()
+
+        # Load group agents into agent combo
+        self._load_group_agents(g["id"])
+
+    def _load_group_agents(self, group_id: int) -> None:
+        """Load agents belonging to the group into agent combo."""
+        from utils.api import api
+        run_in_thread(
+            lambda: api.get(f"/api/groups/{group_id}/agents"),
+            on_result=self._on_group_agents_loaded,
+        )
+
+    def _on_group_agents_loaded(self, result) -> None:
+        ok, data = result
+        if not ok or not data.get("ok"):
+            return
+        agents = data.get("agents", [])
+        self._agents = [a for a in agents if a.get("session_cookie")]
+        self._agent_combo.blockSignals(True)
+        self._agent_combo.clear()
+        if not self._agents:
+            self._agent_combo.addItem(t("customer.no_active_agent"))
+            self._current_agent_id = None
+        else:
+            for ag in self._agents:
+                self._agent_combo.addItem(
+                    f"{ag['name']} ({ag['ext_username']})", ag["id"],
+                )
+            self._current_agent_id = self._agents[0]["id"]
+        self._agent_combo.blockSignals(False)
+        # Also cache group agents locally for parallel fetch
+        if self._current_group_id:
+            upstream.save_group_agents_local(self._current_group_id, agents)
+        # Load data
         self._load_group_data()
 
     def _load_group_data(self) -> None:
@@ -904,9 +922,13 @@ class UpstreamTab(BaseTab):
     # ── Public ───────────────────────────────────────────────
 
     def refresh_agents(self) -> None:
-        agents = upstream.get_agents_local()
-        if agents:
-            self._apply_agents(agents)
+        """Reload agents (group or personal)."""
+        if self._group_mode and self._current_group_id:
+            self._load_group_agents(self._current_group_id)
+        else:
+            agents = upstream.get_agents_local()
+            if agents:
+                self._apply_agents(agents)
 
     # ── Retranslate ──────────────────────────────────────────
 
@@ -925,10 +947,11 @@ class UpstreamTab(BaseTab):
         for i18n_key, _data_key, card in self._summary_cards:
             card.set_title(t(i18n_key))
         self._agent_label.setText(t("customer.agent_select"))
-        self._group_label.setText(t("group.select"))
-        # Retranslate group combo first item
-        if self._group_combo.count() > 0:
-            self._group_combo.setItemText(0, t("group.none"))
+        # Update group info label if in group mode
+        if self._group_mode and self._groups:
+            g = self._groups[0]
+            self._group_info_label.setText(
+                f"{t('group.select')} {g['name']}")
         columns = [t(ck[0]) for ck in self._columns_keys]
         self.crud.table.setHorizontalHeaderLabels(columns)
 

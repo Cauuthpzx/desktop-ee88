@@ -532,6 +532,7 @@
         "change_key_confirm": "Change key for agent {name}?\n\nThe old key will be invalidated. If the agent was added to a group with the old key, it needs to be re-added with the new key.",
         "key_copied": "Key copied: {key}",
         "key_changed_msg": "New key for agent {name}:\n\n{key}\n\nCopied to clipboard. Send this key to the group owner to join.",
-        "view_members": "View Members"
+        "view_members": "View Members",
+        "admin_only_hint": "Only admin can create and manage groups. Send your agent key to admin for approval."
     }
 }

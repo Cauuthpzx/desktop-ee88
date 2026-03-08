@@ -83,6 +83,12 @@ def _audit_log(cur, group_id: int, user_id: int, action: str,
     )
 
 
+def _require_admin(user: dict) -> None:
+    """Raise 403 if user is not admin."""
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Admin only.")
+
+
 def _generate_agent_key() -> str:
     """Generate 12-char alphanumeric key."""
     return secrets.token_hex(6).upper()
@@ -113,6 +119,7 @@ def create_group(
     user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    _require_admin(user)
     name = body.get("name", "").strip()
     if not name:
         raise HTTPException(400, "Group name required.")
@@ -177,6 +184,7 @@ def update_group(
     user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    _require_admin(user)
     cur = db.cursor()
     _verify_group_owner(cur, group_id, user["id"])
 
@@ -205,6 +213,7 @@ def delete_group(
     user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    _require_admin(user)
     cur = db.cursor()
     _verify_group_owner(cur, group_id, user["id"])
 
@@ -245,6 +254,7 @@ def add_agent_to_group(
     db=Depends(get_db),
 ):
     """Add agent to group by agent_key."""
+    _require_admin(user)
     agent_key = body.get("agent_key", "").strip().upper()
     if not agent_key:
         raise HTTPException(400, "agent_key required.")
@@ -299,6 +309,7 @@ def remove_agent_from_group(
     user: dict = Depends(get_current_user),
     db=Depends(get_db),
 ):
+    _require_admin(user)
     cur = db.cursor()
     _verify_group_owner(cur, group_id, user["id"])
 

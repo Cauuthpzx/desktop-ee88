@@ -532,6 +532,7 @@
         "change_key_confirm": "Đổi key đại lý {name}?\n\nKey cũ sẽ mất hiệu lực. Nếu đại lý đã được thêm vào nhóm bằng key cũ, cần thêm lại bằng key mới.",
         "key_copied": "Đã copy key: {key}",
         "key_changed_msg": "Key mới của đại lý {name}:\n\n{key}\n\nĐã copy vào clipboard. Gửi key này cho chủ nhóm để được thêm vào nhóm.",
-        "view_members": "Xem thành viên"
+        "view_members": "Xem thành viên",
+        "admin_only_hint": "Chỉ admin mới có quyền tạo và quản lý nhóm. Gửi key đại lý cho admin để được duyệt."
     }
 }

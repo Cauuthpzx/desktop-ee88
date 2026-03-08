@@ -112,6 +112,8 @@ MIGRATIONS = [
     "CREATE INDEX IF NOT EXISTS idx_gdc_group ON group_data_cache(group_id)",
     "CREATE INDEX IF NOT EXISTS idx_agents_group ON agents(group_id)",
     "CREATE INDEX IF NOT EXISTS idx_gal_group ON group_audit_log(group_id)",
+    # Promote 'admin' user to admin role
+    "UPDATE users SET role = 'admin' WHERE username = 'admin' AND role = 'user'",
 ]
 
 
