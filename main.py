@@ -50,6 +50,9 @@ def main():
     from core.icon import _connect_theme_signal
     _connect_theme_signal()
 
+    # Init API signals (phai sau QApplication)
+    api.init_signals()
+
     # Monitoring — crash reporter + health checker + audit trail
     monitor = MonitoringManager(app_version=APP_VERSION)
     monitor.start()
@@ -103,6 +106,9 @@ def main():
         login.show()
 
     auth.logged_out.connect(on_logout)
+
+    # Session expired: token het han + refresh fail → force logout ngay
+    api.session_expired.connect(auth.logout)
 
     # Auto-login: neu co session luu tu truoc, verify token trong background
     if settings.get_bool("login/remember") and settings.get_str("session/token"):

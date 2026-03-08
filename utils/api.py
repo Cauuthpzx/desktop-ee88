@@ -25,6 +25,8 @@ import urllib.request
 import urllib.error
 
 from dotenv import load_dotenv
+from PyQt6.QtCore import QObject, pyqtSignal, QMetaObject, Qt, Q_ARG
+
 from core.i18n import t
 
 # Tim .env ca khi chay tu PyInstaller bundle
@@ -38,6 +40,11 @@ load_dotenv(os.path.join(_base_dir, ".env"))
 logger = logging.getLogger(__name__)
 
 
+class _ApiSignals(QObject):
+    """Signals cho ApiClient — phai la QObject de emit tu worker thread."""
+    session_expired = pyqtSignal()  # 401 + refresh fail → force logout
+
+
 class ApiClient:
     """HTTP client ket noi API server."""
 
@@ -47,6 +54,17 @@ class ApiClient:
         self._username: str | None = None
         self._role: str | None = None
         self._lock = threading.Lock()  # AUDIT-FIX: protect token state
+        self._signals: _ApiSignals | None = None
+        self._session_expired_fired = False  # tranh emit nhieu lan
+
+    def init_signals(self) -> None:
+        """Khoi tao signals — goi sau khi QApplication da tao."""
+        self._signals = _ApiSignals()
+
+    @property
+    def session_expired(self):
+        """Signal emitted khi token het han va refresh fail."""
+        return self._signals.session_expired if self._signals else None
 
     # ── Token persistence ───────────────────────────────────
     def save_session(self) -> None:
@@ -162,7 +180,21 @@ class ApiClient:
             if self._try_refresh():
                 # Retry request voi token moi
                 return self._raw_request(method, path, body, auth, timeout)
+            # Refresh fail → session het han, force logout
+            self._emit_session_expired()
         return ok, data
+
+    def _emit_session_expired(self) -> None:
+        """Emit session_expired signal (thread-safe, chi emit 1 lan)."""
+        if self._session_expired_fired or not self._signals:
+            return
+        self._session_expired_fired = True
+        logger.warning("Session expired — forcing logout")
+        # Emit trong main thread (co the goi tu worker thread)
+        QMetaObject.invokeMethod(
+            self._signals, "session_expired",
+            Qt.ConnectionType.QueuedConnection,
+        )
 
     def _try_refresh(self) -> bool:
         """Thu gia han JWT token. Tra ve True neu thanh cong."""
@@ -205,6 +237,7 @@ class ApiClient:
                 self._token = data.get("token")
                 self._username = data.get("username")
                 self._role = data.get("role")
+                self._session_expired_fired = False  # reset khi login lai
             return True, data.get("username", "")
         return False, data.get("message", t("api.error_login"))
 
