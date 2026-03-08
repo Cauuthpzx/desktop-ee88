@@ -16,6 +16,7 @@ Endpoints:
   GET    /api/groups/{id}/cache          — Doc cache
   GET    /api/groups/{id}/cache/version  — Lightweight poll version
 """
+import asyncio
 import logging
 import secrets
 import json
@@ -26,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from server.database import get_db
 from server.auth import get_current_user
 from server.config import UPSTREAM_BASE_URL
+from server.ws_manager import ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +86,23 @@ def _audit_log(cur, group_id: int, user_id: int, action: str,
 def _generate_agent_key() -> str:
     """Generate 12-char alphanumeric key."""
     return secrets.token_hex(6).upper()
+
+
+def _broadcast_sync(group_id: int, event: dict) -> None:
+    """Helper: broadcast tu sync context (non-async endpoint chay trong threadpool)."""
+    loop = ws_manager._loop
+    if not loop or loop.is_closed():
+        logger.warning("broadcast_sync: no event loop available")
+        return
+    future = asyncio.run_coroutine_threadsafe(
+        ws_manager.broadcast(group_id, event), loop,
+    )
+    try:
+        # Wait up to 2s for broadcast to complete
+        sent = future.result(timeout=2)
+        logger.info("broadcast_sync: group=%d sent=%d", group_id, sent)
+    except Exception as e:
+        logger.error("broadcast_sync failed: %s", e)
 
 
 # ── Group CRUD ────────────────────────────────────────────────
@@ -264,6 +283,12 @@ def add_agent_to_group(
     )
     _audit_log(cur, group_id, user["id"], "agent_added", agent["id"],
                {"agent_name": agent["name"]})
+    _broadcast_sync(group_id, {
+        "type": "member_added",
+        "group_id": group_id,
+        "agent_name": agent["name"],
+        "added_by": user["username"],
+    })
     return {"ok": True, "message": "Agent added to group."}
 
 
@@ -286,6 +311,11 @@ def remove_agent_from_group(
         raise HTTPException(404, "Agent not in this group.")
 
     _audit_log(cur, group_id, user["id"], "agent_removed", agent_id)
+    _broadcast_sync(group_id, {
+        "type": "member_removed",
+        "group_id": group_id,
+        "agent_id": agent_id,
+    })
     return {"ok": True, "message": "Agent removed from group."}
 
 
@@ -399,6 +429,15 @@ def sync_group_data(
 
     logger.info("Group %d sync %s: %d rows, version=%d by user %d",
                 group_id, data_type, total_count, version, user["id"])
+
+    _broadcast_sync(group_id, {
+        "type": "data_updated",
+        "group_id": group_id,
+        "data_type": data_type,
+        "version": version,
+        "synced_by": user["username"],
+        "synced_at": datetime.now(timezone.utc).isoformat(),
+    })
 
     return {"ok": True, "version": version}
 

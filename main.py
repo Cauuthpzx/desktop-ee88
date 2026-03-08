@@ -25,6 +25,7 @@ from utils.api import api
 from utils.auth import auth
 from utils.settings import settings
 from utils.thread_worker import run_in_thread
+from utils.ws_client import ws_client
 
 if getattr(sys, "frozen", False):
     BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
@@ -81,10 +82,13 @@ def main():
         from utils.upstream import upstream
         from utils.thread_worker import run_in_thread
         run_in_thread(lambda: upstream.sync_from_db(username))
+        # Connect WebSocket
+        ws_client.connect()
 
     login.login_success.connect(on_login_success)
 
     def on_logout() -> None:
+        ws_client.disconnect()
         window.hide()
         tray.hide()
         login.show()
@@ -106,7 +110,9 @@ def main():
             return ok
 
         def _on_restore_result(ok):
-            if not ok:
+            if ok:
+                ws_client.connect()
+            else:
                 # Token het han — quay ve login
                 window.hide()
                 tray.hide()

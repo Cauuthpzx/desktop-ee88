@@ -32,6 +32,8 @@ from server.routes.system_routes import router as system_router
 from server.routes.agent_routes import router as agent_router
 from server.routes.upstream_routes import router as upstream_router
 from server.routes.group_routes import router as group_router
+from server.routes.ws_routes import router as ws_router
+from server.ws_manager import ws_manager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,6 +46,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("MaxHub API started.")
+    await ws_manager.start_heartbeat(interval=30)
     yield
     logger.info("Shutting down.")
 
@@ -64,6 +67,7 @@ app.include_router(system_router)
 app.include_router(agent_router)
 app.include_router(upstream_router)
 app.include_router(group_router)
+app.include_router(ws_router)
 
 
 # ── Dev entry point ───────────────────────────────────────────
@@ -72,4 +76,4 @@ if __name__ == "__main__":
     init_schema()
 
     import uvicorn
-    uvicorn.run("server.main:app", host="0.0.0.0", port=8000, workers=4)
+    uvicorn.run("server.main:app", host="0.0.0.0", port=8000, workers=1)

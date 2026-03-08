@@ -22,6 +22,7 @@ from core.theme import tinted_icon, theme_signals
 from utils.upstream import upstream
 from utils.formatters import currency
 from utils.thread_worker import run_in_thread
+from utils.ws_client import ws_client
 from widgets.table_crud import TableCrud
 from widgets.loading import LoadingOverlay
 from widgets.error_state import ErrorState
@@ -150,6 +151,9 @@ class UpstreamTab(BaseTab):
         self._group_mode = False
         self._cache_version = 0
         self._poll_timer: QTimer | None = None
+
+        # WebSocket listener cho group mode
+        ws_client.data_updated.connect(self._on_ws_data_updated)
 
     # ── Search filter row ──────────────────────────────────
 
@@ -614,9 +618,12 @@ class UpstreamTab(BaseTab):
     # ── Polling ───────────────────────────────────────────────
 
     def _start_polling(self) -> None:
-        """Start 30s polling for cache version changes."""
+        """Start 30s polling as fallback when WS not connected."""
         self._stop_polling()
         if not self._group_mode or not self._current_group_id:
+            return
+        # WS connected → realtime via _on_ws_data_updated, no polling needed
+        if ws_client.is_connected:
             return
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(30_000)
@@ -644,6 +651,26 @@ class UpstreamTab(BaseTab):
     def _on_version_check(self, result) -> None:
         ok, data = result
         if ok and data.get("version", 0) > self._cache_version:
+            self._load_group_data()
+
+    # ── WebSocket realtime ────────────────────────────────────
+
+    def _on_ws_data_updated(self, event: dict) -> None:
+        """Data nhom duoc member khac cap nhat -> reload cache."""
+        if not self._group_mode:
+            return
+        if event.get("group_id") != self._current_group_id:
+            return
+        if event.get("data_type") != self._data_type:
+            return
+        from utils.api import api
+        if event.get("synced_by") == api.username:
+            # Chinh minh sync — chi cap nhat version, khong reload
+            self._cache_version = event.get("version", self._cache_version)
+            return
+        # Member khac sync — reload cache moi
+        new_ver = event.get("version", 0)
+        if new_ver > self._cache_version:
             self._load_group_data()
 
     # ── Data loading (infinite scroll) ───────────────────────
