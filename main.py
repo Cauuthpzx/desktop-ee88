@@ -25,7 +25,9 @@ from utils.api import api
 from utils.auth import auth
 from utils.settings import settings
 from utils.thread_worker import run_in_thread
+from utils.updater import APP_VERSION
 from utils.ws_client import ws_client
+from monitoring import MonitoringManager
 
 if getattr(sys, "frozen", False):
     BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
@@ -47,6 +49,11 @@ def main():
 
     from core.icon import _connect_theme_signal
     _connect_theme_signal()
+
+    # Monitoring — crash reporter + health checker + audit trail
+    monitor = MonitoringManager(app_version=APP_VERSION)
+    monitor.start()
+    app.aboutToQuit.connect(monitor.shutdown)
 
     # Tạo bảng users nếu chưa có (background — không block UI)
     run_in_thread(auth.init)
@@ -78,6 +85,7 @@ def main():
         login.hide()
         window.show()
         tray.show()
+        monitor.log_action("auth", "login", f"user={username}")
         # Sync agents + cookies tu DB xuong local (background, khong block)
         from utils.upstream import upstream
         from utils.thread_worker import run_in_thread
@@ -88,6 +96,7 @@ def main():
     login.login_success.connect(on_login_success)
 
     def on_logout() -> None:
+        monitor.log_action("auth", "logout")
         ws_client.disconnect()
         window.hide()
         tray.hide()

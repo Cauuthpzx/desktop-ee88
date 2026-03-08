@@ -1,0 +1,25 @@
+[project]
+name = "maxhub-desktop"
+version = "1.0.0"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests (fast, no external deps)",
+    "integration: Integration tests (may need server)",
+    "ui: UI tests (require QApplication)",
+    "performance: Performance benchmarks",
+    "slow: Tests that take >5s",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
