@@ -217,17 +217,26 @@ def delete_group(
     cur = db.cursor()
     _verify_group_owner(cur, group_id, user["id"])
 
-    # Remove all agents from group
-    cur.execute(
-        "UPDATE agents SET group_id = NULL, group_joined_at = NULL WHERE group_id = %s",
-        (group_id,),
-    )
-    # Soft delete group
-    cur.execute(
-        "UPDATE groups SET deleted_at = NOW() WHERE id = %s",
-        (group_id,),
-    )
-    _audit_log(cur, group_id, user["id"], "group_deleted")
+    # AUDIT-FIX: use transaction for multi-step operation
+    db.autocommit = False
+    try:
+        # Remove all agents from group
+        cur.execute(
+            "UPDATE agents SET group_id = NULL, group_joined_at = NULL WHERE group_id = %s",
+            (group_id,),
+        )
+        # Soft delete group
+        cur.execute(
+            "UPDATE groups SET deleted_at = NOW() WHERE id = %s",
+            (group_id,),
+        )
+        _audit_log(cur, group_id, user["id"], "group_deleted")
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.autocommit = True
     return {"ok": True, "message": "Group deleted."}
 
 
@@ -357,7 +366,8 @@ def get_group_agents(
                 "id": a["id"],
                 "name": a["name"],
                 "ext_username": a["ext_username"],
-                "session_cookie": a["session_cookie"],
+                # AUDIT-FIX: only expose session_cookie to agent owner
+                "session_cookie": a["session_cookie"] if a["user_id"] == user["id"] else "",
                 "base_url": a.get("base_url") or UPSTREAM_BASE_URL,
                 "status": a["status"],
                 "is_mine": a["user_id"] == user["id"],
@@ -411,6 +421,10 @@ def sync_group_data(
         raise HTTPException(400, "data_type required.")
 
     data_json = body.get("data", [])
+    # AUDIT-FIX: limit payload size to prevent abuse (max 10MB JSON)
+    import sys
+    if sys.getsizeof(json.dumps(data_json)) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Data payload too large (max 10MB).")
     agents_fetched = body.get("agents_fetched", [])
     agents_errors = body.get("agents_errors", [])
     total_count = len(data_json)

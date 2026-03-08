@@ -91,6 +91,9 @@ class AppWindow(QMainWindow):
 
     def _start_token_refresh_timer(self) -> None:
         """Refresh JWT token moi 1 gio de khong bao gio het han."""
+        # AUDIT-FIX: guard against duplicate timers if show() called multiple times
+        if hasattr(self, "_refresh_timer") and self._refresh_timer.isActive():
+            return
         from PyQt6.QtCore import QTimer
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(60 * 60 * 1000)  # 1 gio
@@ -110,8 +113,15 @@ class AppWindow(QMainWindow):
         settings.save_window(self)
         if hasattr(self, "_refresh_timer"):
             self._refresh_timer.stop()
-        i18n_signals.language_changed.disconnect(self._retranslate)
-        theme_signals.changed.disconnect(self._on_theme_changed)
+        # AUDIT-FIX: guard disconnects with try/except
+        try:
+            i18n_signals.language_changed.disconnect(self._retranslate)
+        except (TypeError, RuntimeError):
+            pass
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
         self._bell.cleanup()
         self._sidebar.cleanup()
         super().closeEvent(event)

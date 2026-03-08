@@ -119,9 +119,11 @@ class UpstreamClient:
     def clear_local(self) -> None:
         """Xoa toan bo cache local (khi logout)."""
         s = _settings()
+        # AUDIT-FIX: read cache BEFORE removing, otherwise get_agents_local() returns []
+        agents = self.get_agents_local()
         s.remove("agents/cache")
         # Xoa cookies cua tat ca agents da cache
-        for ag in self.get_agents_local():
+        for ag in agents:
             s.remove(f"agent/{ag['id']}/cookie")
             s.remove(f"agent/{ag['id']}/base_url")
 

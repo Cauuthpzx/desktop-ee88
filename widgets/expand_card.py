@@ -164,6 +164,8 @@ class ExpandCard(QFrame):
 
         # Re-tint icon on theme change
         theme_signals.changed.connect(self._on_theme_changed)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_signals)
 
     # ── Public API ───────────────────────────────────────────
 
@@ -227,14 +229,29 @@ class ExpandCard(QFrame):
         self._anim_height.setEndValue(self._header_height)
         self._anim_arrow.setStartValue(180.0)
         self._anim_arrow.setEndValue(0.0)
-        self._anim_group.start()
+        # AUDIT-FIX: disconnect first to prevent signal accumulation on rapid toggle
+        try:
+            self._anim_group.finished.disconnect(self._hide_content_once)
+        except (TypeError, RuntimeError):
+            pass
         self._anim_group.finished.connect(self._hide_content_once)
+        self._anim_group.start()
 
     def _hide_content_once(self) -> None:
         """Hide content after collapse animation finishes."""
         if not self._expanded:
             self._content.hide()
-        self._anim_group.finished.disconnect(self._hide_content_once)
+        try:
+            self._anim_group.finished.disconnect(self._hide_content_once)
+        except (TypeError, RuntimeError):
+            pass
+
+    def _cleanup_signals(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     @property
     def content_layout(self) -> QVBoxLayout:

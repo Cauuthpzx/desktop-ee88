@@ -170,6 +170,8 @@ class UpstreamTab(BaseTab):
 
         # WebSocket listener cho group mode
         ws_client.data_updated.connect(self._on_ws_data_updated)
+        # AUDIT-FIX: disconnect on destroy (closeEvent not called for stacked tabs)
+        self.destroyed.connect(lambda: self._cleanup_signals())
 
     # ── Search filter row ──────────────────────────────────
 
@@ -932,12 +934,20 @@ class UpstreamTab(BaseTab):
 
     # ── Retranslate ──────────────────────────────────────────
 
-    def closeEvent(self, event) -> None:
+    def _cleanup_signals(self) -> None:
+        """AUDIT-FIX: cleanup all global signal connections."""
         self._stop_polling()
         try:
             ws_client.data_updated.disconnect(self._on_ws_data_updated)
-        except TypeError:
+        except (TypeError, RuntimeError):
             pass
+        try:
+            theme_signals.changed.disconnect(self._on_filter_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
+
+    def closeEvent(self, event) -> None:
+        self._cleanup_signals()
         super().closeEvent(event)
 
     def retranslate(self) -> None:

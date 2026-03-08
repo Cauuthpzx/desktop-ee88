@@ -15,8 +15,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["auth"])
 
 
+RESERVED_USERNAMES = {"admin", "administrator", "root", "system"}
+
+
 @router.post("/register", response_model=MsgResp)
 def register(req: RegisterReq, db=Depends(get_db)):
+    # AUDIT-FIX: block reserved usernames to prevent privilege escalation
+    if req.username.lower() in RESERVED_USERNAMES:
+        return MsgResp(ok=False, message="server.username_exists")
+
     cur = db.cursor()
     cur.execute("SELECT id FROM users WHERE username = %s", (req.username,))
     if cur.fetchone():

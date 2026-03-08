@@ -168,7 +168,9 @@ def tinted_icon(path: str, color: QColor | None = None, size: int = 20) -> QIcon
         p.fillRect(px.rect(), color)
         p.end()
         icon = QIcon(px)
-    except Exception:  # noqa: BLE001 — fallback to untinted icon
+    except Exception:  # noqa: BLE001 — AUDIT-FIX: log + fallback to untinted icon
+        import logging
+        logging.getLogger(__name__).debug("tinted_icon fallback for %s", path)
         icon = QIcon(path)
 
     _tinted_icon_cache[key] = icon

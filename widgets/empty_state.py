@@ -100,10 +100,19 @@ class EmptyState(QWidget):
 
         self._refresh_pixmap()
         theme_signals.changed.connect(self._on_theme_changed)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_signals)
 
     def _refresh_pixmap(self) -> None:
         dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
         self._img_lbl.setPixmap(_render_empty_pixmap(dark))
+
+    def _cleanup_signals(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     def _on_theme_changed(self, _dark: bool) -> None:
         self._refresh_pixmap()

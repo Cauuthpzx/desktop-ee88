@@ -232,6 +232,15 @@ class DateRangePicker(QWidget):
         lay.addWidget(self._btn)
 
         theme_signals.changed.connect(self._on_theme_changed)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_signals)
+
+    def _cleanup_signals(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     def _update_text(self) -> None:
         if self._d_from and self._d_to:

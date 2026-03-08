@@ -10,14 +10,33 @@ from server.config import DB_DSN
 
 logger = logging.getLogger(__name__)
 
+# AUDIT-FIX: connection pooling — fallback to per-request if psycopg_pool not installed
+try:
+    from psycopg_pool import ConnectionPool
+    _pool: ConnectionPool | None = ConnectionPool(
+        DB_DSN,
+        min_size=2,
+        max_size=10,
+        kwargs={"row_factory": dict_row, "autocommit": True},
+    )
+    logger.info("Using psycopg_pool connection pool (min=2, max=10)")
+except ImportError:
+    _pool = None
+    logger.info("psycopg_pool not installed, using per-request connections")
+
+
 # ── Dependency — dung voi Depends(get_db) ─────────────────────
 def get_db():
-    """FastAPI dependency: mo connection, tra ve, dong khi xong."""
-    conn = psycopg.connect(DB_DSN, row_factory=dict_row, autocommit=True)
-    try:
-        yield conn
-    finally:
-        conn.close()
+    """FastAPI dependency: lay connection tu pool (hoac tao moi), tra lai khi xong."""
+    if _pool is not None:
+        with _pool.connection() as conn:
+            yield conn
+    else:
+        conn = psycopg.connect(DB_DSN, row_factory=dict_row, autocommit=True)
+        try:
+            yield conn
+        finally:
+            conn.close()
 
 
 # ── Schema ────────────────────────────────────────────────────

@@ -41,6 +41,8 @@ class SettingsTab(BaseTab):
         self._theme_check.toggled.connect(self._on_theme_changed)
         form_a.addRow(self._lbl_theme, self._theme_check)
         theme_signals.changed.connect(self._on_theme_signal)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_theme_signal)
         self._card_appearance.add_layout(form_a)
         col_left.addWidget(self._card_appearance)
 
@@ -137,6 +139,13 @@ class SettingsTab(BaseTab):
 
     def _on_theme_changed(self, checked: bool) -> None:
         theme.set_theme(checked)
+
+    def _cleanup_theme_signal(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_signal)
+        except (TypeError, RuntimeError):
+            pass
 
     def _on_theme_signal(self, dark: bool) -> None:
         self._theme_check.blockSignals(True)

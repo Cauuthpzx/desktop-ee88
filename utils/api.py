@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import sys
+import threading
 import urllib.request
 import urllib.error
 
@@ -45,6 +46,7 @@ class ApiClient:
         self._token: str | None = None
         self._username: str | None = None
         self._role: str | None = None
+        self._lock = threading.Lock()  # AUDIT-FIX: protect token state
 
     # ── Token persistence ───────────────────────────────────
     def save_session(self) -> None:
@@ -65,16 +67,18 @@ class ApiClient:
         token = settings.get_str("session/token")
         if not token:
             return False
-        self._token = token
-        self._username = settings.get_str("session/username")
-        self._role = settings.get_str("session/role")
+        with self._lock:  # AUDIT-FIX: thread-safe token mutation
+            self._token = token
+            self._username = settings.get_str("session/username")
+            self._role = settings.get_str("session/role")
         # Verify token still valid
         ok, data = self.me()
         if not ok:
             self.logout()
             return False
-        self._username = data.get("username", self._username)
-        self._role = data.get("role", self._role)
+        with self._lock:
+            self._username = data.get("username", self._username)
+            self._role = data.get("role", self._role)
         return True
 
     def clear_session(self) -> None:
@@ -164,9 +168,10 @@ class ApiClient:
         """Thu gia han JWT token. Tra ve True neu thanh cong."""
         ok, data = self._raw_request("POST", "/api/refresh")
         if ok and data.get("ok"):
-            self._token = data.get("token", self._token)
-            self._username = data.get("username", self._username)
-            self._role = data.get("role", self._role)
+            with self._lock:  # AUDIT-FIX: thread-safe token mutation
+                self._token = data.get("token", self._token)
+                self._username = data.get("username", self._username)
+                self._role = data.get("role", self._role)
             self.save_session()
             logger.info("Token refreshed successfully for %s", self._username)
             return True
@@ -196,17 +201,19 @@ class ApiClient:
         """Dang nhap. Tra ve (ok, message). Neu ok, luu token."""
         ok, data = self.post("/api/login", {"username": username, "password": password}, auth=False)
         if data.get("ok"):
-            self._token = data.get("token")
-            self._username = data.get("username")
-            self._role = data.get("role")
+            with self._lock:  # AUDIT-FIX: thread-safe token mutation
+                self._token = data.get("token")
+                self._username = data.get("username")
+                self._role = data.get("role")
             return True, data.get("username", "")
         return False, data.get("message", t("api.error_login"))
 
     def logout(self) -> None:
         """Xoa token local + QSettings."""
-        self._token = None
-        self._username = None
-        self._role = None
+        with self._lock:  # AUDIT-FIX: thread-safe token mutation
+            self._token = None
+            self._username = None
+            self._role = None
         self.clear_session()
 
     def me(self) -> tuple[bool, dict]:

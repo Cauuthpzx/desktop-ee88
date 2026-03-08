@@ -19,7 +19,8 @@ DB_DSN = (
 )
 
 # ── JWT ───────────────────────────────────────────────────────
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me")
+# AUDIT-FIX: generate random secret if not set (instead of weak default)
+JWT_SECRET = os.getenv("JWT_SECRET") or os.urandom(32).hex()
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "72"))
 
 # ── App version / Update ─────────────────────────────────────

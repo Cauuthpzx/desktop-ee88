@@ -86,6 +86,8 @@ class TableCrud(QWidget):
             slot=self._on_export,
         )
         theme_signals.changed.connect(self._on_theme_changed)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_signals)
 
         root.addWidget(self._toolbar)
 
@@ -151,6 +153,13 @@ class TableCrud(QWidget):
 
     def _on_theme_changed(self, _dark: bool) -> None:
         self._export_btn.setIcon(tinted_icon(IconPath.EXPORT, size=15))
+
+    def _cleanup_signals(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     def _on_select(self):
         has = bool(self.table.selectionModel().selectedRows())

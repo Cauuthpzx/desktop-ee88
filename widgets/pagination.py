@@ -79,6 +79,8 @@ class Pagination(QWidget):
 
         # Refresh icons on theme change
         theme_signals.changed.connect(self._on_theme_changed)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_signals)
 
     @staticmethod
     def _icon_btn(icon_path: str) -> QPushButton:
@@ -136,6 +138,13 @@ class Pagination(QWidget):
     def offset(self) -> int:
         """Trả về offset (0-based) để dùng với SQL LIMIT/OFFSET."""
         return (self._current - 1) * self._page_size
+
+    def _cleanup_signals(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     def _on_theme_changed(self, _dark: bool) -> None:
         self._btn_first.setIcon(tinted_icon(IconPath.FIRST_PAGE, size=18))

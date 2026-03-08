@@ -145,6 +145,8 @@ class AccountTab(BaseTab):
 
         self._apply_logout_style()
         theme_signals.changed.connect(self._on_theme_changed)
+        # AUDIT-FIX: disconnect on destroy to prevent memory leak
+        self.destroyed.connect(self._cleanup_theme_signal)
 
         self._loading = LoadingOverlay(self)
         self._profile_loaded = False
@@ -960,6 +962,13 @@ class AccountTab(BaseTab):
                 "QPushButton { color: #d32f2f; } "
                 "QPushButton:hover { color: #b71c1c; }"
             )
+
+    def _cleanup_theme_signal(self) -> None:
+        """AUDIT-FIX: disconnect theme signal on destroy."""
+        try:
+            theme_signals.changed.disconnect(self._on_theme_changed)
+        except (TypeError, RuntimeError):
+            pass
 
     def _on_theme_changed(self, _dark: bool) -> None:
         self._apply_logout_style()
