@@ -86,8 +86,10 @@ class HealthChecker:
 
                 if result["level"] == HealthStatus.WARNING:
                     logger.warning("Health WARNING: %s", result.get("warnings", []))
+                    self._notify_health(result, critical=False)
                 elif result["level"] == HealthStatus.CRITICAL:
                     logger.error("Health CRITICAL: %s", result.get("warnings", []))
+                    self._notify_health(result, critical=True)
                     self._auto_mitigate(result)
             except Exception as e:
                 logger.error("Health check error: %s", e)
@@ -125,6 +127,18 @@ class HealthChecker:
             "warnings": warnings,
             "timestamp": time.time(),
         }
+
+    def _notify_health(self, result: dict, *, critical: bool) -> None:
+        """Đẩy thông báo health vào notification service."""
+        try:
+            from utils.notification_service import notif_service
+            for w in result.get("warnings", []):
+                if critical:
+                    notif_service.notify_health_critical(w)
+                else:
+                    notif_service.notify_health_warning(w)
+        except Exception:
+            pass  # notification service may not be ready yet
 
     def _auto_mitigate(self, status: dict) -> None:
         """Tự động xử lý khi có vấn đề."""

@@ -191,10 +191,22 @@ class UpstreamClient:
         Returns (cookie, base_url) hoac None.
         """
         from utils.api import api
+        from utils.notification_service import notif_service
         logger.info("Auto re-login agent %d...", agent_id)
+
+        # Tìm tên agent cho notification
+        agent_name = str(agent_id)
+        for ag in self.get_agents_local():
+            if ag.get("id") == agent_id:
+                agent_name = ag.get("name", ag.get("ext_username", str(agent_id)))
+                break
+
+        notif_service.notify_agent_session_expired(agent_name)
+
         ok, data = api.post(f"/api/agents/{agent_id}/login")
         if not ok:
             logger.warning("Auto re-login failed for agent %d: %s", agent_id, data)
+            notif_service.notify_agent_login_fail(agent_name)
             return None
 
         agent_data = data.get("agent", {})
@@ -202,6 +214,7 @@ class UpstreamClient:
         new_base = agent_data.get("base_url", UPSTREAM_BASE_URL)
         if not new_cookie:
             logger.warning("Auto re-login returned no cookie for agent %d", agent_id)
+            notif_service.notify_agent_login_fail(agent_name)
             return None
 
         self.save_cookie(agent_id, new_cookie, new_base)
@@ -213,6 +226,7 @@ class UpstreamClient:
         self.save_agents_local(agents)
 
         logger.info("Auto re-login success for agent %d", agent_id)
+        notif_service.notify_agent_relogin_ok(agent_name)
         return new_cookie, new_base.rstrip("/")
 
     def _fetch(

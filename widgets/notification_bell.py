@@ -1,46 +1,75 @@
 """
-widgets/notification_bell.py — Nut chuong thong bao voi badge dem so va popup panel.
+widgets/notification_bell.py — Nút chuông thông báo với badge, popup panel, phân loại category.
 
-Dat vao toolbar (ngoai cung ben phai). Khi co thong bao moi, badge hien so.
-Nhan vao → popup panel danh sach thong bao.
+Đặt vào toolbar (ngoài cùng bên phải). Khi có thông báo mới, badge hiện số.
+Nhấn vào → popup panel danh sách thông báo.
+Tab lọc: Tất cả | Chưa đọc | Đã đọc.
+Loại thông báo (category) hiện đầu mỗi dòng.
 
-Dung:
+Dùng:
     from widgets.notification_bell import NotificationBell
 
     bell = NotificationBell()
     toolbar.addWidget(bell)
 
-    # Them thong bao
-    from core.icon import IconPath
-    bell.add_notification("Nguoi dung moi dang ky", icon=IconPath.USER)
-    bell.add_notification("Phien ban moi 2.0", icon=IconPath.REFRESH)
+    bell.add_notification("Phiên bản mới 2.0", category="system")
+    bell.add_notification("Nạp tiền 500K", category="customer", icon=IconPath.SAVINGS)
 """
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QFrame, QSizePolicy,
+    QPushButton, QScrollArea, QFrame,
 )
 from PyQt6.QtGui import (
-    QPainter, QColor, QIcon, QPen, QPixmap, QPalette,
+    QPainter, QColor, QIcon, QFont, QPalette,
     QGuiApplication,
 )
-from PyQt6.QtCore import Qt, QPoint, QRect, QSize, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSignal
 
 from core import theme
 from core.i18n import t
-from core.theme import theme_signals
+from core.theme import theme_signals, tinted_icon
+
+
+# ── Category constants ──────────────────────────────────────────────────────
+
+CATEGORY_SYSTEM = "system"
+CATEGORY_CUSTOMER = "customer"
+CATEGORY_AGENT = "agent"
+CATEGORY_GROUP = "group"
+
+# Category → (i18n_key, color)
+_CAT_INFO: dict[str, tuple[str, QColor]] = {
+    CATEGORY_SYSTEM:   ("notification.cat_system",   QColor(66, 133, 244)),   # Blue
+    CATEGORY_CUSTOMER: ("notification.cat_customer", QColor(52, 168, 83)),    # Green
+    CATEGORY_AGENT:    ("notification.cat_agent",    QColor(251, 188, 4)),    # Amber
+    CATEGORY_GROUP:    ("notification.cat_group",    QColor(142, 68, 173)),   # Purple
+}
+
+# Filter tabs
+_FILTER_ALL = "all"
+_FILTER_UNREAD = "unread"
+_FILTER_READ = "read"
+
+_FILTERS: list[tuple[str, str]] = [
+    (_FILTER_ALL,    "notification.tab_all"),
+    (_FILTER_UNREAD, "notification.tab_unread"),
+    (_FILTER_READ,   "notification.tab_read"),
+]
 
 
 # ── Data ──────────────────────────────────────────────────────────────────────
 
 @dataclass
 class NotificationItem:
-    """Du lieu 1 thong bao."""
+    """Dữ liệu 1 thông báo."""
     message: str
+    category: str = CATEGORY_SYSTEM
     icon: str = ""
     timestamp: float = field(default_factory=time.time)
     read: bool = False
@@ -51,32 +80,46 @@ class NotificationItem:
             self.id = f"notif_{self.timestamp}_{id(self)}"
 
     def time_ago(self) -> str:
-        """Tra ve chuoi thoi gian tuong doi."""
+        """Trả về chuỗi thời gian tương đối."""
         diff = int(time.time() - self.timestamp)
         if diff < 60:
             return t("notification.just_now")
         if diff < 3600:
-            m = diff // 60
-            return t("notification.minutes_ago", n=m)
+            return t("notification.minutes_ago", n=diff // 60)
         if diff < 86400:
-            h = diff // 3600
-            return t("notification.hours_ago", n=h)
-        d = diff // 86400
-        return t("notification.days_ago", n=d)
+            return t("notification.hours_ago", n=diff // 3600)
+        return t("notification.days_ago", n=diff // 86400)
+
+    def time_full(self) -> str:
+        """Trả về chuỗi giờ:phút — ngày/tháng/năm."""
+        dt = datetime.fromtimestamp(self.timestamp)
+        return dt.strftime("%H:%M — %d/%m/%Y")
+
+    def category_label(self) -> str:
+        """Trả về tên category đã dịch."""
+        info = _CAT_INFO.get(self.category)
+        return t(info[0]) if info else self.category
+
+    def category_color(self) -> QColor:
+        """Trả về màu category."""
+        info = _CAT_INFO.get(self.category)
+        return info[1] if info else QColor(128, 128, 128)
 
 
-# ── Badge dot / count ─────────────────────────────────────────────────────────
+# ── Badge color ──────────────────────────────────────────────────────────────
 
-_BADGE_COLOR = QColor(234, 67, 53)  # Google red
+_BADGE_COLOR = QColor(234, 67, 53)   # Google red
 _BADGE_TEXT = QColor(255, 255, 255)
 
 
 # ── Bell button ──────────────────────────────────────────────────────────────
 
 class NotificationBell(QWidget):
-    """Nut chuong voi badge dem so. Nhan → toggle popup."""
+    """Nút chuông với badge đếm số. Nhấn → toggle popup."""
 
     notification_clicked = pyqtSignal(str)  # emit notification id
+
+    _MAX_ITEMS = 100
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -95,13 +138,16 @@ class NotificationBell(QWidget):
 
     # ── Public API ───────────────────────────────────────────
 
-    def add_notification(self, message: str, icon: str = "") -> None:
-        """Them 1 thong bao moi."""
-        item = NotificationItem(message=message, icon=icon)
+    def add_notification(
+        self, message: str, *,
+        category: str = CATEGORY_SYSTEM,
+        icon: str = "",
+    ) -> None:
+        """Thêm 1 thông báo mới."""
+        item = NotificationItem(message=message, category=category, icon=icon)
         self._items.insert(0, item)
-        # Gioi han 50 thong bao
-        if len(self._items) > 50:
-            self._items = self._items[:50]
+        if len(self._items) > self._MAX_ITEMS:
+            self._items = self._items[:self._MAX_ITEMS]
         self._update_unread_count()
         self.update()
         if self._popup and self._popup.isVisible():
@@ -132,13 +178,11 @@ class NotificationBell(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Ve icon chuong (tinted theo palette, cached)
         if self._cached_icon is None:
-            self._cached_icon = theme.tinted_icon(self._icon_path, size=20)
+            self._cached_icon = tinted_icon(self._icon_path, size=20)
         icon_rect = QRect(8, 8, 20, 20)
         self._cached_icon.paint(p, icon_rect)
 
-        # Badge
         count = self._unread_count
         if count > 0:
             text = str(count) if count <= 99 else "99+"
@@ -151,12 +195,10 @@ class NotificationBell(QWidget):
             badge_x = self.width() - badge_w - 2
             badge_y = 2
 
-            # Ve nen badge
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(_BADGE_COLOR)
             p.drawRoundedRect(badge_x, badge_y, badge_w, badge_h, 7, 7)
 
-            # Ve so
             p.setPen(_BADGE_TEXT)
             p.drawText(
                 QRect(badge_x, badge_y, badge_w, badge_h),
@@ -178,18 +220,16 @@ class NotificationBell(QWidget):
         if self._popup is None:
             self._popup = _NotificationPopup(self)
             self._popup.item_clicked.connect(self._on_item_clicked)
-            self._popup.mark_all_clicked.connect(self.mark_all_read)
-            self._popup.clear_all_clicked.connect(self.clear_all)
+            self._popup.mark_all_clicked.connect(self._on_mark_all)
+            self._popup.clear_all_clicked.connect(self._on_clear_all)
 
         self._popup.refresh(self._items)
 
-        # Vi tri: ngay duoi nut chuong, can phai
         global_pos = self.mapToGlobal(QPoint(self.width(), self.height()))
         popup_w = self._popup.width()
         popup_x = global_pos.x() - popup_w
         popup_y = global_pos.y() + 4
 
-        # Dam bao khong tran man hinh
         screen = QGuiApplication.screenAt(global_pos)
         if screen:
             sr = screen.availableGeometry()
@@ -209,15 +249,25 @@ class NotificationBell(QWidget):
                 break
         self.update()
         self.notification_clicked.emit(notif_id)
+        if self._popup and self._popup.isVisible():
+            self._popup.refresh(self._items)
+
+    def _on_mark_all(self) -> None:
+        self.mark_all_read()
+        if self._popup and self._popup.isVisible():
+            self._popup.refresh(self._items)
+
+    def _on_clear_all(self) -> None:
+        self.clear_all()
 
     def _on_theme_changed(self, _dark: bool) -> None:
-        self._cached_icon = None  # rebuild on next paint
+        self._cached_icon = None
         self.update()
         if self._popup and self._popup.isVisible():
             self._popup.refresh(self._items)
 
     def cleanup(self) -> None:
-        """Goi khi dong app."""
+        """Gọi khi đóng app."""
         try:
             theme_signals.changed.disconnect(self._on_theme_changed)
         except (TypeError, RuntimeError):
@@ -229,14 +279,14 @@ class NotificationBell(QWidget):
 # ── Popup panel ──────────────────────────────────────────────────────────────
 
 class _NotificationPopup(QWidget):
-    """Popup hien danh sach thong bao."""
+    """Popup hiện danh sách thông báo. Tab: Tất cả | Chưa đọc | Đã đọc."""
 
     item_clicked = pyqtSignal(str)
     mark_all_clicked = pyqtSignal()
     clear_all_clicked = pyqtSignal()
 
-    _POPUP_W = 340
-    _POPUP_MAX_H = 420
+    _POPUP_W = 380
+    _POPUP_MAX_H = 480
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(
@@ -244,7 +294,8 @@ class _NotificationPopup(QWidget):
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint,
         )
         self.setFixedWidth(self._POPUP_W)
-
+        self._current_filter: str = _FILTER_ALL
+        self._all_items: list[NotificationItem] = []
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -252,7 +303,6 @@ class _NotificationPopup(QWidget):
         main_lay.setContentsMargins(0, 0, 0, 0)
         main_lay.setSpacing(0)
 
-        # Container frame — co border va background
         self._frame = QFrame()
         self._frame.setFrameShape(QFrame.Shape.Box)
         self._frame.setFrameShadow(QFrame.Shadow.Raised)
@@ -260,7 +310,7 @@ class _NotificationPopup(QWidget):
         frame_lay.setContentsMargins(0, 0, 0, 0)
         frame_lay.setSpacing(0)
 
-        # Header
+        # Header: title + mark all read
         header = QWidget()
         h_lay = QHBoxLayout(header)
         h_lay.setContentsMargins(
@@ -283,20 +333,42 @@ class _NotificationPopup(QWidget):
 
         frame_lay.addWidget(header)
 
+        # Filter tabs: Tất cả | Chưa đọc | Đã đọc
+        self._tab_row = QWidget()
+        tab_lay = QHBoxLayout(self._tab_row)
+        tab_lay.setContentsMargins(
+            theme.SPACING_LG, 0, theme.SPACING_LG, theme.SPACING_SM,
+        )
+        tab_lay.setSpacing(theme.SPACING_MD)
+
+        self._tab_buttons: dict[str, QPushButton] = {}
+        for filter_id, i18n_key in _FILTERS:
+            btn = QPushButton(t(i18n_key))
+            btn.setFlat(True)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setFont(theme.font(size=theme.FONT_SIZE_SM))
+            btn.setCheckable(True)
+            btn.clicked.connect(lambda checked, f=filter_id: self._on_filter(f))
+            tab_lay.addWidget(btn)
+            self._tab_buttons[filter_id] = btn
+
+        tab_lay.addStretch()
+        frame_lay.addWidget(self._tab_row)
+
         # Separator
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setFrameShadow(QFrame.Shadow.Sunken)
         frame_lay.addWidget(sep)
 
-        # Scroll area cho danh sach
+        # Scroll area
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll.setMaximumHeight(self._POPUP_MAX_H - 100)
+        self._scroll.setMaximumHeight(self._POPUP_MAX_H - 130)
 
         self._list_widget = QWidget()
         self._list_lay = QVBoxLayout(self._list_widget)
@@ -338,16 +410,66 @@ class _NotificationPopup(QWidget):
         f_lay.addWidget(self._btn_clear)
 
         frame_lay.addWidget(footer)
-
         main_lay.addWidget(self._frame)
 
+    def _on_filter(self, filter_id: str) -> None:
+        self._current_filter = filter_id
+        self._update_tab_style()
+        self._render_items()
+
+    def _update_tab_style(self) -> None:
+        for fid, btn in self._tab_buttons.items():
+            active = fid == self._current_filter
+            btn.setChecked(active)
+            if active:
+                btn.setStyleSheet(
+                    f"color: {self.palette().color(QPalette.ColorRole.Highlight).name()};"
+                    "font-weight: bold; text-decoration: underline;"
+                )
+            else:
+                btn.setStyleSheet("")
+
     def refresh(self, items: list[NotificationItem]) -> None:
-        """Cap nhat danh sach thong bao."""
-        # Xoa cac item cu
+        """Cập nhật danh sách thông báo."""
+        self._all_items = items
+        self._update_tab_badges()
+        self._update_tab_style()
+        self._render_items()
+
+    def _filtered_items(self) -> list[NotificationItem]:
+        if self._current_filter == _FILTER_UNREAD:
+            return [n for n in self._all_items if not n.read]
+        if self._current_filter == _FILTER_READ:
+            return [n for n in self._all_items if n.read]
+        return self._all_items
+
+    def _update_tab_badges(self) -> None:
+        """Cập nhật text tab với count."""
+        total = len(self._all_items)
+        unread = sum(1 for n in self._all_items if not n.read)
+        read = total - unread
+
+        counts = {
+            _FILTER_ALL: total,
+            _FILTER_UNREAD: unread,
+            _FILTER_READ: read,
+        }
+        for fid, i18n_key in _FILTERS:
+            btn = self._tab_buttons.get(fid)
+            if btn:
+                c = counts.get(fid, 0)
+                label = t(i18n_key)
+                if c > 0:
+                    label = f"{label} ({c})"
+                btn.setText(label)
+
+    def _render_items(self) -> None:
         while self._list_lay.count():
             child = self._list_lay.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
+
+        items = self._filtered_items()
 
         if not items:
             self._scroll.hide()
@@ -357,7 +479,8 @@ class _NotificationPopup(QWidget):
         else:
             self._empty_lbl.hide()
             self._scroll.show()
-            self._btn_mark_all.setEnabled(True)
+            has_unread = any(not n.read for n in self._all_items)
+            self._btn_mark_all.setEnabled(has_unread)
             self._btn_clear.setEnabled(True)
 
             for item in items:
@@ -365,19 +488,16 @@ class _NotificationPopup(QWidget):
                 row.clicked_signal.connect(self.item_clicked.emit)
                 self._list_lay.addWidget(row)
 
-        # Tinh chieu cao popup
         count = len(items)
-        row_h = 60
-        content_h = min(count * row_h, self._POPUP_MAX_H - 100)
+        row_h = 72
+        content_h = min(count * row_h, self._POPUP_MAX_H - 130)
         if not items:
             content_h = 80
-        total_h = content_h + 100  # header + footer
+        total_h = content_h + 130
         self.setFixedHeight(min(total_h, self._POPUP_MAX_H))
 
     def _on_mark_all(self) -> None:
         self.mark_all_clicked.emit()
-        self.refresh([])  # se duoc goi lai tu bell
-        self.hide()
 
     def _on_clear_all(self) -> None:
         self.clear_all_clicked.emit()
@@ -387,7 +507,7 @@ class _NotificationPopup(QWidget):
 # ── Notification row ─────────────────────────────────────────────────────────
 
 class _NotificationRow(QWidget):
-    """1 dong thong bao trong popup."""
+    """1 dòng thông báo trong popup."""
 
     clicked_signal = pyqtSignal(str)
 
@@ -395,7 +515,7 @@ class _NotificationRow(QWidget):
         super().__init__()
         self._item = item
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setMinimumHeight(56)
+        self.setMinimumHeight(68)
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(
@@ -404,7 +524,7 @@ class _NotificationRow(QWidget):
         )
         lay.setSpacing(theme.SPACING_MD)
 
-        # Cham xanh (chua doc)
+        # Chấm xanh (chưa đọc)
         self._dot = QWidget()
         self._dot.setFixedSize(8, 8)
         if not item.read:
@@ -413,17 +533,31 @@ class _NotificationRow(QWidget):
             )
         lay.addWidget(self._dot, 0, Qt.AlignmentFlag.AlignTop)
 
-        # Icon
+        # Icon (tinted theo theme)
         if item.icon:
             icon_lbl = QLabel()
-            icon_lbl.setPixmap(QIcon(item.icon).pixmap(20, 20))
-            icon_lbl.setFixedSize(20, 20)
+            ico = tinted_icon(item.icon, size=18)
+            icon_lbl.setPixmap(ico.pixmap(18, 18))
+            icon_lbl.setFixedSize(18, 18)
             lay.addWidget(icon_lbl, 0, Qt.AlignmentFlag.AlignTop)
 
-        # Text
+        # Text column
         text_lay = QVBoxLayout()
-        text_lay.setSpacing(theme.SPACING_XS)
+        text_lay.setSpacing(1)
 
+        # Dòng 1: [Category] message
+        cat_color = item.category_color()
+        top_lay = QHBoxLayout()
+        top_lay.setSpacing(theme.SPACING_SM)
+
+        cat_lbl = QLabel(f"[ {item.category_label()} ]")
+        cat_lbl.setFont(theme.font(size=8, bold=True))
+        cat_lbl.setStyleSheet(f"color: {cat_color.name()};")
+        top_lay.addWidget(cat_lbl)
+        top_lay.addStretch()
+        text_lay.addLayout(top_lay)
+
+        # Dòng 2: message
         msg_lbl = QLabel(item.message)
         msg_lbl.setWordWrap(True)
         msg_lbl.setFont(theme.font(
@@ -432,8 +566,12 @@ class _NotificationRow(QWidget):
         ))
         text_lay.addWidget(msg_lbl)
 
-        time_lbl = QLabel(item.time_ago())
-        time_lbl.setFont(theme.font(size=theme.FONT_SIZE_SM))
+        # Dòng 3: thời gian — chữ nhỏ nghiêng
+        time_text = f"{item.time_full()}  ·  {item.time_ago()}"
+        time_lbl = QLabel(time_text)
+        time_font = theme.font(size=8)
+        time_font.setItalic(True)
+        time_lbl.setFont(time_font)
         time_lbl.setEnabled(False)
         text_lay.addWidget(time_lbl)
 
@@ -442,6 +580,5 @@ class _NotificationRow(QWidget):
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked_signal.emit(self._item.id)
-            # Dat read
             self._item.read = True
             self._dot.setStyleSheet("")

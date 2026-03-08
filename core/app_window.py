@@ -18,6 +18,7 @@ from core.base_widgets import vbox
 from utils.settings import settings
 from widgets.sidebar import CollapsibleSidebar
 from widgets.notification_bell import NotificationBell
+from utils.notification_service import notif_service
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,7 @@ class AppWindow(QMainWindow):
             theme_signals.changed.disconnect(self._on_theme_changed)
         except (TypeError, RuntimeError):
             pass
+        notif_service.disconnect_all()
         self._bell.cleanup()
         self._sidebar.cleanup()
         super().closeEvent(event)
@@ -141,6 +143,7 @@ class AppWindow(QMainWindow):
     def _on_update_check(self, info: dict | None) -> None:
         if not info:
             return
+        notif_service.notify_update_available(info.get("version", ""))
         from dialogs.update_dialog import UpdateDialog
         dlg = UpdateDialog(self, info)
         dlg.exec()
@@ -174,8 +177,10 @@ class AppWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         tb.addWidget(spacer)
 
-        # Notification bell
+        # Notification bell + service
         self._bell = NotificationBell()
+        notif_service.bind(self._bell)
+        notif_service.connect_all()
         tb.addWidget(self._bell)
 
         # Theme toggle button
