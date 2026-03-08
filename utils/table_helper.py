@@ -12,8 +12,29 @@ Dùng:
     load_table(self.table, data, keys=["id", "name", "age"])
     id_ = get_selected_id(self.table)   # lấy ID từ cột 0
 """
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QApplication
 from PyQt6.QtCore import Qt
+from widgets.notify import NotifyOverlay
+
+
+def _get_copy_overlay(table: QTableWidget) -> NotifyOverlay:
+    """Lấy hoặc tạo NotifyOverlay dành cho copy trên table viewport."""
+    viewport = table.viewport()
+    overlay = getattr(viewport, "_copy_overlay", None)
+    if overlay is None:
+        overlay = NotifyOverlay(viewport)
+        viewport._copy_overlay = overlay  # type: ignore[attr-defined]
+    return overlay
+
+
+def _on_double_click(table: QTableWidget, index) -> None:
+    """Copy cell value to clipboard on double-click."""
+    item = table.item(index.row(), index.column())
+    if item and item.text():
+        QApplication.clipboard().setText(item.text())
+        overlay = _get_copy_overlay(table)
+        display = item.text()[:40]
+        overlay.notify("success", f"Đã copy: {display}")
 
 
 def setup_table(table: QTableWidget,
@@ -33,6 +54,9 @@ def setup_table(table: QTableWidget,
     table.viewport().setAttribute(Qt.WidgetAttribute.WA_Hover, True)
     table.horizontalHeader().setMouseTracking(True)
     table.horizontalHeader().setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+
+    # Double-click cell → copy value
+    table.doubleClicked.connect(lambda idx: _on_double_click(table, idx))
 
     if stretch_last:
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)

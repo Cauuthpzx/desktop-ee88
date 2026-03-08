@@ -133,18 +133,14 @@ class WsClient(QObject):
         if self._ws is not None:
             ws = self._ws
             self._ws = None
-            # Block signals truoc khi disconnect — tranh wildcard warnings
+            # Block signals first — prevents callbacks during teardown
             try:
                 ws.blockSignals(True)
             except RuntimeError:
                 return
-            try:
-                ws.connected.disconnect(self._on_connected)
-                ws.disconnected.disconnect(self._on_disconnected)
-                ws.textMessageReceived.disconnect(self._on_message)
-                ws.errorOccurred.disconnect(self._on_error)
-            except (TypeError, RuntimeError):
-                pass
+            # Don't call disconnect() after blockSignals — it causes
+            # "wildcard call disconnects from destroyed signal" warnings.
+            # blockSignals(True) + deleteLater() is sufficient.
             try:
                 if ws.isValid():
                     ws.close()

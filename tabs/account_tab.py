@@ -363,11 +363,12 @@ class AccountTab(BaseTab):
 
         # Table
         self._agent_table = QTableWidget()
-        self._agent_table.setColumnCount(6)
+        self._agent_table.setColumnCount(7)
         self._agent_headers = [
             t("account.agent_name"),
             t("account.agent_username"),
             t("account.agent_status"),
+            t("group.agent_key"),
             t("account.agent_last_login"),
             t("account.agent_base_url"),
             t("account.agent_actions"),
@@ -381,13 +382,16 @@ class AccountTab(BaseTab):
         # Name, Username — stretch to fill
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        # Status, Last login, Base URL — fit content
+        # Status — fit content
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        # Key — fit content
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        # Last login, Base URL
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
         # Actions — fixed
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
-        self._agent_table.setColumnWidth(5, 380)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
+        self._agent_table.setColumnWidth(6, 380)
         agent_lay.addWidget(self._agent_table)
 
         # Message
@@ -449,15 +453,23 @@ class AccountTab(BaseTab):
             item.setFont(bold_font)
             table.setItem(row, 2, item)
 
+            # Key
+            key_text = ag.get("agent_key") or ""
+            item = QTableWidgetItem(key_text)
+            item.setTextAlignment(center)
+            if key_text:
+                item.setFont(bold_font)
+            table.setItem(row, 3, item)
+
             # Last login
             item = QTableWidgetItem(self._format_datetime(ag.get("last_login_at")))
             item.setTextAlignment(center)
-            table.setItem(row, 3, item)
+            table.setItem(row, 4, item)
 
             # Base URL
             item = QTableWidgetItem(ag.get("base_url", ""))
             item.setTextAlignment(center)
-            table.setItem(row, 4, item)
+            table.setItem(row, 5, item)
 
             # Action buttons
             actions_w = QWidget()
@@ -495,12 +507,13 @@ class AccountTab(BaseTab):
             btn_del.clicked.connect(lambda _, aid=agent_id: self._on_delete_agent(aid))
             actions_lay.addWidget(btn_del)
 
-            btn_key = QPushButton(t("group.generate_key"))
+            btn_key = QPushButton(t("group.change_key"))
+            btn_key.setToolTip(t("group.change_key_tip"))
             btn_key.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_key.clicked.connect(lambda _, aid=agent_id, aname=ag.get("name", ""): self._on_generate_key(aid, aname))
+            btn_key.clicked.connect(lambda _, aid=agent_id, aname=ag.get("name", ""): self._on_change_key(aid, aname))
             actions_lay.addWidget(btn_key)
 
-            table.setCellWidget(row, 5, actions_w)
+            table.setCellWidget(row, 6, actions_w)
 
         table.setUpdatesEnabled(True)
 
@@ -683,32 +696,31 @@ class AccountTab(BaseTab):
             self._show_msg(self._agent_msg, t("account.agent_session_expired_msg", error=msg), error=True)
         self._load_agents()
 
-    # ── Agent key generation ─────────────────────────────────
+    # ── Agent key change ─────────────────────────────────────
 
-    def _on_generate_key(self, agent_id: int, agent_name: str) -> None:
-        """Generate agent key and show dialog to copy."""
+    def _on_change_key(self, agent_id: int, agent_name: str) -> None:
+        """Confirm then regenerate agent key."""
+        from dialogs.confirm_dialog import confirm
+        if not confirm(self.window(), t("group.change_key_confirm", name=agent_name)):
+            return
         run_in_thread(
             lambda: api.post(f"/api/groups/agent-key/{agent_id}"),
-            on_result=lambda r: self._on_key_generated(r, agent_name),
+            on_result=lambda r: self._on_key_changed(r, agent_name),
             on_error=lambda e: self._show_msg(self._agent_msg, str(e), error=True),
         )
 
-    def _on_key_generated(self, result: tuple[bool, dict], agent_name: str) -> None:
+    def _on_key_changed(self, result: tuple[bool, dict], agent_name: str) -> None:
         ok, data = result
-        if ok and data.get("ok"):
-            key = data.get("agent_key", "")
-            from PyQt6.QtWidgets import QMessageBox, QApplication
-            msg_text = t("group.key_generate_msg", name=agent_name, key=key)
-            dlg = QMessageBox(self.window())
-            dlg.setWindowTitle(t("group.key_generate_title"))
-            dlg.setText(msg_text)
-            dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
-            # Copy to clipboard
-            QApplication.clipboard().setText(key)
-            self._show_msg(self._agent_msg, t("group.key_copied", key=key), error=False)
-            dlg.exec()
-        else:
+        if not ok or not data.get("ok"):
             self._show_msg(self._agent_msg, data.get("message", t("api.error_generic")), error=True)
+            return
+        key = data.get("agent_key", "")
+        from PyQt6.QtWidgets import QApplication
+        QApplication.clipboard().setText(key)
+        self._show_msg(self._agent_msg, t("group.key_copied", key=key), error=False)
+        from dialogs.confirm_dialog import alert
+        alert(self.window(), t("group.key_changed_msg", name=agent_name, key=key))
+        self._load_agents()
 
     # ── Group management card ─────────────────────────────────
 
@@ -1000,6 +1012,7 @@ class AccountTab(BaseTab):
             t("account.agent_name"),
             t("account.agent_username"),
             t("account.agent_status"),
+            t("group.agent_key"),
             t("account.agent_last_login"),
             t("account.agent_base_url"),
             t("account.agent_actions"),

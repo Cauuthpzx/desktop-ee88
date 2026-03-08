@@ -7,6 +7,7 @@ from utils.upstream import upstream
 
 class CustomerTab(UpstreamTab):
     _title_key = "customer.title"
+    _prefix_key = ""
     _data_type = "customers"
     _columns_keys = [
         ("customer.col_username",    "username"),

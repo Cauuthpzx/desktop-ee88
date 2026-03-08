@@ -234,7 +234,9 @@
         "col_status": "Status"
     },
     "deposit": {
-        "title": "Deposit Summary:",
+        "title": "Deposit",
+        "card_status": "Complete / Failed",
+        "card_orders": "Orders Executed",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_parent": "Parent",
@@ -244,7 +246,9 @@
         "col_time": "Time"
     },
     "withdraw": {
-        "title": "Withdrawal Summary:",
+        "title": "Withdrawal",
+        "card_status": "Complete / Failed",
+        "card_orders": "Orders Executed",
         "col_agent": "Agent",
         "col_serial": "Serial No.",
         "col_time": "Time",
@@ -257,7 +261,7 @@
         "col_action": "Action"
     },
     "transaction": {
-        "title": "Transaction Summary:",
+        "title": "Transaction",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_parent": "Parent",
@@ -273,7 +277,7 @@
         "col_date": "Date"
     },
     "bet_lottery": {
-        "title": "Lottery Bets Summary:",
+        "title": "Lottery Bets",
         "col_agent": "Agent",
         "col_serial": "Serial No.",
         "col_user": "User",
@@ -289,7 +293,7 @@
         "col_status": "Status"
     },
     "bet_provider": {
-        "title": "Provider Bets Summary:",
+        "title": "Provider Bets",
         "col_agent": "Agent",
         "col_serial": "Serial No.",
         "col_provider": "Provider",
@@ -303,7 +307,7 @@
         "col_time": "Bet Time"
     },
     "lottery": {
-        "title": "Lottery Summary:",
+        "title": "Lottery",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_parent": "Parent",
@@ -317,7 +321,7 @@
         "col_name": "Lottery Name"
     },
     "provider": {
-        "title": "Provider Summary:",
+        "title": "Provider",
         "col_agent": "Agent",
         "col_account": "Account",
         "col_provider": "Provider",
@@ -463,6 +467,7 @@
         "agent_session_expired": "Session expired."
     },
     "upstream": {
+        "prefix": "Summary Data",
         "init_failed": "Init request failed: {error}",
         "init_invalid": "Init response invalid: {detail}",
         "no_rsa_key": "Cannot get RSA public key from upstream.",
@@ -522,10 +527,11 @@
         "deleted": "Group deleted.",
         "no_groups": "No groups yet.",
         "agent_key": "Agent Key",
-        "generate_key": "Get Key",
+        "change_key": "Change Key",
+        "change_key_tip": "Change agent key (old key will be invalidated)",
+        "change_key_confirm": "Change key for agent {name}?\n\nThe old key will be invalidated. If the agent was added to a group with the old key, it needs to be re-added with the new key.",
         "key_copied": "Key copied: {key}",
-        "key_generate_title": "Agent Key",
-        "key_generate_msg": "Key for agent {name}:\n\n{key}\n\nSend this key to the group owner to join.",
+        "key_changed_msg": "New key for agent {name}:\n\n{key}\n\nCopied to clipboard. Send this key to the group owner to join.",
         "view_members": "View Members"
     }
 }

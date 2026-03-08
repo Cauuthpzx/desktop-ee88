@@ -234,7 +234,9 @@
         "col_status": "状态"
     },
     "deposit": {
-        "title": "充值汇总数据:",
+        "title": "充值",
+        "card_status": "完成 / 失败",
+        "card_orders": "执行订单数",
         "col_agent": "代理",
         "col_account": "账号",
         "col_parent": "上级管理",
@@ -244,7 +246,9 @@
         "col_time": "时间"
     },
     "withdraw": {
-        "title": "提现汇总数据:",
+        "title": "提现",
+        "card_status": "完成 / 失败",
+        "card_orders": "执行订单数",
         "col_agent": "代理",
         "col_serial": "序列号",
         "col_time": "创建时间",
@@ -257,7 +261,7 @@
         "col_action": "操作"
     },
     "transaction": {
-        "title": "交易汇总数据:",
+        "title": "交易",
         "col_agent": "代理",
         "col_account": "账号",
         "col_parent": "上级管理",
@@ -273,7 +277,7 @@
         "col_date": "日期"
     },
     "bet_lottery": {
-        "title": "彩票投注汇总数据:",
+        "title": "彩票投注",
         "col_agent": "代理",
         "col_serial": "序列号",
         "col_user": "用户",
@@ -289,7 +293,7 @@
         "col_status": "状态"
     },
     "bet_provider": {
-        "title": "供应商投注汇总数据:",
+        "title": "供应商投注",
         "col_agent": "代理",
         "col_serial": "序列号",
         "col_provider": "供应商",
@@ -303,7 +307,7 @@
         "col_time": "投注时间"
     },
     "lottery": {
-        "title": "彩票汇总数据:",
+        "title": "彩票",
         "col_agent": "代理",
         "col_account": "账号",
         "col_parent": "上级管理",
@@ -317,7 +321,7 @@
         "col_name": "彩票名称"
     },
     "provider": {
-        "title": "供应商汇总数据:",
+        "title": "供应商",
         "col_agent": "代理",
         "col_account": "账号",
         "col_provider": "供应商",
@@ -463,6 +467,7 @@
         "agent_session_expired": "会话已过期。"
     },
     "upstream": {
+        "prefix": "汇总数据",
         "init_failed": "初始化请求失败：{error}",
         "init_invalid": "初始化响应无效：{detail}",
         "no_rsa_key": "无法从上游获取RSA公钥。",
@@ -522,10 +527,11 @@
         "deleted": "群组已删除。",
         "no_groups": "暂无群组。",
         "agent_key": "代理密钥",
-        "generate_key": "获取密钥",
+        "change_key": "更换密钥",
+        "change_key_tip": "更换代理密钥（旧密钥将失效）",
+        "change_key_confirm": "更换代理 {name} 的密钥？\n\n旧密钥将失效。如果代理已用旧密钥加入群组，需要用新密钥重新添加。",
         "key_copied": "密钥已复制: {key}",
-        "key_generate_title": "代理密钥",
-        "key_generate_msg": "代理 {name} 的密钥:\n\n{key}\n\n将此密钥发送给群主以加入群组。",
+        "key_changed_msg": "代理 {name} 的新密钥:\n\n{key}\n\n已复制到剪贴板。将此密钥发送给群主以加入群组。",
         "view_members": "查看成员"
     }
 }

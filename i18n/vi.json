@@ -234,7 +234,9 @@
         "col_status": "Trạng thái"
     },
     "deposit": {
-        "title": "Dữ liệu tổng hợp Nạp Tiền:",
+        "title": "Nạp Tiền",
+        "card_status": "Hoàn tất / Thất bại",
+        "card_orders": "Số lệnh thực thi",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_parent": "Đơn vị quản lý",
@@ -244,7 +246,9 @@
         "col_time": "Thời gian"
     },
     "withdraw": {
-        "title": "Dữ liệu tổng hợp Rút Tiền:",
+        "title": "Rút Tiền",
+        "card_status": "Hoàn tất / Thất bại",
+        "card_orders": "Số lệnh thực thi",
         "col_agent": "Đại lý",
         "col_serial": "Số serial",
         "col_time": "Thời gian tạo",
@@ -257,7 +261,7 @@
         "col_action": "Hành động"
     },
     "transaction": {
-        "title": "Dữ liệu tổng hợp Sao Kê:",
+        "title": "Sao Kê",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_parent": "Đơn vị quản lý",
@@ -273,7 +277,7 @@
         "col_date": "Ngày"
     },
     "bet_lottery": {
-        "title": "Dữ liệu tổng hợp Đơn Cược Xổ Số:",
+        "title": "Đơn Cược Xổ Số",
         "col_agent": "Đại lý",
         "col_serial": "Số serial",
         "col_user": "Người dùng",
@@ -289,7 +293,7 @@
         "col_status": "Trạng thái"
     },
     "bet_provider": {
-        "title": "Dữ liệu tổng hợp Đơn Cược Nhà Cung Cấp:",
+        "title": "Đơn Cược NCC",
         "col_agent": "Đại lý",
         "col_serial": "Số serial",
         "col_provider": "Nhà cung cấp",
@@ -298,12 +302,12 @@
         "col_game_name": "Tên trò chơi",
         "col_bet": "Tiền cược",
         "col_valid": "Cược hợp lệ",
-        "col_prize": "Giải thưởng",
+        "col_prize": "Tiền trúng thưởng",
         "col_result": "Thắng thua",
         "col_time": "Thời gian cược"
     },
     "lottery": {
-        "title": "Dữ liệu tổng hợp Xổ Số:",
+        "title": "Xổ Số",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_parent": "Đơn vị quản lý",
@@ -313,18 +317,18 @@
         "col_rebate": "Hoàn trả",
         "col_result": "Thắng thua",
         "col_winlose": "Thắng thua (ròng)",
-        "col_prize": "Tiền giải thưởng",
+        "col_prize": "Tiền trúng thưởng",
         "col_name": "Tên xổ số"
     },
     "provider": {
-        "title": "Dữ liệu tổng hợp Nhà Cung Cấp:",
+        "title": "Nhà Cung Cấp",
         "col_agent": "Đại lý",
         "col_account": "Tài khoản",
         "col_provider": "Nhà cung cấp",
         "col_bet_n": "Số lần cược",
         "col_bet_amt": "Tiền cược",
         "col_valid": "Cược hợp lệ",
-        "col_prize": "Giải thưởng",
+        "col_prize": "Tiền trúng thưởng",
         "col_result": "Thắng thua"
     },
     "referral": {
@@ -463,6 +467,7 @@
         "agent_session_expired": "Phiên đã hết hạn."
     },
     "upstream": {
+        "prefix": "Dữ liệu tổng hợp",
         "init_failed": "Yêu cầu khởi tạo thất bại: {error}",
         "init_invalid": "Phản hồi khởi tạo không hợp lệ: {detail}",
         "no_rsa_key": "Không thể lấy khóa RSA công khai từ upstream.",
@@ -522,10 +527,11 @@
         "deleted": "Đã xóa nhóm.",
         "no_groups": "Chưa có nhóm nào.",
         "agent_key": "Key đại lý",
-        "generate_key": "Lấy Key",
+        "change_key": "Đổi Key",
+        "change_key_tip": "Đổi key đại lý (key cũ sẽ mất hiệu lực)",
+        "change_key_confirm": "Đổi key đại lý {name}?\n\nKey cũ sẽ mất hiệu lực. Nếu đại lý đã được thêm vào nhóm bằng key cũ, cần thêm lại bằng key mới.",
         "key_copied": "Đã copy key: {key}",
-        "key_generate_title": "Key đại lý",
-        "key_generate_msg": "Key của đại lý {name}:\n\n{key}\n\nGửi key này cho chủ nhóm để được thêm vào nhóm.",
+        "key_changed_msg": "Key mới của đại lý {name}:\n\n{key}\n\nĐã copy vào clipboard. Gửi key này cho chủ nhóm để được thêm vào nhóm.",
         "view_members": "Xem thành viên"
     }
 }

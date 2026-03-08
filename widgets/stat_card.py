@@ -16,16 +16,20 @@ from core import theme
 class StatCard(QFrame):
     def __init__(self, title: str, value: str,
                  suffix: str = "",
-                 min_width: int = 140):
+                 min_width: int = 140,
+                 value_size: int = theme.FONT_SIZE_XL):
         super().__init__()
         self.setFrameShape(QFrame.Shape.Box)
         self.setFrameShadow(QFrame.Shadow.Sunken)
         self.setMinimumWidth(min_width)
 
+        compact = value_size < theme.FONT_SIZE_XL
+        pad_h = theme.SPACING_MD if compact else theme.SPACING_LG
+        pad_v = theme.SPACING_SM if compact else theme.SPACING_MD
+
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(theme.SPACING_LG, theme.SPACING_MD,
-                               theme.SPACING_LG, theme.SPACING_MD)
-        lay.setSpacing(theme.SPACING_SM)
+        lay.setContentsMargins(pad_h, pad_v, pad_h, pad_v)
+        lay.setSpacing(theme.SPACING_XS if compact else theme.SPACING_SM)
 
         lbl_title = QLabel(title)
         lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -34,7 +38,7 @@ class StatCard(QFrame):
         display = f"{value}{suffix}"
         lbl_value = QLabel(display)
         lbl_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_value.setFont(theme.font(size=theme.FONT_SIZE_XL, bold=True))
+        lbl_value.setFont(theme.font(size=value_size, bold=True))
 
         self._lbl_title = lbl_title
         self._lbl_value = lbl_value
@@ -48,3 +52,10 @@ class StatCard(QFrame):
     def update_value(self, value: str, suffix: str = "") -> None:
         """Cập nhật giá trị hiển thị."""
         self._lbl_value.setText(f"{value}{suffix}")
+
+    def set_value_color(self, color: str) -> None:
+        """Đặt màu cho giá trị (e.g. 'green', 'red', '')."""
+        if color:
+            self._lbl_value.setStyleSheet(f"color: {color};")
+        else:
+            self._lbl_value.setStyleSheet("")

@@ -3,6 +3,9 @@ tabs/withdraw_tab.py — Tab Rút tiền (upstream: /agent/withdrawalsRecord.htm
 """
 from tabs._upstream_tab import UpstreamTab, _fmt_currency
 from utils.upstream import upstream
+from core.i18n import t
+from core import theme
+from widgets.stat_card import StatCard
 
 
 class WithdrawTab(UpstreamTab):
@@ -55,3 +58,26 @@ class WithdrawTab(UpstreamTab):
             "user_fee": _fmt_currency,
             "true_amount": _fmt_currency,
         }
+
+    def _build_extra_cards(self, title_row) -> None:
+        self._card_status = StatCard(
+            t("withdraw.card_status"), "0 / 0",
+            min_width=80, value_size=theme.FONT_SIZE_LG)
+        self._card_orders = StatCard(
+            t("withdraw.card_orders"), "0",
+            min_width=80, value_size=theme.FONT_SIZE_LG)
+        title_row.addWidget(self._card_status, 1)
+        title_row.addWidget(self._card_orders, 1)
+
+    def _update_extra_cards(self) -> None:
+        complete = sum(1 for r in self._all_rows if str(r.get("status", "")) == "1")
+        failed = sum(1 for r in self._all_rows if str(r.get("status", "")) == "3")
+        self._card_status.update_value(f"{complete} / {failed}")
+        executed = sum(1 for r in self._all_rows
+                       if str(r.get("status", "")) in ("1", "2", "3"))
+        self._card_orders.update_value(str(executed))
+
+    def retranslate(self) -> None:
+        super().retranslate()
+        self._card_status.set_title(t("withdraw.card_status"))
+        self._card_orders.set_title(t("withdraw.card_orders"))

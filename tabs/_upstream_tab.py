@@ -11,7 +11,7 @@ Pattern chung:
 """
 from PyQt6.QtWidgets import (
     QComboBox, QTableWidgetItem, QLineEdit,
-    QPushButton, QLabel, QWidget,
+    QPushButton, QLabel, QWidget, QVBoxLayout,
 )
 from PyQt6.QtCore import Qt, QSize, QTimer
 from core.base_widgets import BaseTab, label, divider, hbox
@@ -59,25 +59,44 @@ class UpstreamTab(BaseTab):
         _formatters() → dict      — column formatters
     """
     _title_key: str = ""
+    _prefix_key: str = "upstream.prefix"
     _columns_keys: list[tuple[str, str]] = []
     _search_fields: list[dict] = []
     _summary_keys: list[tuple[str, str]] = []  # [(i18n_key, data_key), ...]
     _data_type: str = ""  # cache key cho group sync (e.g. "customers", "lottery")
 
     def _build(self, layout) -> None:
-        self._title_lbl = label(t(self._title_key), bold=True, size=theme.FONT_SIZE_LG)
-        layout.addWidget(self._title_lbl)
+        # Title + Summary cards trên cùng 1 dòng
+        title_row = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
 
-        # Summary cards row (chỉ hiện khi tab khai báo _summary_keys)
+        # Two-line centered title (prefix + subtitle)
+        title_col = QVBoxLayout()
+        title_col.setSpacing(0)
+        title_col.setContentsMargins(0, 0, 0, 0)
+
+        if self._prefix_key:
+            self._prefix_lbl = label(t(self._prefix_key), size=theme.FONT_SIZE)
+            self._prefix_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            title_col.addWidget(self._prefix_lbl)
+        else:
+            self._prefix_lbl = None
+
+        self._title_lbl = label(t(self._title_key), bold=True, size=theme.FONT_SIZE_LG)
+        if self._prefix_key:
+            self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_col.addWidget(self._title_lbl)
+        title_row.addLayout(title_col)
+
         self._summary_cards: list[tuple[str, str, StatCard]] = []
         if self._summary_keys:
-            summary_row = hbox(spacing=theme.SPACING_MD, margins=theme.MARGIN_ZERO)
             for i18n_key, data_key in self._summary_keys:
-                card = StatCard(t(i18n_key), "0")
+                card = StatCard(t(i18n_key), "0",
+                                min_width=80, value_size=theme.FONT_SIZE_LG)
                 self._summary_cards.append((i18n_key, data_key, card))
-                summary_row.addWidget(card)
-            summary_row.addStretch()
-            layout.addLayout(summary_row)
+                title_row.addWidget(card, 1)
+
+        self._build_extra_cards(title_row)
+        layout.addLayout(title_row)
 
         layout.addWidget(divider())
 
@@ -199,6 +218,7 @@ class UpstreamTab(BaseTab):
                     )
                 else:
                     w = DateRangePicker(optional=field.get("optional", False))
+                w.range_changed.connect(lambda *_: self._on_filter_search())
                 row.addWidget(w)
 
             elif ftype == "select":
@@ -207,6 +227,7 @@ class UpstreamTab(BaseTab):
                     w.addItem(t(opt_label), opt_val)
                 w.setSizeAdjustPolicy(
                     QComboBox.SizeAdjustPolicy.AdjustToContents)
+                w.setMaxVisibleItems(20)
                 row.addWidget(w)
 
             self._filter_widgets[key] = w
@@ -351,7 +372,7 @@ class UpstreamTab(BaseTab):
 
     def _build_export_filename(self) -> str:
         """Tạo tên file mặc định: 'Title - dd.MM - dd.MM.xlsx'."""
-        title = t(self._title_key)
+        title = f"{t(self._prefix_key)} {t(self._title_key)}" if self._prefix_key else t(self._title_key)
         date_part = ""
         for field in self._search_fields:
             if field.get("type") == "date_range":
@@ -711,6 +732,9 @@ class UpstreamTab(BaseTab):
         """Override to provide column formatters. Default: no formatting."""
         return {}
 
+    # Các data_key mang ý nghĩa thắng/thua — tô màu theo giá trị
+    _win_lose_keys: set[str] = {"result", "win_lose", "t_win_lose"}
+
     def _update_summary(self) -> None:
         """Tính tổng các cột trong _summary_keys từ _all_rows và cập nhật StatCard."""
         if not self._summary_cards:
@@ -724,6 +748,20 @@ class UpstreamTab(BaseTab):
                 except (TypeError, ValueError):
                     pass
             card.update_value(_fmt_currency(total))
+            if data_key in self._win_lose_keys:
+                if total > 0:
+                    card.set_value_color("#4caf50")
+                elif total < 0:
+                    card.set_value_color("#f44336")
+                else:
+                    card.set_value_color("")
+        self._update_extra_cards()
+
+    def _build_extra_cards(self, title_row) -> None:
+        """Hook: subclass adds extra cards to title_row."""
+
+    def _update_extra_cards(self) -> None:
+        """Hook: subclass updates extra cards from _all_rows."""
 
     def _on_page_data(self, data: dict, page: int) -> None:
         rows = data.get("data", [])
@@ -882,6 +920,8 @@ class UpstreamTab(BaseTab):
 
     def retranslate(self) -> None:
         self._title_lbl.setText(t(self._title_key))
+        if self._prefix_lbl:
+            self._prefix_lbl.setText(t(self._prefix_key))
         for i18n_key, _data_key, card in self._summary_cards:
             card.set_title(t(i18n_key))
         self._agent_label.setText(t("customer.agent_select"))

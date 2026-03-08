@@ -2,6 +2,7 @@
 server/routes/agent_routes.py — Agent (dai ly) CRUD + upstream login.
 """
 import logging
+import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -32,6 +33,7 @@ def _agent_row_to_dict(row: dict) -> dict:
         "is_active": row.get("is_active", True),
         "login_error": row.get("login_error"),
         "last_login_at": row["last_login_at"].isoformat() if row.get("last_login_at") else None,
+        "agent_key": row.get("agent_key"),
         "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
     }
 
@@ -64,10 +66,11 @@ def create_agent(
     if cur.fetchone():
         return AgentResp(ok=False, message="server.agent_username_exists")
 
+    agent_key = secrets.token_hex(6).upper()
     cur.execute(
-        """INSERT INTO agents (user_id, name, ext_username, ext_password, base_url)
-           VALUES (%s, %s, %s, %s, %s) RETURNING *""",
-        (user["id"], req.name, req.ext_username, req.ext_password, req.base_url),
+        """INSERT INTO agents (user_id, name, ext_username, ext_password, base_url, agent_key, key_generated_at)
+           VALUES (%s, %s, %s, %s, %s, %s, NOW()) RETURNING *""",
+        (user["id"], req.name, req.ext_username, req.ext_password, req.base_url, agent_key),
     )
     row = cur.fetchone()
     logger.info("Agent created: %s (%s) by user %s", req.name, req.ext_username, user["id"])
