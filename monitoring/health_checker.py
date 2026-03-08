@@ -4,7 +4,6 @@ monitoring/health_checker.py — Kiểm tra sức khỏe app định kỳ.
 Chạy trong background thread, kiểm tra:
 - Memory usage
 - Thread count
-- API server connectivity
 
 Dùng:
     from monitoring.health_checker import HealthChecker
@@ -22,16 +21,18 @@ from __future__ import annotations
 import gc
 import logging
 import os
+import sys
 import threading
 import time
+from enum import IntEnum
 
 logger = logging.getLogger(__name__)
 
 
-class HealthStatus:
-    HEALTHY = "HEALTHY"
-    WARNING = "WARNING"
-    CRITICAL = "CRITICAL"
+class HealthStatus(IntEnum):
+    HEALTHY = 0
+    WARNING = 1
+    CRITICAL = 2
 
 
 class HealthChecker:
@@ -47,9 +48,10 @@ class HealthChecker:
 
     def start(self) -> None:
         """Bắt đầu health check loop trong background thread."""
-        if self._running:
-            return
-        self._running = True
+        with self._lock:
+            if self._running:
+                return
+            self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True, name="health-checker")
         self._thread.start()
         logger.info("Health checker started (interval=%ds)", self._interval)
@@ -141,6 +143,9 @@ class HealthChecker:
             # Fallback: đọc /proc trên Linux, hoặc trả 0
             try:
                 import resource
-                return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+                ru = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                if sys.platform == "darwin":
+                    return ru / 1024 / 1024  # macOS: bytes → MB
+                return ru / 1024  # Linux: KB → MB
             except ImportError:
                 return 0

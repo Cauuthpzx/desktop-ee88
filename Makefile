@@ -1,6 +1,6 @@
-# Makefile — Quick commands cho development
+# Makefile — Quick commands for development
 
-.PHONY: test test-unit test-integration test-ui test-perf test-fast coverage install-dev lint
+.PHONY: test test-unit test-integration test-ui test-perf test-fast coverage install-dev
 
 # ── Testing ──────────────────────────────────────────────────
 test:

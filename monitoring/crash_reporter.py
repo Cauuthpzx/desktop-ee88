@@ -46,6 +46,8 @@ class CrashReporter:
 
     def install(self) -> None:
         """Đăng ký global exception hook."""
+        if self._original_hook is not None:
+            return  # Already installed
         self._original_hook = sys.excepthook
         sys.excepthook = self._handle_exception
         logger.info("Crash reporter installed")
@@ -79,10 +81,10 @@ class CrashReporter:
 
     def _build_report(self, exc_type, exc_value, exc_tb) -> dict:
         """Tạo crash report dict."""
-        import psutil  # lazy import — optional dependency
-
-        mem = None
+        mem = {"rss_mb": 0, "vms_mb": 0}
         try:
+            import psutil  # lazy import — optional dependency
+
             proc = psutil.Process(os.getpid())
             mem_info = proc.memory_info()
             mem = {
@@ -90,7 +92,7 @@ class CrashReporter:
                 "vms_mb": round(mem_info.vms / 1024 / 1024, 1),
             }
         except Exception:
-            mem = {"rss_mb": 0, "vms_mb": 0}
+            pass
 
         return {
             "app_version": self._app_version,
@@ -142,6 +144,9 @@ class CrashReporter:
         """Xóa tất cả crash reports. Trả về số file đã xóa."""
         count = 0
         for f in _CRASHES_DIR.glob("crash_*.json"):
-            f.unlink(missing_ok=True)
-            count += 1
+            try:
+                f.unlink()
+                count += 1
+            except OSError:
+                pass
         return count

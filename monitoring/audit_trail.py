@@ -85,7 +85,7 @@ class AuditTrail:
         """Đọc N entries gần nhất."""
         with self._lock:
             try:
-                lines = self._filepath.read_text(encoding="utf-8").strip().split("\n")
+                lines = self._filepath.read_text(encoding="utf-8").splitlines()
                 entries = []
                 for line in lines[-limit:]:
                     try:
@@ -93,7 +93,7 @@ class AuditTrail:
                     except json.JSONDecodeError:
                         continue
                 return entries
-            except (OSError, FileNotFoundError):
+            except OSError:
                 return []
 
     def get_stats(self) -> dict:
@@ -117,9 +117,9 @@ class AuditTrail:
         """Giữ chỉ _MAX_ENTRIES entries mới nhất."""
         with self._lock:
             try:
-                lines = self._filepath.read_text(encoding="utf-8").strip().split("\n")
+                lines = self._filepath.read_text(encoding="utf-8").splitlines()
                 if len(lines) > _MAX_ENTRIES:
                     keep = lines[-_MAX_ENTRIES:]
                     self._filepath.write_text("\n".join(keep) + "\n", encoding="utf-8")
-            except (OSError, FileNotFoundError):
+            except OSError:
                 pass

@@ -64,12 +64,49 @@ class DepositTab(UpstreamTab):
         title_row.addWidget(self._card_orders, 1)
 
     def _update_extra_cards(self) -> None:
+        if self._group_mode:
+            # Group mode: all data loaded — count locally
+            self._count_from_rows()
+        else:
+            # Single agent: fetch counts from upstream API
+            self._fetch_status_counts()
+
+    def _count_from_rows(self) -> None:
         complete = sum(1 for r in self._all_rows if str(r.get("status", "")) == "1")
         failed = sum(1 for r in self._all_rows if str(r.get("status", "")) == "3")
+        processing = sum(1 for r in self._all_rows if str(r.get("status", "")) == "2")
         self._card_status.update_value(f"{complete} / {failed}")
-        executed = sum(1 for r in self._all_rows
-                       if str(r.get("status", "")) in ("1", "2", "3"))
-        self._card_orders.update_value(str(executed))
+        self._card_orders.update_value(str(complete + processing + failed))
+
+    def _fetch_status_counts(self) -> None:
+        """Fetch counts per status from upstream (limit=1, chỉ lấy count)."""
+        if not self._current_agent_id:
+            return
+        aid = self._current_agent_id
+        params = self._get_search_params()
+        params.pop("status", None)
+
+        from utils.thread_worker import run_in_thread
+
+        def _fetch_counts():
+            results = {}
+            for status_code in ("1", "2", "3"):
+                p = {**params, "status": status_code}
+                data = self._fetch_upstream(aid, 1, 1, **p)
+                results[status_code] = data.get("count", 0)
+            return results
+
+        run_in_thread(
+            _fetch_counts,
+            on_result=self._on_status_counts,
+        )
+
+    def _on_status_counts(self, counts: dict) -> None:
+        complete = counts.get("1", 0)
+        failed = counts.get("3", 0)
+        processing = counts.get("2", 0)
+        self._card_status.update_value(f"{complete} / {failed}")
+        self._card_orders.update_value(str(complete + processing + failed))
 
     def retranslate(self) -> None:
         super().retranslate()

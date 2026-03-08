@@ -22,7 +22,7 @@ def main() -> int:
     cmd = [sys.executable, "-m", "pytest"]
 
     if "--unit" in args:
-        cmd.extend(["-m", "unit or not (integration or ui or performance)"])
+        cmd.extend(["-m", "unit"])
         cmd.append("tests/unit/")
     elif "--integration" in args:
         cmd.extend(["-m", "integration"])

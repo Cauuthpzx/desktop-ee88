@@ -58,11 +58,19 @@ class MonitoringManager:
         if self._started:
             return
 
-        if self.crash_reporter:
-            self.crash_reporter.install()
+        try:
+            if self.crash_reporter:
+                self.crash_reporter.install()
 
-        if self.health_checker:
-            self.health_checker.start()
+            if self.health_checker:
+                self.health_checker.start()
+        except Exception:
+            # Rollback on partial failure
+            if self.health_checker:
+                self.health_checker.stop()
+            if self.crash_reporter:
+                self.crash_reporter.uninstall()
+            raise
 
         self._started = True
         logger.info(

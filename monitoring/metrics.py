@@ -17,6 +17,7 @@ Dùng:
 """
 from __future__ import annotations
 
+import asyncio
 import functools
 import logging
 import threading
@@ -44,18 +45,30 @@ def track_performance(fn=None, *, name: str | None = None):
     def decorator(func):
         metric_name = name or f"{func.__module__}.{func.__qualname__}"
 
+        def _log_elapsed(elapsed_ms: float) -> None:
+            _record(metric_name, elapsed_ms)
+            if elapsed_ms > 1000:
+                logger.warning("%s took %.0fms", metric_name, elapsed_ms)
+            else:
+                logger.debug("%s completed in %.1fms", metric_name, elapsed_ms)
+
+        if asyncio.iscoroutinefunction(func):
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                start = time.perf_counter()
+                try:
+                    return await func(*args, **kwargs)
+                finally:
+                    _log_elapsed((time.perf_counter() - start) * 1000)
+            return async_wrapper
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             start = time.perf_counter()
             try:
                 return func(*args, **kwargs)
             finally:
-                elapsed_ms = (time.perf_counter() - start) * 1000
-                _record(metric_name, elapsed_ms)
-                if elapsed_ms > 1000:
-                    logger.warning("%s took %.0fms", metric_name, elapsed_ms)
-                else:
-                    logger.debug("%s completed in %.1fms", metric_name, elapsed_ms)
+                _log_elapsed((time.perf_counter() - start) * 1000)
 
         return wrapper
 
@@ -103,7 +116,7 @@ def get_all_metrics() -> dict[str, dict]:
     """Lấy thống kê tất cả metrics."""
     with _lock:
         names = list(_metrics.keys())
-    return {name: get_metrics(name) for name in names if get_metrics(name)}
+    return {name: stats for name in names if (stats := get_metrics(name))}
 
 
 def clear_metrics() -> None:
