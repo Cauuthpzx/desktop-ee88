@@ -1,0 +1,44 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="login">icons/login-rounded-right.png</file>
+        <file alias="password">icons/password.png</file>
+        <file alias="user">icons/user-male.png</file>
+        <file alias="key">icons/key.png</file>
+        <file alias="lock">icons/lock.png</file>
+        <file alias="add_user">icons/add-user-male.png</file>
+        <file alias="rocket">icons/rocket.png</file>
+        <file alias="star">icons/star.png</file>
+        <file alias="app">icons/duango_logo.png</file>
+        <file alias="lightning">icons/lightning-bolt.png</file>
+        <file alias="shield">icons/security-shield-green.png</file>
+        <file alias="home">icons/home.png</file>
+        <file alias="server">icons/server--v2.png</file>
+        <file alias="webdesign">icons/web-design.png</file>
+        <file alias="monitor">icons/monitor--v2.png</file>
+        <file alias="widgets">icons/color-widgets.png</file>
+        <file alias="moon_feature">icons/moon.png</file>
+        <file alias="sun">icons/sun.png</file>
+        <file alias="moon_theme">icons/moon.png</file>
+        <file alias="sun_theme">icons/sun.png</file>
+        <file alias="journal">icons/journal.png</file>
+        <file alias="logout">icons/emergency-exit.png</file>
+        <file alias="guide">icons/city-guide.png</file>
+        <file alias="browser">icons/open-in-browser.png</file>
+        <file alias="customers">icons/customers.png</file>
+        <file alias="report">icons/report.png</file>
+        <file alias="bet_order">icons/bet_order.png</file>
+        <file alias="deposit_withdraw">icons/deposit_withdraw.png</file>
+        <file alias="settings">icons/settings.png</file>
+        <file alias="menu_lottery_report">icons/menu_lottery_report.png</file>
+        <file alias="menu_transaction_log">icons/menu_transaction_log.png</file>
+        <file alias="menu_provider_report">icons/menu_provider_report.png</file>
+        <file alias="menu_third_party_bet">icons/menu_third_party_bet.png</file>
+        <file alias="menu_lottery_bet">icons/menu_lottery_bet.png</file>
+        <file alias="menu_deposit_log">icons/menu_deposit_log.png</file>
+        <file alias="menu_withdraw_log">icons/menu_withdraw_log.png</file>
+        <file alias="flag_vn">icons/vietnam-rect.png</file>
+        <file alias="flag_us">icons/usa-rect.png</file>
+        <file alias="flag_cn">icons/china-rect.png</file>
+        <file alias="app_icon">icons/maxhub_icon.ico</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,81 @@
+{
+  "name": "@layui/layui-vue",
+  "type": "module",
+  "version": "2.23.3",
+  "description": "a component library for Vue 3 base on layui-vue",
+  "author": "就眠儀式",
+  "license": "MIT",
+  "homepage": "http://www.layui-vue.com",
+  "keywords": [
+    "vue",
+    "vue-component",
+    "component-library",
+    "layui-vue",
+    "layui"
+  ],
+  "sideEffects": [
+    "lib/*.css",
+    "es/**/*.css",
+    "umd/*.css"
+  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./types/index.d.ts",
+        "default": "./es/index.js"
+      }
+    },
+    "./lib/*": "./lib/*",
+    "./es/*": "./es/*",
+    "./types/*": [
+      "./types/*.d.ts"
+    ]
+  },
+  "main": "es/index.js",
+  "unpkg": "umd/index.js",
+  "jsdelivr": "umd/index.js",
+  "web-types": "types/web-types.json",
+  "types": "types/index.d.ts",
+  "style": "lib/index.css",
+  "vetur": {
+    "tags": "types/tags.json",
+    "attributes": "types/attributes.json"
+  },
+  "files": [
+    "es",
+    "lib",
+    "types",
+    "umd"
+  ],
+  "scripts": {
+    "build": "pnpm run --filter . --parallel \"/^build:.*/\"",
+    "build:all": "vite build --emptyOutDir --config ./script/build.all.ts",
+    "build:es": "vite build --emptyOutDir --config ./script/build.es.ts",
+    "build:umd": "vite build --emptyOutDir --config ./script/build.umd.ts",
+    "build:dts": "rimraf types && vue-tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ctrl/tinycolor": "^3.4.1",
+    "@floating-ui/dom": "1.6.5",
+    "@layui/icons-vue": "workspace:*",
+    "@layui/layer-vue": "workspace:*",
+    "@umijs/ssr-darkreader": "^4.9.45",
+    "@vueuse/core": "8.7.3",
+    "async-validator": "^4.1.1",
+    "cropperjs": "^1.5.12",
+    "dayjs": "^1.11.10",
+    "jsbarcode": "3.11.5",
+    "qrcode": "1.5.0",
+    "vue-i18n": "9.6.3"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "0.4.4",
+    "@types/qrcode": "1.5.0"
+  },
+  "browserslist": [
+    "current node",
+    "last 2 versions and > 2%",
+    "ie > 10"
+  ]
+}

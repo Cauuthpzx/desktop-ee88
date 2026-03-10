@@ -1,0 +1,269 @@
+<template>
+  <lay-config-provider :theme="appStore.theme" :themeVariable="appStore.themeVariable">
+    <div class="auth-page">
+      <div class="auth-box">
+        <div class="auth-left">
+          <img src="/icons/duango_logo.png" alt="MaxHub" class="auth-logo" />
+          <h2 class="auth-heading">Quản lý thông minh,<br/>Kết nối mọi thứ</h2>
+          <p class="auth-desc">Nền tảng quản lý tập trung giúp bạn kiểm soát, tự động hóa và tối ưu hiệu suất làm việc.</p>
+          <div class="auth-pills">
+            <span class="pill pill-teal">● Realtime Sync</span>
+            <span class="pill pill-blue">● AI Powered</span>
+            <span class="pill pill-amber">● Enterprise</span>
+          </div>
+        </div>
+        <div class="auth-right">
+          <div class="auth-form-wrapper">
+            <h2>Đăng nhập</h2>
+            <p class="auth-sub">Chào mừng trở lại</p>
+            <lay-form :model="form" :pane="true">
+              <lay-form-item prop="username">
+                <lay-input
+                  v-model="form.username"
+                  placeholder="Tài khoản"
+                  prefix-icon="layui-icon-username"
+                  :allow-clear="true"
+                  @keyup.enter="focus_password"
+                />
+              </lay-form-item>
+              <lay-form-item prop="password">
+                <lay-input
+                  ref="passRef"
+                  v-model="form.password"
+                  type="password"
+                  placeholder="Mật khẩu"
+                  prefix-icon="layui-icon-password"
+                  password
+                  @keyup.enter="on_submit"
+                />
+              </lay-form-item>
+              <lay-form-item v-if="error_msg">
+                <div class="auth-error">
+                  <lay-icon type="layui-icon-close-fill" size="14px" color="#ff5722" />
+                  <span>{{ error_msg }}</span>
+                </div>
+              </lay-form-item>
+              <lay-form-item>
+                <div class="auth-btn-row">
+                  <lay-button
+                    type="primary"
+                    :loading="loading"
+                    size="lg"
+                    @click="on_submit"
+                  >
+                    Đăng nhập
+                  </lay-button>
+                  <lay-button
+                    type="danger"
+                    size="lg"
+                    @click="on_cancel"
+                  >
+                    Huỷ
+                  </lay-button>
+                </div>
+              </lay-form-item>
+            </lay-form>
+            <div class="auth-footer">
+              <span>Chưa có tài khoản?</span>
+              <router-link to="/register">Đăng ký ngay</router-link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </lay-config-provider>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../../store/auth";
+import { useAppStore } from "../../store/app";
+
+const router = useRouter();
+const auth_store = useAuthStore();
+const appStore = useAppStore();
+const loading = ref(false);
+const error_msg = ref("");
+const passRef = ref();
+
+const form = reactive({
+  username: "",
+  password: "",
+});
+
+const focus_password = () => {
+  passRef.value?.$el?.querySelector("input")?.focus();
+};
+
+const on_cancel = () => {
+  form.username = "";
+  form.password = "";
+  error_msg.value = "";
+  router.push("/");
+};
+
+const on_submit = async () => {
+  if (!form.username || !form.password) {
+    error_msg.value = "Vui lòng nhập đầy đủ thông tin";
+    return;
+  }
+  loading.value = true;
+  error_msg.value = "";
+  try {
+    await auth_store.login(form.username, form.password);
+    router.push("/");
+  } catch (err: any) {
+    error_msg.value = err.response?.data?.error || "Đăng nhập thất bại";
+  } finally {
+    loading.value = false;
+  }
+};
+</script>
+
+<style scoped>
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+}
+
+.auth-box {
+  display: flex;
+  width: 820px;
+  min-height: 480px;
+  background: #fff;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.auth-left {
+  width: 340px;
+  background: linear-gradient(160deg, #f0f7f6 0%, #e8f4f2 50%, #f5f9f8 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-logo {
+  width: 240px;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 24px;
+}
+
+.auth-heading {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a2332;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.auth-desc {
+  margin: 0 0 24px 0;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.auth-pills {
+  display: flex;
+  gap: 8px;
+}
+
+.pill {
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 11px;
+  color: #444;
+}
+
+.pill-teal {
+  background: rgba(22, 186, 170, 0.08);
+  border: 1px solid rgba(22, 186, 170, 0.2);
+}
+
+.pill-blue {
+  background: rgba(30, 159, 255, 0.08);
+  border: 1px solid rgba(30, 159, 255, 0.2);
+}
+
+.pill-amber {
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid rgba(255, 184, 0, 0.2);
+}
+
+.auth-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+}
+
+.auth-form-wrapper {
+  width: 100%;
+  max-width: 360px;
+}
+
+.auth-form-wrapper h2 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+}
+
+.auth-sub {
+  margin: 0 0 28px 0;
+  color: #999;
+  font-size: 13px;
+}
+
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ff5722;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: #fff5f5;
+  border: 1px solid #ffe0e0;
+}
+
+.auth-btn-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.auth-btn-row .layui-btn {
+  flex: 1;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #999;
+}
+
+.auth-footer a {
+  color: #16baaa;
+  margin-left: 4px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+</style>

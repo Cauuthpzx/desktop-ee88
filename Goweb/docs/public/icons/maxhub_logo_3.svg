@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" width="720" height="220">
+  <defs>
+    <!-- === GRADIENTS === -->
+    <linearGradient id="ring1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00BFFF"/>
+      <stop offset="100%" style="stop-color:#1565C0"/>
+    </linearGradient>
+    <linearGradient id="ring2Grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#42A5F5"/>
+      <stop offset="70%" style="stop-color:#1976D2"/>
+      <stop offset="100%" style="stop-color:#E67E22"/>
+    </linearGradient>
+    <linearGradient id="ring3Grad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FC3F7"/>
+      <stop offset="100%" style="stop-color:#1E88E5"/>
+    </linearGradient>
+    <linearGradient id="blade1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#29B6F6"/>
+      <stop offset="100%" style="stop-color:#0D47A1"/>
+    </linearGradient>
+    <linearGradient id="blade2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FC3F7"/>
+      <stop offset="100%" style="stop-color:#1565C0"/>
+    </linearGradient>
+    <linearGradient id="blade3" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" style="stop-color:#0288D1"/>
+      <stop offset="100%" style="stop-color:#01579B"/>
+    </linearGradient>
+    <linearGradient id="hubBadgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E5FF"/>
+      <stop offset="100%" style="stop-color:#00BCD4"/>
+    </linearGradient>
+    <linearGradient id="underlineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00B8D4"/>
+      <stop offset="40%" style="stop-color:#2196F3"/>
+      <stop offset="100%" style="stop-color:#E67E22"/>
+    </linearGradient>
+    <linearGradient id="circuitTraceH" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#29B6F6" stop-opacity="0"/>
+      <stop offset="50%" style="stop-color:#29B6F6" stop-opacity="0.25"/>
+      <stop offset="100%" style="stop-color:#1565C0" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- === FILTERS === -->
+    <filter id="blueGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="softGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="orangeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="iconShadow" x="-12%" y="-8%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0288D1" flood-opacity="0.3"/>
+    </filter>
+    <filter id="textShadow">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    <filter id="badgeShadow" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#00BCD4" flood-opacity="0.4"/>
+    </filter>
+
+    <clipPath id="iconClip">
+      <rect x="10" y="10" width="180" height="180" rx="36" ry="36"/>
+    </clipPath>
+  </defs>
+
+  <!-- ============================================== -->
+  <!-- ICON CONTAINER                                  -->
+  <!-- ============================================== -->
+  <g filter="url(#iconShadow)">
+    <!-- White/light background rounded square -->
+    <rect x="10" y="10" width="180" height="180" rx="36" ry="36" fill="#F8FBFF"/>
+    <!-- Very subtle border -->
+    <rect x="10" y="10" width="180" height="180" rx="36" ry="36" fill="none" stroke="#E0E8F0" stroke-width="1"/>
+
+    <!-- ============================================ -->
+    <!-- THE ICON - Orbital/Hub symbol                -->
+    <!-- Center at (100, 100), radius ~62             -->
+    <!-- ============================================ -->
+    <g transform="translate(100, 100)">
+      
+      <!-- === 3 ORBITAL RINGS (ellipses rotated 120°) === -->
+      
+      <!-- Ring 1 - 0° rotation -->
+      <g filter="url(#softGlow)">
+        <ellipse cx="0" cy="0" rx="62" ry="34" fill="none" stroke="url(#ring1Grad)" stroke-width="4.5" opacity="0.85"
+          transform="rotate(0)"/>
+      </g>
+      
+      <!-- Ring 2 - 60° rotation (has orange at bottom-right) -->
+      <g filter="url(#softGlow)">
+        <ellipse cx="0" cy="0" rx="62" ry="34" fill="none" stroke="url(#ring2Grad)" stroke-width="4.5" opacity="0.85"
+          transform="rotate(60)"/>
+      </g>
+      
+      <!-- Ring 3 - 120° rotation -->
+      <g filter="url(#softGlow)">
+        <ellipse cx="0" cy="0" rx="62" ry="34" fill="none" stroke="url(#ring3Grad)" stroke-width="4.5" opacity="0.85"
+          transform="rotate(120)"/>
+      </g>
+
+      <!-- === 3 BLADE/LEAF SHAPES in center === -->
+      <!-- Blade pointing up-left -->
+      <path d="M-3,-6 C-18,-30 -8,-40 0,-22 C8,-40 18,-30 3,-6 Z" 
+            fill="url(#blade1)" opacity="0.9" transform="rotate(0)"/>
+      
+      <!-- Blade pointing down-right -->
+      <path d="M-3,-6 C-18,-30 -8,-40 0,-22 C8,-40 18,-30 3,-6 Z" 
+            fill="url(#blade2)" opacity="0.9" transform="rotate(120)"/>
+      
+      <!-- Blade pointing left -->
+      <path d="M-3,-6 C-18,-30 -8,-40 0,-22 C8,-40 18,-30 3,-6 Z" 
+            fill="url(#blade3)" opacity="0.9" transform="rotate(240)"/>
+
+      <!-- Center overlap dot -->
+      <circle cx="0" cy="0" r="5" fill="#E3F2FD" opacity="0.7"/>
+
+      <!-- === 6 CONNECTION NODES at ring intersections === -->
+      
+      <!-- Top node - cyan glow -->
+      <g filter="url(#nodeGlow)">
+        <circle cx="0" cy="-62" r="6.5" fill="#4FC3F7"/>
+        <circle cx="0" cy="-62" r="3" fill="white"/>
+      </g>
+      
+      <!-- Top-right node - cyan -->
+      <g filter="url(#nodeGlow)">
+        <circle cx="53.7" cy="-31" r="6.5" fill="#29B6F6"/>
+        <circle cx="53.7" cy="-31" r="3" fill="white"/>
+      </g>
+
+      <!-- Bottom-right node - ORANGE accent -->
+      <g filter="url(#orangeGlow)">
+        <circle cx="53.7" cy="31" r="7" fill="#F57C00"/>
+        <circle cx="53.7" cy="31" r="3" fill="#FFE0B2"/>
+      </g>
+
+      <!-- Bottom node - cyan -->
+      <g filter="url(#nodeGlow)">
+        <circle cx="0" cy="62" r="6.5" fill="#0288D1"/>
+        <circle cx="0" cy="62" r="3" fill="white"/>
+      </g>
+
+      <!-- Bottom-left node - blue -->
+      <g filter="url(#nodeGlow)">
+        <circle cx="-53.7" cy="31" r="6.5" fill="#1565C0"/>
+        <circle cx="-53.7" cy="31" r="3" fill="white"/>
+      </g>
+
+      <!-- Top-left node - ORANGE accent -->
+      <g filter="url(#orangeGlow)">
+        <circle cx="-53.7" cy="-31" r="7" fill="#FF9800"/>
+        <circle cx="-53.7" cy="-31" r="3" fill="#FFF3E0"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- CIRCUIT TRACES between icon and text           -->
+  <!-- ============================================== -->
+  <g opacity="0.18">
+    <line x1="194" y1="75" x2="218" y2="75" stroke="#29B6F6" stroke-width="0.7"/>
+    <line x1="194" y1="100" x2="212" y2="100" stroke="#1565C0" stroke-width="0.7"/>
+    <line x1="194" y1="125" x2="222" y2="125" stroke="#29B6F6" stroke-width="0.7"/>
+    <circle cx="218" cy="75" r="1.2" fill="#29B6F6"/>
+    <circle cx="212" cy="100" r="1.2" fill="#1565C0"/>
+    <circle cx="222" cy="125" r="1.2" fill="#29B6F6"/>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- TYPOGRAPHY                                      -->
+  <!-- ============================================== -->
+  
+  <!-- "Max" -->
+  <g filter="url(#textShadow)">
+    <text x="232" y="128" 
+          font-family="'Segoe UI','SF Pro Display','Helvetica Neue',Arial,sans-serif" 
+          font-size="82" font-weight="900" fill="#0C1929" letter-spacing="-3">Max</text>
+  </g>
+
+  <!-- Full underline under Max -->
+  <rect x="234" y="140" width="185" height="5" rx="2.5" fill="url(#underlineGrad)"/>
+  <rect x="234" y="140" width="185" height="5" rx="2.5" fill="url(#underlineGrad)" opacity="0.35" filter="url(#softGlow)"/>
+
+  <!-- HUB badge -->
+  <g filter="url(#badgeShadow)">
+    <rect x="432" y="78" width="170" height="68" rx="16" ry="16" fill="url(#hubBadgeBg)"/>
+    <rect x="432" y="78" width="170" height="34" rx="16" ry="16" fill="white" opacity="0.1"/>
+    <text x="517" y="112" 
+          font-family="'Segoe UI','SF Pro Display','Helvetica Neue',Arial,sans-serif" 
+          font-size="48" font-weight="900" fill="white" letter-spacing="8" 
+          text-anchor="middle" dominant-baseline="central">HUB</text>
+  </g>
+
+  <!-- Circuit traces decoration -->
+  <g opacity="0.12">
+    <line x1="234" y1="158" x2="602" y2="158" stroke="#29B6F6" stroke-width="0.5"/>
+    <line x1="234" y1="167" x2="560" y2="167" stroke="#1565C0" stroke-width="0.5"/>
+    <circle cx="320" cy="158" r="1" fill="#29B6F6"/>
+    <circle cx="432" cy="158" r="1" fill="#1565C0"/>
+    <circle cx="520" cy="158" r="1" fill="#F57C00"/>
+    <circle cx="380" cy="167" r="1" fill="#1565C0"/>
+    <circle cx="500" cy="167" r="1" fill="#29B6F6"/>
+  </g>
+
+  <!-- Tagline -->
+  <text x="236" y="186" 
+        font-family="'Segoe UI','SF Pro Display','Helvetica Neue',Arial,sans-serif" 
+        font-size="12.5" font-weight="700" fill="#78909C" letter-spacing="6">CONNECT EVERYTHING</text>
+</svg>

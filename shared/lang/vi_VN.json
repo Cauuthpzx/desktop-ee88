@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "Trang chủ",
+    "guide": "Hướng dẫn",
+    "components": "Thành phần",
+    "resources": "Tài nguyên",
+    "customers": "Quản lý khách hàng"
+  },
+  "home": {
+    "description": "DUANGO — Nền tảng phát triển ứng dụng đa nền tảng.",
+    "tagline": "Nhanh — Ổn định — Hiệu năng",
+    "explore": "Khám phá Component",
+    "light_mode": "Chế độ sáng",
+    "dark_mode": "Chế độ tối",
+    "welcome": "Xin chào"
+  },
+  "features": {
+    "go_title": "Go Backend",
+    "go_desc": "Clean Architecture, PostgreSQL, JWT Auth",
+    "vue_title": "Vue 3 Web",
+    "vue_desc": "Layui-Vue, Composition API, TypeScript",
+    "qt_title": "Qt6 Desktop",
+    "qt_desc": "C++ Native, Cross-platform, CMake",
+    "comp_title": "77+ Components",
+    "comp_desc": "Component Layui-Vue sẵn có, không custom",
+    "theme_title": "Dark Theme",
+    "theme_desc": "Hỗ trợ theme sáng/tối, tùy biến màu sắc",
+    "log_title": "Logging",
+    "log_desc": "Console + File log, request tracking"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất",
+    "change_password": "Đổi mật khẩu",
+    "username": "Tài khoản",
+    "password": "Mật khẩu",
+    "confirm_password": "Xác nhận mật khẩu",
+    "login_success": "Đăng nhập thành công!",
+    "register_success": "Đăng ký thành công!",
+    "login_failed": "Đăng nhập thất bại",
+    "register_failed": "Đăng ký thất bại",
+    "fill_all": "Vui lòng nhập đầy đủ thông tin",
+    "password_min": "Mật khẩu phải có tối thiểu 8 ký tự",
+    "password_mismatch": "Mật khẩu xác nhận không khớp",
+    "no_account": "Chưa có tài khoản?",
+    "has_account": "Đã có tài khoản?",
+    "register_now": "Đăng ký ngay",
+    "register_tagline": "Tạo tài khoản mới\nBắt đầu hành trình của bạn",
+    "login_tagline": "Hệ thống quản lý hiện đại\nNhanh — Ổn định — Hiệu năng",
+    "fill_info": "Điền thông tin để tạo tài khoản",
+    "welcome_back": "Chào mừng trở lại",
+    "password_placeholder": "Mật khẩu (tối thiểu 8 ký tự)",
+    "old_password": "Mật khẩu cũ",
+    "new_password": "Mật khẩu mới (tối thiểu 8 ký tự)",
+    "confirm_new": "Xác nhận mật khẩu mới",
+    "change_success": "Đổi mật khẩu thành công!",
+    "change_failed": "Đổi mật khẩu thất bại"
+  }
+}

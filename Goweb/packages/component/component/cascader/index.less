@@ -1,0 +1,157 @@
+@import "../input/index.less";
+@import "../cascaderPanel/index.less";
+
+@lg: 44px;
+@md: 38px;
+@sm: 32px;
+@xs: 26px;
+
+@lg-width: 220px;
+@md-width: 220px;
+@sm-width: 220px;
+@xs-width: 220px;
+
+.set-size(@size, @width) {
+  & {
+    height: @size;
+    width: @width;
+    .layui-input {
+      height: @size;
+      line-height: @size;
+    }
+  }
+}
+
+.layui-cascader {
+  display: inline-block;
+  &[size="lg"] {
+    .set-size(@lg,@lg-width);
+  }
+  &[size="md"] {
+    .set-size(@md,@md-width);
+  }
+  &[size="sm"] {
+    .set-size(@sm,@sm-width);
+  }
+  &[size="xs"] {
+    .set-size(@xs,@xs-width);
+  }
+
+  &-search-result-list {
+    height: 200px;
+    min-width: 330px;
+  }
+
+  &-search-result-item {
+    height: 34px;
+    padding: 0 12px;
+    line-height: 34px;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background-color: var(--global-checked-color);
+      color: white;
+    }
+
+    &-active {
+      background-color: var(--global-checked-color);
+      color: white;
+      opacity: 0.6;
+    }
+  }
+
+  &-multiple {
+    height: auto !important;
+  }
+
+  &.has-content.has-clear:not(.layui-cascader-disabled){
+    .layui-tag-input-clear{
+      display: none;
+    }
+
+    &:hover {
+      .layui-input-suffix {
+        display: none;
+      }
+
+      .layui-tag-input-suffix{
+        display: none;
+      }
+
+      .layui-tag-input-clear{
+        display: flex;
+      }
+    }
+  }
+
+  &:not(.has-clear) {
+    .layui-tag-input-clear{
+      display: none !important;
+    }
+  }
+    
+
+  .layui-input-suffix {
+    padding-right: 10px;
+  }
+
+  .layui-icon-triangle-d {
+    transition: all 0.3s ease-in-out;
+    transform: rotate(0);
+    color: var(--global-neutral-color-8);
+  }
+
+  .layui-icon-triangle-d.is-expand{
+    transform: rotate(180deg);
+  }
+
+  .layui-cascader-menu {
+    display: inline-block;
+    border-right: 1px solid var(--global-neutral-color-3);
+
+    &:last-child {
+      border-right: none;
+    }
+
+    .layui-cascader-menu-item {
+      min-width: 130px;
+      padding: 5px 15px;
+      box-sizing: border-box;
+      transition: all 0.1s ease-in-out;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-right: 9px;
+      min-height: 35px;
+
+      .layui-icon-right {
+        margin-left: 10px;
+      }
+    }
+
+    &:hover {
+      background-color: var(--global-checked-color);
+      color: white;
+    }
+  }
+
+  .layui-cascader-selected {
+    background-color: var(--global-checked-color);
+    color: white;
+  }
+
+  .layui-cascader-disabled,
+  .layui-cascader-disabled * {
+    cursor: not-allowed !important;
+  }
+
+  .layui-cascader-opend .layui-icon-triangle-d {
+    transform: rotate(180deg);
+  }
+
+  &-empty{
+    vertical-align: middle;
+    height: 200px
+  }
+}

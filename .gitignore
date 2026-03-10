@@ -1,0 +1,38 @@
+# Build outputs
+GoDesktop/build/
+dist/
+*.exe
+
+# Dependencies
+node_modules/
+Goweb/node_modules/
+Goweb/.pnpm-store/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Go
+Goserver/tmp/
+
+# Icons8 source (quá lớn, không commit)
+icons8-fluency/
+
+# Claude sessions
+.claude/

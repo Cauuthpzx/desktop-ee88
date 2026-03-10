@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "首页",
+    "guide": "指南",
+    "components": "组件",
+    "resources": "生态",
+    "customers": "客户管理"
+  },
+  "home": {
+    "description": "DUANGO — 多平台应用开发框架。",
+    "tagline": "快速 — 稳定 — 高性能",
+    "explore": "探索组件",
+    "light_mode": "浅色模式",
+    "dark_mode": "深色模式",
+    "welcome": "你好"
+  },
+  "features": {
+    "go_title": "Go Backend",
+    "go_desc": "Clean Architecture, PostgreSQL, JWT Auth",
+    "vue_title": "Vue 3 Web",
+    "vue_desc": "Layui-Vue, Composition API, TypeScript",
+    "qt_title": "Qt6 Desktop",
+    "qt_desc": "C++ Native, Cross-platform, CMake",
+    "comp_title": "77+ Components",
+    "comp_desc": "内置 Layui-Vue 组件，无需自定义",
+    "theme_title": "Dark Theme",
+    "theme_desc": "支持明暗主题，自定义配色",
+    "log_title": "Logging",
+    "log_desc": "Console + File log, request tracking"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录",
+    "change_password": "修改密码",
+    "username": "用户名",
+    "password": "密码",
+    "confirm_password": "确认密码",
+    "login_success": "登录成功！",
+    "register_success": "注册成功！",
+    "login_failed": "登录失败",
+    "register_failed": "注册失败",
+    "fill_all": "请填写完整信息",
+    "password_min": "密码至少8个字符",
+    "password_mismatch": "密码确认不匹配",
+    "no_account": "没有账号？",
+    "has_account": "已有账号？",
+    "register_now": "立即注册",
+    "register_tagline": "创建新账户\n开始你的旅程",
+    "login_tagline": "现代化管理系统\n快速 — 稳定 — 高性能",
+    "fill_info": "填写信息以创建账户",
+    "welcome_back": "欢迎回来",
+    "password_placeholder": "密码（至少8个字符）",
+    "old_password": "当前密码",
+    "new_password": "新密码（至少8个字符）",
+    "confirm_new": "确认新密码",
+    "change_success": "密码修改成功！",
+    "change_failed": "密码修改失败"
+  }
+}

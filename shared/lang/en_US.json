@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "Home",
+    "guide": "Guide",
+    "components": "Components",
+    "resources": "Resources",
+    "customers": "Customer Management"
+  },
+  "home": {
+    "description": "DUANGO — Multi-platform application development framework.",
+    "tagline": "Fast — Stable — Performant",
+    "explore": "Explore Components",
+    "light_mode": "Light Mode",
+    "dark_mode": "Dark Mode",
+    "welcome": "Hello"
+  },
+  "features": {
+    "go_title": "Go Backend",
+    "go_desc": "Clean Architecture, PostgreSQL, JWT Auth",
+    "vue_title": "Vue 3 Web",
+    "vue_desc": "Layui-Vue, Composition API, TypeScript",
+    "qt_title": "Qt6 Desktop",
+    "qt_desc": "C++ Native, Cross-platform, CMake",
+    "comp_title": "77+ Components",
+    "comp_desc": "Built-in Layui-Vue components, no custom needed",
+    "theme_title": "Dark Theme",
+    "theme_desc": "Light/Dark theme support, customizable colors",
+    "log_title": "Logging",
+    "log_desc": "Console + File log, request tracking"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "change_password": "Change Password",
+    "username": "Username",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "login_success": "Login successful!",
+    "register_success": "Registration successful!",
+    "login_failed": "Login failed",
+    "register_failed": "Registration failed",
+    "fill_all": "Please fill in all fields",
+    "password_min": "Password must be at least 8 characters",
+    "password_mismatch": "Passwords do not match",
+    "no_account": "Don't have an account?",
+    "has_account": "Already have an account?",
+    "register_now": "Register now",
+    "register_tagline": "Create a new account\nStart your journey",
+    "login_tagline": "Modern management system\nFast — Stable — Performant",
+    "fill_info": "Fill in your information to create an account",
+    "welcome_back": "Welcome back",
+    "password_placeholder": "Password (minimum 8 characters)",
+    "old_password": "Current password",
+    "new_password": "New password (minimum 8 characters)",
+    "confirm_new": "Confirm new password",
+    "change_success": "Password changed successfully!",
+    "change_failed": "Password change failed"
+  }
+}
