@@ -1,0 +1,377 @@
+#include "core/report_page_builder.h"
+#include "core/flow_layout.h"
+#include "core/theme_manager.h"
+
+#include <QPixmap>
+#include <QScrollArea>
+
+QWidget* ReportPageBuilder::make_field(const QString& label_text, QWidget* field, QVector<QLabel*>& labels)
+{
+    auto* w = new QWidget;
+    w->setStyleSheet("border: none;");
+    auto* h = new QHBoxLayout(w);
+    h->setContentsMargins(0, 0, 0, 0);
+    h->setSpacing(6);
+    auto* lbl = new QLabel(label_text);
+    lbl->setObjectName("searchLabel");
+    labels.push_back(lbl);
+    h->addWidget(lbl);
+    h->addWidget(field);
+    return w;
+}
+
+ReportPageWidgets ReportPageBuilder::build_page(
+    const QString& icon_path,
+    const QString& title_text,
+    const QStringList& column_headers,
+    FlowLayout* &out_flow)
+{
+    ReportPageWidgets w;
+
+    w.page = new QWidget;
+    w.page->setObjectName("reportPage");
+
+    auto* page_layout = new QVBoxLayout(w.page);
+    page_layout->setContentsMargins(10, 10, 10, 10);
+    page_layout->setSpacing(0);
+
+    // Card
+    w.card = new QWidget;
+    w.card->setObjectName("reportCard");
+    auto* card_layout = new QVBoxLayout(w.card);
+    card_layout->setContentsMargins(16, 16, 16, 16);
+    card_layout->setSpacing(12);
+
+    // Field header
+    w.field_header = new QWidget;
+    auto* header_layout = new QHBoxLayout(w.field_header);
+    header_layout->setContentsMargins(0, 0, 0, 8);
+    header_layout->setSpacing(6);
+    header_layout->setAlignment(Qt::AlignLeft);
+
+    auto* header_icon = new QLabel;
+    QPixmap icon_pix(icon_path);
+    header_icon->setPixmap(icon_pix.scaled(18, 18, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    header_icon->setStyleSheet("border: none;");
+    header_layout->addWidget(header_icon);
+
+    w.title_label = new QLabel(title_text);
+    w.title_label->setStyleSheet("font-size: 16px; font-weight: 700; border: none;");
+    header_layout->addWidget(w.title_label);
+    header_layout->addStretch();
+
+    card_layout->addWidget(w.field_header);
+
+    // Separator
+    auto* separator = new QWidget;
+    separator->setFixedHeight(1);
+    separator->setObjectName("fieldSep");
+    card_layout->addWidget(separator);
+    card_layout->addSpacing(12);
+
+    // Search form (FlowLayout)
+    w.search_form = new QWidget;
+    w.search_form->setObjectName("searchForm");
+    out_flow = new FlowLayout(w.search_form, 0, 12, 8);
+
+    card_layout->addWidget(w.search_form);
+
+    // Table group
+    auto* table_group = new QWidget;
+    auto* tg_layout = new QVBoxLayout(table_group);
+    tg_layout->setContentsMargins(0, 0, 0, 0);
+    tg_layout->setSpacing(0);
+
+    // Table toolbar
+    w.table_toolbar = new QWidget;
+    w.table_toolbar->setObjectName("tableToolbar");
+    auto* tb_layout = new QHBoxLayout(w.table_toolbar);
+    tb_layout->setContentsMargins(8, 6, 8, 6);
+    tb_layout->setSpacing(4);
+
+    tb_layout->addStretch();
+
+    auto make_tool_icon = [](const QString& icon_res, const QString& tooltip) -> QPushButton* {
+        auto* btn = new QPushButton;
+        btn->setObjectName("toolIcon");
+        btn->setIcon(QIcon(icon_res));
+        btn->setIconSize(QSize(16, 16));
+        btn->setFixedSize(28, 26);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setToolTip(tooltip);
+        return btn;
+    };
+
+    w.filter_btn = make_tool_icon(":/icons/settings", QString::fromUtf8("Lọc cột"));
+    w.export_btn = make_tool_icon(":/icons/report", QString::fromUtf8("Xuất file"));
+    w.print_btn = make_tool_icon(":/icons/browser", QString::fromUtf8("In"));
+    tb_layout->addWidget(w.filter_btn);
+    tb_layout->addWidget(w.export_btn);
+    tb_layout->addWidget(w.print_btn);
+
+    tg_layout->addWidget(w.table_toolbar);
+
+    // Table
+    int col_count = column_headers.size();
+    w.table = new QTableWidget(0, col_count);
+    w.table->setObjectName("reportTable");
+    w.table->setHorizontalHeaderLabels(column_headers);
+    w.table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    w.table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    w.table->verticalHeader()->setVisible(false);
+    w.table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    w.table->setSelectionMode(QAbstractItemView::SingleSelection);
+    w.table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    w.table->setAlternatingRowColors(false);
+    w.table->setShowGrid(true);
+    w.table->horizontalHeader()->setHighlightSections(false);
+
+    tg_layout->addWidget(w.table, 1);
+
+    // Pagination
+    w.pagination_bar = new QWidget;
+    w.pagination_bar->setObjectName("paginationBar");
+    auto* pg_layout = new QHBoxLayout(w.pagination_bar);
+    pg_layout->setContentsMargins(8, 6, 8, 6);
+    pg_layout->setSpacing(8);
+
+    w.page_prev_btn = new QPushButton("<");
+    w.page_prev_btn->setObjectName("pageBtn");
+    w.page_prev_btn->setFixedSize(30, 28);
+    w.page_prev_btn->setEnabled(false);
+    pg_layout->addWidget(w.page_prev_btn);
+
+    w.page_number = new QLabel("1");
+    w.page_number->setObjectName("pageNumber");
+    w.page_number->setFixedSize(30, 28);
+    w.page_number->setAlignment(Qt::AlignCenter);
+    pg_layout->addWidget(w.page_number);
+
+    w.page_next_btn = new QPushButton(">");
+    w.page_next_btn->setObjectName("pageBtn");
+    w.page_next_btn->setFixedSize(30, 28);
+    w.page_next_btn->setEnabled(false);
+    pg_layout->addWidget(w.page_next_btn);
+
+    pg_layout->addSpacing(12);
+
+    w.page_info = new QLabel(QString::fromUtf8("Tổng 0 dòng"));
+    w.page_info->setObjectName("pageInfo");
+    pg_layout->addWidget(w.page_info);
+
+    pg_layout->addSpacing(8);
+
+    w.page_size_combo = new QComboBox;
+    w.page_size_combo->setObjectName("pageSizeCombo");
+    const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
+    for (int ps : page_sizes) {
+        w.page_size_combo->addItem(
+            QString::fromUtf8("%1 dòng/trang").arg(ps), ps);
+    }
+    w.page_size_combo->setFixedHeight(28);
+    pg_layout->addWidget(w.page_size_combo);
+
+    pg_layout->addStretch();
+    tg_layout->addWidget(w.pagination_bar);
+
+    card_layout->addWidget(table_group, 1);
+    page_layout->addWidget(w.card, 1);
+
+    return w;
+}
+
+void ReportPageBuilder::add_summary(
+    ReportPageWidgets& w,
+    const QString& summary_title_text,
+    const QStringList& summary_headers,
+    const QStringList& summary_defaults)
+{
+    // Insert summary between table group and end of card
+    auto* card_layout = qobject_cast<QVBoxLayout*>(w.card->layout());
+    if (!card_layout) return;
+
+    w.summary_section = new QWidget;
+    auto* sum_layout = new QVBoxLayout(w.summary_section);
+    sum_layout->setContentsMargins(0, 10, 0, 0);
+    sum_layout->setSpacing(6);
+
+    w.summary_title = new QLabel(summary_title_text);
+    w.summary_title->setObjectName("summaryTitle");
+    sum_layout->addWidget(w.summary_title);
+
+    int col_count = summary_headers.size();
+    w.summary_table = new QTableWidget(1, col_count);
+    w.summary_table->setObjectName("summaryTable");
+    w.summary_table->setHorizontalHeaderLabels(summary_headers);
+    w.summary_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    w.summary_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    w.summary_table->verticalHeader()->setVisible(false);
+    w.summary_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    w.summary_table->setSelectionMode(QAbstractItemView::NoSelection);
+    w.summary_table->setShowGrid(true);
+    w.summary_table->horizontalHeader()->setHighlightSections(false);
+    w.summary_table->setMaximumHeight(70);
+
+    for (int c = 0; c < col_count && c < summary_defaults.size(); ++c) {
+        auto* item = new QTableWidgetItem(summary_defaults[c]);
+        item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        w.summary_table->setItem(0, c, item);
+    }
+    w.summary_table->setRowHeight(0, 32);
+
+    sum_layout->addWidget(w.summary_table);
+
+    card_layout->addWidget(w.summary_section);
+}
+
+void ReportPageBuilder::apply_page_theme(ReportPageWidgets& w, ThemeManager* theme)
+{
+    const auto bg = theme->color("bg");
+    const auto bg2 = theme->color("bg_secondary");
+    const auto bg_hover = theme->color("bg_hover");
+    const auto text1 = theme->color("text_primary");
+    const auto text2 = theme->color("text_secondary");
+    const auto border = theme->color("border");
+    const auto border_light = theme->color("border_light");
+    const auto border_box = theme->color("border_box");
+    const auto primary = theme->color("primary");
+
+    w.page->setStyleSheet(QString(
+        "QWidget#reportPage { background: %1; }"
+    ).arg(bg2));
+
+    w.card->setStyleSheet(QString(
+        "QWidget#reportCard { background: %1; border: 1px solid %2; }"
+    ).arg(bg, border_box));
+
+    w.title_label->setStyleSheet(QString(
+        "font-size: 16px; font-weight: 700; color: %1; border: none;"
+    ).arg(text1));
+
+    // Separator
+    for (auto* sep : w.card->findChildren<QWidget*>("fieldSep")) {
+        sep->setStyleSheet(QString("background: %1;").arg(border_light));
+    }
+
+    // Search labels
+    for (auto* lbl : w.search_labels) {
+        lbl->setStyleSheet(QString(
+            "font-size: 13px; color: %1; border: none;"
+        ).arg(text2));
+    }
+
+    // Input style
+    auto input_style = QString(
+        "QLineEdit, QComboBox, QDateEdit {"
+        "  background: %1; color: %2; border: 1px solid %3;"
+        "  padding: 4px 8px; font-size: 13px;"
+        "}"
+        "QLineEdit:focus, QComboBox:focus {"
+        "  border-color: %4;"
+        "}"
+        "QComboBox::drop-down {"
+        "  subcontrol-origin: padding; subcontrol-position: center right;"
+        "  width: 20px; border-left: 1px solid %3;"
+        "}"
+        "QComboBox::down-arrow {"
+        "  image: url(:/icons/dropdown_arrow);"
+        "  width: 10px; height: 10px;"
+        "}"
+        "QComboBox QAbstractItemView {"
+        "  background: %1; color: %2; border: 1px solid %3;"
+        "  selection-background-color: %5;"
+        "}"
+    ).arg(bg, text1, border, primary, bg_hover);
+
+    // Apply to all inputs in search form
+    for (auto* le : w.search_form->findChildren<QLineEdit*>()) {
+        le->setStyleSheet(input_style);
+    }
+    for (auto* cb : w.search_form->findChildren<QComboBox*>()) {
+        cb->setStyleSheet(input_style);
+    }
+
+    // Search/Reset buttons
+    for (auto* btn : w.search_form->findChildren<QPushButton*>("searchBtn")) {
+        btn->setStyleSheet(QString(
+            "QPushButton { background: %1; color: #fff; border: none;"
+            "  padding: 0 16px; font-size: 13px; }"
+            "QPushButton:hover { background: #0d8a7e; }"
+        ).arg(primary));
+    }
+    for (auto* btn : w.search_form->findChildren<QPushButton*>("resetBtn")) {
+        btn->setStyleSheet(QString(
+            "QPushButton { background: %1; color: %2; border: 1px solid %3;"
+            "  padding: 0 16px; font-size: 13px; }"
+            "QPushButton:hover { background: %4; }"
+        ).arg(bg, text1, border, bg_hover));
+    }
+
+    // Table toolbar
+    w.table_toolbar->setStyleSheet(QString(
+        "QWidget#tableToolbar { background: %1; border: 1px solid %2; border-bottom: none; }"
+    ).arg(bg2, border));
+
+    auto tool_icon_style = QString(
+        "QPushButton#toolIcon { background: transparent; border: 1px solid %1; }"
+        "QPushButton#toolIcon:hover { background: %2; }"
+    ).arg(border, bg_hover);
+    w.filter_btn->setStyleSheet(tool_icon_style);
+    w.export_btn->setStyleSheet(tool_icon_style);
+    w.print_btn->setStyleSheet(tool_icon_style);
+
+    // Table
+    w.table->setStyleSheet(QString(
+        "QTableWidget { background: %1; color: %2; border: 1px solid %3;"
+        "  gridline-color: %3; font-size: 13px; }"
+        "QTableWidget::item { padding: 4px 8px; border: none; }"
+        "QTableWidget::item:selected { background: %4; color: %2; }"
+        "QHeaderView::section { background: %5; color: %2; border: none;"
+        "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
+        "  padding: 6px 8px; font-size: 13px; font-weight: 400; }"
+        "QHeaderView::section:last { border-right: none; }"
+    ).arg(bg, text1, border, bg_hover, bg2));
+
+    // Pagination
+    w.pagination_bar->setStyleSheet(QString(
+        "QWidget#paginationBar { background: %1; border: 1px solid %2; border-top: none; }"
+    ).arg(bg, border));
+
+    auto page_btn_style = QString(
+        "QPushButton#pageBtn { background: %1; color: %2; border: 1px solid %3;"
+        "  font-size: 13px; padding: 0; }"
+        "QPushButton#pageBtn:hover { background: %4; }"
+        "QPushButton#pageBtn:disabled { color: %5; }"
+    ).arg(bg, text1, border, bg_hover, text2);
+    w.page_prev_btn->setStyleSheet(page_btn_style);
+    w.page_next_btn->setStyleSheet(page_btn_style);
+
+    w.page_number->setStyleSheet(QString(
+        "QLabel#pageNumber { background: %1; color: #fff; border: 1px solid %1;"
+        "  font-size: 13px; padding: 0; qproperty-alignment: 'AlignCenter'; }"
+    ).arg(primary));
+
+    w.page_info->setStyleSheet(QString(
+        "font-size: 13px; color: %1; border: none;"
+    ).arg(text2));
+
+    w.page_size_combo->setStyleSheet(input_style);
+
+    // Summary
+    if (w.summary_title) {
+        w.summary_title->setStyleSheet(QString(
+            "font-weight: bold; font-size: 13px; color: %1; border: none;"
+        ).arg(text1));
+    }
+    if (w.summary_table) {
+        w.summary_table->setStyleSheet(QString(
+            "QTableWidget { background: %1; color: %2; border: 1px solid %3;"
+            "  gridline-color: %3; font-size: 13px; }"
+            "QTableWidget::item { padding: 4px 8px; border: none; }"
+            "QHeaderView::section { background: %4; color: %2; border: none;"
+            "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
+            "  padding: 6px 8px; font-size: 13px; font-weight: 400; }"
+            "QHeaderView::section:last { border-right: none; }"
+        ).arg(bg, text1, border, bg2));
+    }
+}

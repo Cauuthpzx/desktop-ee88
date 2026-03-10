@@ -16,6 +16,8 @@
 #include <QTableWidget>
 #include <QHeaderView>
 
+#include "core/report_page_builder.h"
+
 class ApiClient;
 class DateRangePicker;
 class ThemeManager;
@@ -43,6 +45,13 @@ private:
     void setup_toolbar();
     QWidget* create_home_page();
     QWidget* create_customers_page();
+    QWidget* create_lottery_report_page();
+    QWidget* create_transaction_log_page();
+    QWidget* create_provider_report_page();
+    QWidget* create_lottery_bets_page();
+    QWidget* create_provider_bets_page();
+    QWidget* create_withdrawal_history_page();
+    QWidget* create_deposit_history_page();
     void apply_theme();
     QIcon lang_flag_icon(const QString& locale) const;
     void on_filter_columns();
@@ -125,4 +134,17 @@ private:
     QPushButton* m_page_prev_btn;
     QPushButton* m_page_next_btn;
     QLabel* m_page_number;
+
+    // Report/Bets/Commission pages (dùng ReportPageBuilder)
+    ReportPageWidgets m_lottery_report;
+    ReportPageWidgets m_transaction_log;
+    ReportPageWidgets m_provider_report;
+    ReportPageWidgets m_lottery_bets;
+    ReportPageWidgets m_provider_bets;
+    ReportPageWidgets m_withdrawal_history;
+    ReportPageWidgets m_deposit_history;
+
+    // Date range pickers cho các trang
+    DateRangePicker* m_report_date_pickers[7] = {};
+    QComboBox* m_quick_date_combos[7] = {};
 };

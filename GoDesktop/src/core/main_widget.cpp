@@ -4,6 +4,7 @@
 #include "core/api_client.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
+#include "core/report_page_builder.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -53,8 +54,15 @@ void MainWidget::setup_ui()
 
     m_content_stack = new QStackedWidget;
     m_home_page = create_home_page();
-    m_content_stack->addWidget(m_home_page);
-    m_content_stack->addWidget(create_customers_page());
+    m_content_stack->addWidget(m_home_page);                   // 0
+    m_content_stack->addWidget(create_customers_page());        // 1
+    m_content_stack->addWidget(create_lottery_report_page());   // 2
+    m_content_stack->addWidget(create_transaction_log_page());  // 3
+    m_content_stack->addWidget(create_provider_report_page());  // 4
+    m_content_stack->addWidget(create_lottery_bets_page());     // 5
+    m_content_stack->addWidget(create_provider_bets_page());    // 6
+    m_content_stack->addWidget(create_withdrawal_history_page()); // 7 (Nhật ký rút → Lịch sử rút tiền)
+    m_content_stack->addWidget(create_deposit_history_page());    // 8 (Nhật ký nạp → Danh sách nạp tiền)
     root->addWidget(m_content_stack, 1);
 
     apply_theme();
@@ -83,14 +91,17 @@ void MainWidget::setup_toolbar()
         QString::fromUtf8("Quản Lý Khách Hàng"));
     connect(m_customers_action, &QAction::triggered, this, [this]() { navigate_to(1); });
 
-    // ── Báo Cáo — dropdown menu (y hệt Cqt) ──
+    // ── Báo Cáo — dropdown menu ──
     m_report_menu = new QMenu(this);
-    m_report_menu->addAction(QIcon(":/icons/menu_lottery_report"),
+    auto* act_lottery_report = m_report_menu->addAction(QIcon(":/icons/menu_lottery_report"),
         QString::fromUtf8("Báo cáo xổ số"));
-    m_report_menu->addAction(QIcon(":/icons/menu_transaction_log"),
+    auto* act_transaction_log = m_report_menu->addAction(QIcon(":/icons/menu_transaction_log"),
         QString::fromUtf8("Sao kê giao dịch"));
-    m_report_menu->addAction(QIcon(":/icons/menu_provider_report"),
+    auto* act_provider_report = m_report_menu->addAction(QIcon(":/icons/menu_provider_report"),
         QString::fromUtf8("Báo cáo nhà cung cấp"));
+    connect(act_lottery_report, &QAction::triggered, this, [this]() { navigate_to(2); });
+    connect(act_transaction_log, &QAction::triggered, this, [this]() { navigate_to(3); });
+    connect(act_provider_report, &QAction::triggered, this, [this]() { navigate_to(4); });
 
     m_report_button = new QToolButton(this);
     m_report_button->setIcon(QIcon(":/icons/report"));
@@ -100,12 +111,14 @@ void MainWidget::setup_toolbar()
     m_report_button->setMenu(m_report_menu);
     m_toolbar->addWidget(m_report_button);
 
-    // ── Đơn Cược — dropdown menu (y hệt Cqt) ──
+    // ── Đơn Cược — dropdown menu ──
     m_bet_order_menu = new QMenu(this);
-    m_bet_order_menu->addAction(QIcon(":/icons/menu_third_party_bet"),
+    auto* act_provider_bets = m_bet_order_menu->addAction(QIcon(":/icons/menu_third_party_bet"),
         QString::fromUtf8("Đơn cược bên thứ 3"));
-    m_bet_order_menu->addAction(QIcon(":/icons/menu_lottery_bet"),
+    auto* act_lottery_bets = m_bet_order_menu->addAction(QIcon(":/icons/menu_lottery_bet"),
         QString::fromUtf8("Đơn cược xổ số"));
+    connect(act_provider_bets, &QAction::triggered, this, [this]() { navigate_to(6); });
+    connect(act_lottery_bets, &QAction::triggered, this, [this]() { navigate_to(5); });
 
     m_bet_order_button = new QToolButton(this);
     m_bet_order_button->setIcon(QIcon(":/icons/bet_order"));
@@ -115,12 +128,14 @@ void MainWidget::setup_toolbar()
     m_bet_order_button->setMenu(m_bet_order_menu);
     m_toolbar->addWidget(m_bet_order_button);
 
-    // ── Nạp - Rút — dropdown menu (y hệt Cqt) ──
+    // ── Nạp - Rút — dropdown menu ──
     m_deposit_withdraw_menu = new QMenu(this);
-    m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_deposit_log"),
-        QString::fromUtf8("Nhật ký nạp"));
-    m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_withdraw_log"),
-        QString::fromUtf8("Nhật ký rút"));
+    auto* act_deposit_log = m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_deposit_log"),
+        QString::fromUtf8("Danh sách nạp tiền"));
+    auto* act_withdraw_log = m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_withdraw_log"),
+        QString::fromUtf8("Lịch sử rút tiền"));
+    connect(act_deposit_log, &QAction::triggered, this, [this]() { navigate_to(8); });
+    connect(act_withdraw_log, &QAction::triggered, this, [this]() { navigate_to(7); });
 
     m_deposit_withdraw_button = new QToolButton(this);
     m_deposit_withdraw_button->setIcon(QIcon(":/icons/deposit_withdraw"));
@@ -646,19 +661,19 @@ QWidget* MainWidget::create_customers_page()
 
     m_page_prev_btn = new QPushButton("<");
     m_page_prev_btn->setObjectName("pageBtn");
-    m_page_prev_btn->setFixedSize(30, 26);
+    m_page_prev_btn->setFixedSize(30, 28);
     m_page_prev_btn->setEnabled(false);
     pg_layout->addWidget(m_page_prev_btn);
 
     m_page_number = new QLabel("1");
     m_page_number->setObjectName("pageNumber");
-    m_page_number->setFixedSize(30, 26);
+    m_page_number->setFixedSize(30, 28);
     m_page_number->setAlignment(Qt::AlignCenter);
     pg_layout->addWidget(m_page_number);
 
     m_page_next_btn = new QPushButton(">");
     m_page_next_btn->setObjectName("pageBtn");
-    m_page_next_btn->setFixedSize(30, 26);
+    m_page_next_btn->setFixedSize(30, 28);
     m_page_next_btn->setEnabled(false);
     pg_layout->addWidget(m_page_next_btn);
 
@@ -677,7 +692,7 @@ QWidget* MainWidget::create_customers_page()
         m_page_size_combo->addItem(
             QString::fromUtf8("%1 dòng/trang").arg(ps), ps);
     }
-    m_page_size_combo->setFixedHeight(26);
+    m_page_size_combo->setFixedHeight(28);
     pg_layout->addWidget(m_page_size_combo);
 
     pg_layout->addStretch();
@@ -688,6 +703,523 @@ QWidget* MainWidget::create_customers_page()
     page_layout->addWidget(m_customers_card, 1);
 
     return m_customers_page;
+}
+
+// ════════════════════════════════════════
+// HELPER: tạo quick date combo + date range picker
+// ════════════════════════════════════════
+static QPushButton* make_search_button(const QString& icon_path, const QString& text, const QString& obj_name)
+{
+    auto* btn = new QPushButton(QIcon(icon_path), text);
+    btn->setObjectName(obj_name);
+    btn->setCursor(Qt::PointingHandCursor);
+    btn->setFixedHeight(32);
+    btn->setIconSize(QSize(16, 16));
+    return btn;
+}
+
+static QComboBox* make_quick_date_combo(bool only_today_yesterday = false)
+{
+    auto* combo = new QComboBox;
+    combo->addItem(QString::fromUtf8("Hôm nay"), "today");
+    combo->addItem(QString::fromUtf8("Hôm qua"), "yesterday");
+    if (!only_today_yesterday) {
+        combo->addItem(QString::fromUtf8("Tuần này"), "thisWeek");
+        combo->addItem(QString::fromUtf8("Tháng này"), "thisMonth");
+        combo->addItem(QString::fromUtf8("Tháng trước"), "lastMonth");
+    }
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    combo->setFixedHeight(32);
+    return combo;
+}
+
+// ════════════════════════════════════════
+// BÁO CÁO XỔ SỐ (index 2)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_lottery_report_page()
+{
+    FlowLayout* flow = nullptr;
+    m_lottery_report = ReportPageBuilder::build_page(
+        ":/icons/menu_lottery_report",
+        QString::fromUtf8("BÁO CÁO XỔ SỐ"),
+        {
+            QString::fromUtf8("Tên tài khoản"),
+            QString::fromUtf8("Thuộc đại lý"),
+            QString::fromUtf8("Số lần cược"),
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền cược hợp lệ (trừ cược hoà)"),
+            QString::fromUtf8("Hoàn trả"),
+            QString::fromUtf8("Thắng thua"),
+            QString::fromUtf8("Kết quả thắng thua (không gồm hoàn trả)"),
+            QString::fromUtf8("Tiền trúng"),
+            QString::fromUtf8("Tên loại xổ"),
+        },
+        flow
+    );
+
+    // Search fields
+    m_report_date_pickers[0] = new DateRangePicker;
+    m_report_date_pickers[0]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(m_report_date_pickers[0]);
+
+    m_quick_date_combos[0] = make_quick_date_combo();
+    flow->addWidget(m_quick_date_combos[0]);
+
+    auto* lottery_select = new QComboBox;
+    lottery_select->addItem(QString::fromUtf8("Chọn hoặc nhập để tìm kiếm"), QVariant());
+    lottery_select->setEditable(true);
+    lottery_select->setFixedHeight(32);
+    lottery_select->setFixedWidth(200);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên loại xổ："), lottery_select, m_lottery_report.search_labels));
+
+    auto* username = new QLineEdit;
+    username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    username->setFixedWidth(200);
+    username->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên tài khoản："), username, m_lottery_report.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    // Summary
+    ReportPageBuilder::add_summary(m_lottery_report,
+        QString::fromUtf8("Phương pháp tổng hợp [nhóm]:"),
+        {
+            QString::fromUtf8("Số khách đặt cược"),
+            QString::fromUtf8("Số lần cược"),
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền cược hợp lệ (trừ cược hoà)"),
+            QString::fromUtf8("Hoàn trả"),
+            QString::fromUtf8("Thắng thua"),
+            QString::fromUtf8("Kết quả thắng thua (không gồm hoàn trả)"),
+            QString::fromUtf8("Tiền trúng"),
+        },
+        {"0", "0", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"}
+    );
+
+    return m_lottery_report.page;
+}
+
+// ════════════════════════════════════════
+// SAO KÊ GIAO DỊCH (index 3)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_transaction_log_page()
+{
+    FlowLayout* flow = nullptr;
+    m_transaction_log = ReportPageBuilder::build_page(
+        ":/icons/menu_transaction_log",
+        QString::fromUtf8("SAO KÊ GIAO DỊCH"),
+        {
+            QString::fromUtf8("Tên tài khoản"),
+            QString::fromUtf8("Thuộc đại lý"),
+            QString::fromUtf8("Số lần nạp"),
+            QString::fromUtf8("Số tiền nạp"),
+            QString::fromUtf8("Số lần rút"),
+            QString::fromUtf8("Số tiền rút"),
+            QString::fromUtf8("Phí dịch vụ"),
+            QString::fromUtf8("Hoa hồng đại lý"),
+            QString::fromUtf8("Ưu đãi"),
+            QString::fromUtf8("Hoàn trả bên thứ 3"),
+            QString::fromUtf8("Tiền thưởng từ bên thứ 3"),
+            QString::fromUtf8("Thời gian"),
+        },
+        flow
+    );
+
+    m_report_date_pickers[1] = new DateRangePicker;
+    m_report_date_pickers[1]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(m_report_date_pickers[1]);
+
+    m_quick_date_combos[1] = make_quick_date_combo();
+    flow->addWidget(m_quick_date_combos[1]);
+
+    auto* username = new QLineEdit;
+    username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    username->setFixedWidth(200);
+    username->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên tài khoản："), username, m_transaction_log.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    ReportPageBuilder::add_summary(m_transaction_log,
+        QString::fromUtf8("Phương pháp tổng hợp [nhóm]:"),
+        {
+            QString::fromUtf8("Số tiền nạp"),
+            QString::fromUtf8("Số tiền rút"),
+            QString::fromUtf8("Phí dịch vụ"),
+            QString::fromUtf8("Hoa hồng đại lý"),
+            QString::fromUtf8("Ưu đãi"),
+            QString::fromUtf8("Hoàn trả bên thứ 3"),
+            QString::fromUtf8("Tiền thưởng từ bên thứ 3"),
+        },
+        {"0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0"}
+    );
+
+    return m_transaction_log.page;
+}
+
+// ════════════════════════════════════════
+// BÁO CÁO NHÀ CUNG CẤP (index 4)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_provider_report_page()
+{
+    FlowLayout* flow = nullptr;
+    m_provider_report = ReportPageBuilder::build_page(
+        ":/icons/menu_provider_report",
+        QString::fromUtf8("BÁO CÁO NHÀ CUNG CẤP"),
+        {
+            QString::fromUtf8("Tên tài khoản"),
+            QString::fromUtf8("Nhà cung cấp game"),
+            QString::fromUtf8("Số lần cược"),
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền cược hợp lệ"),
+            QString::fromUtf8("Tiền thưởng"),
+            QString::fromUtf8("Thắng thua"),
+        },
+        flow
+    );
+
+    m_report_date_pickers[2] = new DateRangePicker;
+    m_report_date_pickers[2]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(m_report_date_pickers[2]);
+
+    m_quick_date_combos[2] = make_quick_date_combo();
+    flow->addWidget(m_quick_date_combos[2]);
+
+    auto* username = new QLineEdit;
+    username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    username->setFixedWidth(200);
+    username->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên tài khoản："), username, m_provider_report.search_labels));
+
+    auto* provider_select = new QComboBox;
+    provider_select->addItem(QString::fromUtf8("Chọn"), QVariant());
+    const QStringList providers = {
+        "PA", "BBIN", "WM", "MINI", "KY", "PGSOFT", "LUCKYWIN", "SABA", "PT",
+        "RICH88", "ASTAR", "FB", "JILI", "KA", "MW", "SBO", "NEXTSPIN", "AMB",
+        "FunTa", "MG", "WS168", "DG CASINO", "V8", "AE", "TP", "FC", "JDB",
+        "CQ9", "PP", "VA", "BNG", "DB CASINO", "EVO CASINO", "CMD SPORTS",
+        "PG NEW", "FBLIVE", "ON CASINO", "MT", "JILI NEW", "fC NEW"
+    };
+    for (const auto& p : providers) {
+        provider_select->addItem(p, p);
+    }
+    provider_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    provider_select->setFixedHeight(32);
+    provider_select->setFixedWidth(200);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Nhà cung cấp game："), provider_select, m_provider_report.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    ReportPageBuilder::add_summary(m_provider_report,
+        QString::fromUtf8("Dữ liệu tổng hợp:"),
+        {
+            QString::fromUtf8("Số lần cược"),
+            QString::fromUtf8("Số khách đặt cược"),
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền cược hợp lệ"),
+            QString::fromUtf8("Tiền thưởng"),
+            QString::fromUtf8("Thắng thua"),
+        },
+        {"0", "0", "0.00", "0.00", "0.00", "0.00"}
+    );
+
+    return m_provider_report.page;
+}
+
+// ════════════════════════════════════════
+// DANH SÁCH ĐƠN CƯỢC (index 5)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_lottery_bets_page()
+{
+    FlowLayout* flow = nullptr;
+    m_lottery_bets = ReportPageBuilder::build_page(
+        ":/icons/menu_lottery_bet",
+        QString::fromUtf8("DANH SÁCH ĐƠN CƯỢC"),
+        {
+            QString::fromUtf8("Mã giao dịch"),
+            QString::fromUtf8("Tên người dùng"),
+            QString::fromUtf8("Thời gian cược"),
+            QString::fromUtf8("Trò chơi"),
+            QString::fromUtf8("Loại trò chơi"),
+            QString::fromUtf8("Cách chơi"),
+            QString::fromUtf8("Kỳ"),
+            QString::fromUtf8("Thông tin cược"),
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền hoàn trả"),
+            QString::fromUtf8("Thắng thua"),
+            QString::fromUtf8("Trạng thái"),
+        },
+        flow
+    );
+
+    m_report_date_pickers[3] = new DateRangePicker;
+    m_report_date_pickers[3]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(m_report_date_pickers[3]);
+
+    m_quick_date_combos[3] = make_quick_date_combo(true);
+    flow->addWidget(m_quick_date_combos[3]);
+
+    auto* username = new QLineEdit;
+    username->setPlaceholderText(QString::fromUtf8("Vui lòng nhập đầy đủ Tên người dùng"));
+    username->setFixedWidth(200);
+    username->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên người dùng："), username, m_lottery_bets.search_labels));
+
+    auto* serial_no = new QLineEdit;
+    serial_no->setPlaceholderText(QString::fromUtf8("Nhập đầy đủ mã giao dịch"));
+    serial_no->setFixedWidth(200);
+    serial_no->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Mã giao dịch："), serial_no, m_lottery_bets.search_labels));
+
+    auto* game_select = new QComboBox;
+    game_select->addItem(QString::fromUtf8("Chọn"), QVariant());
+    game_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    game_select->setFixedHeight(32);
+    game_select->setFixedWidth(150);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Trò chơi："), game_select, m_lottery_bets.search_labels));
+
+    auto* play_type = new QComboBox;
+    play_type->addItem(QString::fromUtf8("Chọn"), QVariant());
+    play_type->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    play_type->setFixedHeight(32);
+    play_type->setFixedWidth(180);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Loại trò chơi："), play_type, m_lottery_bets.search_labels));
+
+    auto* play_method = new QComboBox;
+    play_method->addItem(QString::fromUtf8("Chọn"), QVariant());
+    play_method->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    play_method->setFixedHeight(32);
+    play_method->setFixedWidth(180);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Cách chơi："), play_method, m_lottery_bets.search_labels));
+
+    auto* status_select = new QComboBox;
+    status_select->addItem(QString::fromUtf8("Chọn"), QVariant());
+    status_select->addItem(QString::fromUtf8("Chưa thanh toán"), "-9");
+    status_select->addItem(QString::fromUtf8("Trúng"), "1");
+    status_select->addItem(QString::fromUtf8("Không trúng"), "-1");
+    status_select->addItem(QString::fromUtf8("Hoà"), "2");
+    status_select->addItem(QString::fromUtf8("Khách huỷ đơn"), "3");
+    status_select->addItem(QString::fromUtf8("Hệ thống huỷ đơn"), "4");
+    status_select->addItem(QString::fromUtf8("Đơn cược bất thường"), "5");
+    status_select->addItem(QString::fromUtf8("Chưa thanh toán (khôi phục thủ công)"), "6");
+    status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    status_select->setFixedHeight(32);
+    status_select->setFixedWidth(150);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Trạng thái："), status_select, m_lottery_bets.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    ReportPageBuilder::add_summary(m_lottery_bets,
+        QString::fromUtf8("Dữ liệu tổng hợp:"),
+        {
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền hoàn trả"),
+            QString::fromUtf8("Thắng thua"),
+        },
+        {"0.00", "0.00", "0.00"}
+    );
+
+    return m_lottery_bets.page;
+}
+
+// ════════════════════════════════════════
+// ĐƠN CƯỢC BÊN THỨ 3 (index 6)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_provider_bets_page()
+{
+    FlowLayout* flow = nullptr;
+    m_provider_bets = ReportPageBuilder::build_page(
+        ":/icons/menu_third_party_bet",
+        QString::fromUtf8("ĐƠN CƯỢC BÊN THỨ 3"),
+        {
+            QString::fromUtf8("Mã giao dịch"),
+            QString::fromUtf8("Nhà cung cấp game bên thứ 3"),
+            QString::fromUtf8("Tên tài khoản thuộc nhà cái"),
+            QString::fromUtf8("Loại hình trò chơi"),
+            QString::fromUtf8("Tên trò chơi bên thứ 3"),
+            QString::fromUtf8("Tiền cược"),
+            QString::fromUtf8("Tiền cược hợp lệ"),
+            QString::fromUtf8("Tiền thưởng"),
+            QString::fromUtf8("Thắng thua"),
+            QString::fromUtf8("Thời gian cược"),
+        },
+        flow
+    );
+
+    m_report_date_pickers[4] = new DateRangePicker;
+    m_report_date_pickers[4]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Thời gian cược："), m_report_date_pickers[4], m_provider_bets.search_labels));
+
+    m_quick_date_combos[4] = make_quick_date_combo();
+    flow->addWidget(m_quick_date_combos[4]);
+
+    auto* serial_no = new QLineEdit;
+    serial_no->setPlaceholderText(QString::fromUtf8("Nhập hoàn chỉnh đơn giao dịch"));
+    serial_no->setFixedWidth(200);
+    serial_no->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Mã giao dịch："), serial_no, m_provider_bets.search_labels));
+
+    auto* platform_user = new QLineEdit;
+    platform_user->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản thuộc nhà cái"));
+    platform_user->setFixedWidth(200);
+    platform_user->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên tài khoản thuộc nhà cái："), platform_user, m_provider_bets.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    return m_provider_bets.page;
+}
+
+// ════════════════════════════════════════
+// LỊCH SỬ RÚT TIỀN (index 7)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_withdrawal_history_page()
+{
+    FlowLayout* flow = nullptr;
+    m_withdrawal_history = ReportPageBuilder::build_page(
+        ":/icons/menu_withdraw_log",
+        QString::fromUtf8("LỊCH SỬ RÚT TIỀN"),
+        {
+            QString::fromUtf8("Mã giao dịch"),
+            QString::fromUtf8("Thời gian tạo đơn"),
+            QString::fromUtf8("Tên tài khoản"),
+            QString::fromUtf8("Thuộc đại lý"),
+            QString::fromUtf8("Số tiền"),
+            QString::fromUtf8("Phí hội viên"),
+            QString::fromUtf8("Số tiền thực tế"),
+            QString::fromUtf8("Trạng thái giao dịch"),
+        },
+        flow
+    );
+
+    m_report_date_pickers[5] = new DateRangePicker;
+    m_report_date_pickers[5]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Thời gian tạo đơn："), m_report_date_pickers[5], m_withdrawal_history.search_labels));
+
+    auto* username = new QLineEdit;
+    username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    username->setFixedWidth(150);
+    username->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên tài khoản："), username, m_withdrawal_history.search_labels));
+
+    auto* serial_no = new QLineEdit;
+    serial_no->setPlaceholderText(QString::fromUtf8("Nhập mã giao dịch"));
+    serial_no->setFixedWidth(300);
+    serial_no->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Mã giao dịch："), serial_no, m_withdrawal_history.search_labels));
+
+    auto* status_select = new QComboBox;
+    status_select->addItem(QString::fromUtf8("Chọn"), QVariant());
+    status_select->addItem(QString::fromUtf8("Chờ xử lí"), "0");
+    status_select->addItem(QString::fromUtf8("Hoàn tất"), "1");
+    status_select->addItem(QString::fromUtf8("Đang xử lí"), "2");
+    status_select->addItem(QString::fromUtf8("Trạng thái không thành công"), "3");
+    status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    status_select->setFixedHeight(32);
+    status_select->setFixedWidth(200);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Trạng thái giao dịch："), status_select, m_withdrawal_history.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    return m_withdrawal_history.page;
+}
+
+// ════════════════════════════════════════
+// DANH SÁCH NẠP TIỀN (index 8)
+// ════════════════════════════════════════
+QWidget* MainWidget::create_deposit_history_page()
+{
+    FlowLayout* flow = nullptr;
+    m_deposit_history = ReportPageBuilder::build_page(
+        ":/icons/menu_deposit_log",
+        QString::fromUtf8("DANH SÁCH NẠP TIỀN"),
+        {
+            QString::fromUtf8("Tên tài khoản"),
+            QString::fromUtf8("Thuộc đại lý"),
+            QString::fromUtf8("Số tiền"),
+            QString::fromUtf8("Loại hình giao dịch"),
+            QString::fromUtf8("Trạng thái giao dịch"),
+            QString::fromUtf8("Thời gian tạo đơn"),
+        },
+        flow
+    );
+
+    m_report_date_pickers[6] = new DateRangePicker;
+    m_report_date_pickers[6]->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc"));
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Thời gian tạo đơn："), m_report_date_pickers[6], m_deposit_history.search_labels));
+
+    auto* username = new QLineEdit;
+    username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    username->setFixedWidth(300);
+    username->setFixedHeight(32);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Tên tài khoản："), username, m_deposit_history.search_labels));
+
+    auto* type_select = new QComboBox;
+    type_select->addItem(QString::fromUtf8("Chọn"), QVariant());
+    type_select->addItem(QString::fromUtf8("Nạp tiền"), "1");
+    type_select->addItem(QString::fromUtf8("Rút tiền"), "2");
+    type_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    type_select->setFixedHeight(32);
+    type_select->setFixedWidth(220);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Loại hình giao dịch："), type_select, m_deposit_history.search_labels));
+
+    auto* status_select = new QComboBox;
+    status_select->addItem(QString::fromUtf8("Chọn"), QVariant());
+    status_select->addItem(QString::fromUtf8("Chờ xử lí"), "0");
+    status_select->addItem(QString::fromUtf8("Hoàn tất"), "1");
+    status_select->addItem(QString::fromUtf8("Đang xử lí"), "2");
+    status_select->addItem(QString::fromUtf8("Trạng thái không thành công"), "3");
+    status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    status_select->setFixedHeight(32);
+    status_select->setFixedWidth(180);
+    flow->addWidget(ReportPageBuilder::make_field(
+        QString::fromUtf8("Trạng thái giao dịch："), status_select, m_deposit_history.search_labels));
+
+    flow->addWidget(make_search_button(":/icons/search", QString::fromUtf8("Tìm kiếm"), "searchBtn"));
+    flow->addWidget(make_search_button(":/icons/refresh", QString::fromUtf8("Đặt lại"), "resetBtn"));
+
+    return m_deposit_history.page;
 }
 
 QIcon MainWidget::lang_flag_icon(const QString& locale) const
@@ -954,7 +1486,7 @@ void MainWidget::apply_theme()
 
     auto page_btn_style = QString(
         "QPushButton#pageBtn { background: %1; color: %2; border: 1px solid %3;"
-        "  font-size: 12px; }"
+        "  font-size: 13px; padding: 0; }"
         "QPushButton#pageBtn:hover { background: %4; }"
         "QPushButton#pageBtn:disabled { color: %5; }"
     ).arg(bg, text1, border, bg_hover, text2);
@@ -963,14 +1495,38 @@ void MainWidget::apply_theme()
 
     m_page_number->setStyleSheet(QString(
         "QLabel#pageNumber { background: %1; color: #fff; border: 1px solid %1;"
-        "  font-size: 12px; }"
+        "  font-size: 13px; padding: 0; qproperty-alignment: 'AlignCenter'; }"
     ).arg(primary));
 
     m_page_info->setStyleSheet(QString(
-        "font-size: 12px; color: %1; border: none;"
+        "font-size: 13px; color: %1; border: none;"
     ).arg(text2));
 
     m_page_size_combo->setStyleSheet(input_style);
+
+    // ── Report / Bets / Commission pages (dùng ReportPageBuilder) ──
+    ReportPageBuilder::apply_page_theme(m_lottery_report, m_theme);
+    ReportPageBuilder::apply_page_theme(m_transaction_log, m_theme);
+    ReportPageBuilder::apply_page_theme(m_provider_report, m_theme);
+    ReportPageBuilder::apply_page_theme(m_lottery_bets, m_theme);
+    ReportPageBuilder::apply_page_theme(m_provider_bets, m_theme);
+    ReportPageBuilder::apply_page_theme(m_withdrawal_history, m_theme);
+    ReportPageBuilder::apply_page_theme(m_deposit_history, m_theme);
+
+    // Date range pickers cho các trang report/bets/commission
+    auto date_btn_style = QString(
+        "QPushButton { background: %1; color: %2;"
+        "  border-style: solid; border-width: 1px; border-color: %3; border-radius: 0px;"
+        "  padding: 4px 8px; font-size: 13px; text-align: left; }"
+        "QPushButton:hover { border-color: %4; }"
+    ).arg(bg, text1, border, primary);
+    bool is_dark = m_theme->theme() == "dark";
+    for (int i = 0; i < 7; ++i) {
+        if (m_report_date_pickers[i]) {
+            m_report_date_pickers[i]->set_button_style(date_btn_style);
+            m_report_date_pickers[i]->apply_popup_theme(is_dark);
+        }
+    }
 }
 
 void MainWidget::on_theme_changed()
