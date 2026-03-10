@@ -4,6 +4,7 @@
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/report_page_builder.h"
+#include "core/icon_defs.h"
 
 #include <QLineEdit>
 
@@ -12,8 +13,8 @@ static QPushButton* make_search_button(const QString& icon_path, const QString& 
     auto* btn = new QPushButton(QIcon(icon_path), text);
     btn->setObjectName(obj_name);
     btn->setCursor(Qt::PointingHandCursor);
-    btn->setFixedHeight(32);
-    btn->setIconSize(QSize(16, 16));
+    btn->setFixedHeight(IconDefs::k_search_btn_height);
+    btn->setIconSize(IconDefs::search_icon());
     return btn;
 }
 
@@ -28,7 +29,7 @@ static QComboBox* make_quick_date_combo(Translator* tr, bool only_today_yesterda
         combo->addItem(tr->t("common.last_month"), "lastMonth");
     }
     combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    combo->setFixedHeight(32);
+    combo->setFixedHeight(IconDefs::k_input_height);
     return combo;
 }
 
@@ -74,7 +75,7 @@ QWidget* ReportPages::create_lottery_report_page()
     auto* lottery_select = new QComboBox;
     lottery_select->addItem(m_tr->t("common.search_or_type"), QVariant());
     lottery_select->setEditable(true);
-    lottery_select->setFixedHeight(32);
+    lottery_select->setFixedHeight(IconDefs::k_input_height);
     lottery_select->setFixedWidth(200);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_report.lottery_type_label"), lottery_select, m_lottery_report.search_labels));
@@ -82,7 +83,7 @@ QWidget* ReportPages::create_lottery_report_page()
     auto* username = new QLineEdit;
     username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     username->setFixedWidth(200);
-    username->setFixedHeight(32);
+    username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("common.username_label"), username, m_lottery_report.search_labels));
 
@@ -144,7 +145,7 @@ QWidget* ReportPages::create_transaction_log_page()
     auto* username = new QLineEdit;
     username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     username->setFixedWidth(200);
-    username->setFixedHeight(32);
+    username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("common.username_label"), username, m_transaction_log.search_labels));
 
@@ -200,7 +201,7 @@ QWidget* ReportPages::create_provider_report_page()
     auto* username = new QLineEdit;
     username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     username->setFixedWidth(200);
-    username->setFixedHeight(32);
+    username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("common.username_label"), username, m_provider_report.search_labels));
 
@@ -217,7 +218,7 @@ QWidget* ReportPages::create_provider_report_page()
         provider_select->addItem(p, p);
     }
     provider_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    provider_select->setFixedHeight(32);
+    provider_select->setFixedHeight(IconDefs::k_input_height);
     provider_select->setFixedWidth(200);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("provider_report.provider_label"), provider_select, m_provider_report.search_labels));
@@ -278,21 +279,21 @@ QWidget* ReportPages::create_lottery_bets_page()
     auto* username = new QLineEdit;
     username->setPlaceholderText(m_tr->t("lottery_bets.user_placeholder"));
     username->setFixedWidth(200);
-    username->setFixedHeight(32);
+    username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_bets.user_label"), username, m_lottery_bets.search_labels));
 
     auto* serial_no = new QLineEdit;
     serial_no->setPlaceholderText(m_tr->t("lottery_bets.serial_placeholder"));
     serial_no->setFixedWidth(200);
-    serial_no->setFixedHeight(32);
+    serial_no->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_bets.serial_label"), serial_no, m_lottery_bets.search_labels));
 
     auto* game_select = new QComboBox;
     game_select->addItem(m_tr->t("common.select"), QVariant());
     game_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    game_select->setFixedHeight(32);
+    game_select->setFixedHeight(IconDefs::k_input_height);
     game_select->setFixedWidth(150);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_bets.game_label"), game_select, m_lottery_bets.search_labels));
@@ -300,7 +301,7 @@ QWidget* ReportPages::create_lottery_bets_page()
     auto* play_type = new QComboBox;
     play_type->addItem(m_tr->t("common.select"), QVariant());
     play_type->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    play_type->setFixedHeight(32);
+    play_type->setFixedHeight(IconDefs::k_input_height);
     play_type->setFixedWidth(180);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_bets.game_type_label"), play_type, m_lottery_bets.search_labels));
@@ -308,7 +309,7 @@ QWidget* ReportPages::create_lottery_bets_page()
     auto* play_method = new QComboBox;
     play_method->addItem(m_tr->t("common.select"), QVariant());
     play_method->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    play_method->setFixedHeight(32);
+    play_method->setFixedHeight(IconDefs::k_input_height);
     play_method->setFixedWidth(180);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_bets.play_method_label"), play_method, m_lottery_bets.search_labels));
@@ -324,7 +325,7 @@ QWidget* ReportPages::create_lottery_bets_page()
     status_select->addItem(m_tr->t("lottery_bets.status_abnormal"), "5");
     status_select->addItem(m_tr->t("lottery_bets.status_manual_restore"), "6");
     status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    status_select->setFixedHeight(32);
+    status_select->setFixedHeight(IconDefs::k_input_height);
     status_select->setFixedWidth(150);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("lottery_bets.status_label"), status_select, m_lottery_bets.search_labels));
@@ -381,14 +382,14 @@ QWidget* ReportPages::create_provider_bets_page()
     auto* serial_no = new QLineEdit;
     serial_no->setPlaceholderText(m_tr->t("provider_bets.serial_placeholder"));
     serial_no->setFixedWidth(200);
-    serial_no->setFixedHeight(32);
+    serial_no->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("provider_bets.serial_label"), serial_no, m_provider_bets.search_labels));
 
     auto* platform_user = new QLineEdit;
     platform_user->setPlaceholderText(m_tr->t("provider_bets.platform_user_placeholder"));
     platform_user->setFixedWidth(200);
-    platform_user->setFixedHeight(32);
+    platform_user->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("provider_bets.platform_user_label"), platform_user, m_provider_bets.search_labels));
 
@@ -429,14 +430,14 @@ QWidget* ReportPages::create_withdrawal_history_page()
     auto* username = new QLineEdit;
     username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     username->setFixedWidth(150);
-    username->setFixedHeight(32);
+    username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("common.username_label"), username, m_withdrawal_history.search_labels));
 
     auto* serial_no = new QLineEdit;
     serial_no->setPlaceholderText(m_tr->t("withdrawal_history.serial_placeholder"));
     serial_no->setFixedWidth(300);
-    serial_no->setFixedHeight(32);
+    serial_no->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("withdrawal_history.serial_label"), serial_no, m_withdrawal_history.search_labels));
 
@@ -447,7 +448,7 @@ QWidget* ReportPages::create_withdrawal_history_page()
     status_select->addItem(m_tr->t("common.status_processing"), "2");
     status_select->addItem(m_tr->t("common.status_failed"), "3");
     status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    status_select->setFixedHeight(32);
+    status_select->setFixedHeight(IconDefs::k_input_height);
     status_select->setFixedWidth(200);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("withdrawal_history.status_label"), status_select, m_withdrawal_history.search_labels));
@@ -487,7 +488,7 @@ QWidget* ReportPages::create_deposit_history_page()
     auto* username = new QLineEdit;
     username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     username->setFixedWidth(300);
-    username->setFixedHeight(32);
+    username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("common.username_label"), username, m_deposit_history.search_labels));
 
@@ -496,7 +497,7 @@ QWidget* ReportPages::create_deposit_history_page()
     type_select->addItem(m_tr->t("deposit_history.type_deposit"), "1");
     type_select->addItem(m_tr->t("deposit_history.type_withdraw"), "2");
     type_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    type_select->setFixedHeight(32);
+    type_select->setFixedHeight(IconDefs::k_input_height);
     type_select->setFixedWidth(220);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("deposit_history.type_label"), type_select, m_deposit_history.search_labels));
@@ -508,7 +509,7 @@ QWidget* ReportPages::create_deposit_history_page()
     status_select->addItem(m_tr->t("common.status_processing"), "2");
     status_select->addItem(m_tr->t("common.status_failed"), "3");
     status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    status_select->setFixedHeight(32);
+    status_select->setFixedHeight(IconDefs::k_input_height);
     status_select->setFixedWidth(180);
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("deposit_history.status_label"), status_select, m_deposit_history.search_labels));

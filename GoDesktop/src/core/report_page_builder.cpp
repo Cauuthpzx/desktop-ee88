@@ -2,6 +2,7 @@
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
+#include "core/icon_defs.h"
 
 #include <QPixmap>
 #include <QScrollArea>
@@ -66,7 +67,7 @@ ReportPageWidgets ReportPageBuilder::build_page(
 
     // Separator
     auto* separator = new QWidget;
-    separator->setFixedHeight(1);
+    separator->setFixedHeight(IconDefs::k_separator_height);
     separator->setObjectName("fieldSep");
     card_layout->addWidget(separator);
     card_layout->addSpacing(12);
@@ -97,8 +98,8 @@ ReportPageWidgets ReportPageBuilder::build_page(
         auto* btn = new QPushButton;
         btn->setObjectName("toolIcon");
         btn->setIcon(QIcon(icon_res));
-        btn->setIconSize(QSize(16, 16));
-        btn->setFixedSize(28, 26);
+        btn->setIconSize(IconDefs::search_icon());
+        btn->setFixedSize(28, IconDefs::k_toolbar_btn_height);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setToolTip(tooltip);
         return btn;
@@ -170,7 +171,7 @@ ReportPageWidgets ReportPageBuilder::build_page(
         w.page_size_combo->addItem(
             tr ? tr->t("common.rows_per_page").arg(ps) : QString("%1/page").arg(ps), ps);
     }
-    w.page_size_combo->setFixedHeight(28);
+    w.page_size_combo->setFixedHeight(IconDefs::k_page_combo_height);
     pg_layout->addWidget(w.page_size_combo);
 
     pg_layout->addStretch();

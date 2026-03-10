@@ -27,12 +27,14 @@ set(SOURCES
     src/core/main_widget.cpp
     src/core/report_page_builder.cpp
     src/core/report_pages.cpp
+    src/core/settings_dialog.cpp
     src/core/theme_manager.cpp
     src/core/translator.cpp
 )
 
 set(HEADERS
     src/core/api_client.h
+    src/core/api_error.h
     src/core/auth_i18n.h
     src/core/auth_window.h
     src/core/auth_widget.h
@@ -40,9 +42,12 @@ set(HEADERS
     src/core/date_range_picker.h
     src/core/flow_layout.h
     src/core/home_page.h
+    src/core/icon_defs.h
     src/core/main_widget.h
     src/core/report_page_builder.h
     src/core/report_pages.h
+    src/core/settings_dialog.h
+    src/core/toggle_switch.h
     src/core/theme_manager.h
     src/core/translator.h
 )

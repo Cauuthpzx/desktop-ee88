@@ -3,6 +3,7 @@
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
+#include "core/icon_defs.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -62,7 +63,7 @@ void CustomersPage::setup_ui()
 
     // ── Separator ──
     auto* separator = new QWidget;
-    separator->setFixedHeight(1);
+    separator->setFixedHeight(IconDefs::k_separator_height);
     separator->setObjectName("fieldSeparator");
     card_layout->addWidget(separator);
     card_layout->addSpacing(12);
@@ -90,7 +91,7 @@ void CustomersPage::setup_ui()
     m_search_username = new QLineEdit;
     m_search_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     m_search_username->setFixedWidth(160);
-    m_search_username->setFixedHeight(32);
+    m_search_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(make_field(m_tr->t("common.username_label"), m_search_username));
 
     m_date_range_picker = new DateRangePicker;
@@ -108,7 +109,7 @@ void CustomersPage::setup_ui()
     m_search_status->addItem(m_tr->t("customers.status_frozen"), "frozen");
     m_search_status->addItem(m_tr->t("customers.status_locked"), "locked");
     m_search_status->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    m_search_status->setFixedHeight(32);
+    m_search_status->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(make_field(m_tr->t("customers.status_label"), m_search_status));
 
     m_search_sort_field = new QComboBox;
@@ -119,28 +120,28 @@ void CustomersPage::setup_ui()
     m_search_sort_field->addItem(m_tr->t("customers.sort_total_deposit"), "total_deposit");
     m_search_sort_field->addItem(m_tr->t("customers.sort_total_withdraw"), "total_withdraw");
     m_search_sort_field->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    m_search_sort_field->setFixedHeight(32);
+    m_search_sort_field->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(make_field(m_tr->t("customers.sort_field_label"), m_search_sort_field));
 
     m_search_sort_dir = new QComboBox;
     m_search_sort_dir->addItem(m_tr->t("customers.sort_desc"), "desc");
     m_search_sort_dir->addItem(m_tr->t("customers.sort_asc"), "asc");
     m_search_sort_dir->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    m_search_sort_dir->setFixedHeight(32);
+    m_search_sort_dir->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(make_field(m_tr->t("customers.sort_dir_label"), m_search_sort_dir));
 
     m_search_btn = new QPushButton(QIcon(":/icons/search"), m_tr->t("common.search"));
     m_search_btn->setObjectName("searchBtn");
     m_search_btn->setCursor(Qt::PointingHandCursor);
-    m_search_btn->setFixedHeight(32);
-    m_search_btn->setIconSize(QSize(16, 16));
+    m_search_btn->setFixedHeight(IconDefs::k_search_btn_height);
+    m_search_btn->setIconSize(IconDefs::search_icon());
     flow->addWidget(m_search_btn);
 
     m_reset_btn = new QPushButton(QIcon(":/icons/refresh"), m_tr->t("common.reset"));
     m_reset_btn->setObjectName("resetBtn");
     m_reset_btn->setCursor(Qt::PointingHandCursor);
-    m_reset_btn->setFixedHeight(32);
-    m_reset_btn->setIconSize(QSize(16, 16));
+    m_reset_btn->setFixedHeight(IconDefs::k_search_btn_height);
+    m_reset_btn->setIconSize(IconDefs::search_icon());
     flow->addWidget(m_reset_btn);
 
     connect(m_reset_btn, &QPushButton::clicked, this, [this]() {
@@ -174,13 +175,13 @@ void CustomersPage::setup_ui()
     m_add_member_btn = new QPushButton("+ " + m_tr->t("customers.add_member"));
     m_add_member_btn->setObjectName("tbBtn");
     m_add_member_btn->setCursor(Qt::PointingHandCursor);
-    m_add_member_btn->setFixedHeight(26);
+    m_add_member_btn->setFixedHeight(IconDefs::k_toolbar_btn_height);
     tb_left_layout->addWidget(m_add_member_btn);
 
     m_add_agent_btn = new QPushButton("+ " + m_tr->t("customers.add_agent"));
     m_add_agent_btn->setObjectName("tbBtn");
     m_add_agent_btn->setCursor(Qt::PointingHandCursor);
-    m_add_agent_btn->setFixedHeight(26);
+    m_add_agent_btn->setFixedHeight(IconDefs::k_toolbar_btn_height);
     tb_left_layout->addWidget(m_add_agent_btn);
 
     tb_left_layout->addStretch();
@@ -195,8 +196,8 @@ void CustomersPage::setup_ui()
         auto* btn = new QPushButton;
         btn->setObjectName("toolIcon");
         btn->setIcon(QIcon(icon_path));
-        btn->setIconSize(QSize(16, 16));
-        btn->setFixedSize(28, 26);
+        btn->setIconSize(IconDefs::search_icon());
+        btn->setFixedSize(28, IconDefs::k_toolbar_btn_height);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setToolTip(tooltip);
         return btn;
@@ -265,7 +266,7 @@ void CustomersPage::setup_ui()
     auto* rebate_btn = new QPushButton(m_tr->t("customers.rebate_settings"));
     rebate_btn->setObjectName("rebateBtn");
     rebate_btn->setCursor(Qt::PointingHandCursor);
-    rebate_btn->setFixedHeight(24);
+    rebate_btn->setFixedHeight(IconDefs::k_table_btn_height + 2);
     m_table->setCellWidget(0, 11, rebate_btn);
     m_table->setRowHeight(0, 38);
 
@@ -311,7 +312,7 @@ void CustomersPage::setup_ui()
         m_page_size_combo->addItem(
             m_tr->t("common.rows_per_page").arg(ps), ps);
     }
-    m_page_size_combo->setFixedHeight(28);
+    m_page_size_combo->setFixedHeight(IconDefs::k_page_combo_height);
     pg_layout->addWidget(m_page_size_combo);
 
     pg_layout->addStretch();

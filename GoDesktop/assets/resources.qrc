@@ -43,5 +43,12 @@
         <file alias="dropdown_arrow">icons/dropdown_arrow.png</file>
         <file alias="search">icons/search.png</file>
         <file alias="refresh">icons/refresh.png</file>
+        <file alias="edit">icons/edit.png</file>
+        <file alias="delete">icons/delete.png</file>
+        <file alias="check">icons/check.png</file>
+        <file alias="login_agent">icons/login_agent.png</file>
+        <file alias="cookies">icons/cookies.png</file>
+        <file alias="check_all">icons/check_all.png</file>
+        <file alias="add_agent">icons/add_agent.png</file>
     </qresource>
 </RCC>

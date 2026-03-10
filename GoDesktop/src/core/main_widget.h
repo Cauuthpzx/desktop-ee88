@@ -55,7 +55,9 @@ private:
     QMenu* m_bet_order_menu;
     QToolButton* m_deposit_withdraw_button;
     QMenu* m_deposit_withdraw_menu;
-    QAction* m_settings_action;
+    QToolButton* m_settings_button;
+    QMenu* m_settings_menu;
+    QAction* m_act_ee88_settings;
 
     // Menu actions (for retranslation)
     QAction* m_act_lottery_report;

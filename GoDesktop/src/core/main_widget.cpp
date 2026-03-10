@@ -5,6 +5,8 @@
 #include "core/home_page.h"
 #include "core/customers_page.h"
 #include "core/report_pages.h"
+#include "core/settings_dialog.h"
+#include "core/icon_defs.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -68,7 +70,7 @@ void MainWidget::setup_toolbar()
     m_toolbar = new QToolBar;
     m_toolbar->setMovable(false);
     m_toolbar->setFloatable(false);
-    m_toolbar->setIconSize(QSize(18, 18));
+    m_toolbar->setIconSize(IconDefs::toolbar_icon());
     m_toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
 
     // Trang Chủ
@@ -199,10 +201,28 @@ void MainWidget::setup_toolbar()
     m_account_button->setMenu(m_account_menu);
     m_toolbar->addWidget(m_account_button);
 
-    // Cài Đặt
-    m_settings_action = m_toolbar->addAction(
-        QIcon(":/icons/settings"),
-        m_tr->t("nav.settings"));
+    // Cài Đặt — dropdown giống Báo cáo
+    m_settings_menu = new QMenu(this);
+    m_act_ee88_settings = m_settings_menu->addAction(
+        QIcon(":/icons/user"), m_tr->t("settings.ee88_account_settings"));
+    connect(m_act_ee88_settings, &QAction::triggered, this, [this]() {
+        SettingsDialog dlg(m_theme, m_tr, this);
+        dlg.exec();
+    });
+
+    m_settings_button = new QToolButton(this);
+    m_settings_button->setIcon(QIcon(":/icons/settings"));
+    m_settings_button->setText(m_tr->t("nav.settings"));
+    m_settings_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_settings_button->setCursor(Qt::PointingHandCursor);
+    connect(m_settings_button, &QToolButton::clicked, this, [this]() {
+        QPoint pos = m_settings_button->mapToGlobal(
+            QPoint(m_settings_button->width(), m_settings_button->height()));
+        QSize menu_size = m_settings_menu->sizeHint();
+        pos.setX(pos.x() - menu_size.width());
+        m_settings_menu->popup(pos);
+    });
+    m_toolbar->addWidget(m_settings_button);
 
     // Hidden label
     m_username_label = new QLabel;
@@ -275,6 +295,7 @@ void MainWidget::apply_theme()
     m_report_menu->setStyleSheet(menu_style);
     m_bet_order_menu->setStyleSheet(menu_style);
     m_deposit_withdraw_menu->setStyleSheet(menu_style);
+    m_settings_menu->setStyleSheet(menu_style);
 
     // Active nav highlight
     update_active_nav();
@@ -358,7 +379,8 @@ void MainWidget::on_locale_changed()
     m_report_button->setText(m_tr->t("nav.reports"));
     m_bet_order_button->setText(m_tr->t("nav.bets"));
     m_deposit_withdraw_button->setText(m_tr->t("nav.commission"));
-    m_settings_action->setText(m_tr->t("nav.settings"));
+    m_settings_button->setText(m_tr->t("nav.settings"));
+    m_act_ee88_settings->setText(m_tr->t("settings.ee88_account_settings"));
 
     // Report menu actions
     m_act_lottery_report->setText(m_tr->t("nav.report_lottery"));
