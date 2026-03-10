@@ -272,7 +272,7 @@ QWidget* ReportPages::create_lottery_bets_page()
         m_tr->t("common.date_end"));
     flow->addWidget(m_date_pickers[3]);
 
-    m_quick_date_combos[3] = make_quick_date_combo(m_tr, true);
+    m_quick_date_combos[3] = make_quick_date_combo(m_tr);
     flow->addWidget(m_quick_date_combos[3]);
 
     auto* username = new QLineEdit;
@@ -689,7 +689,7 @@ void ReportPages::retranslate()
     update_pagination(m_lottery_bets);
     update_search_buttons(m_lottery_bets.search_form);
     if (m_date_pickers[3]) m_date_pickers[3]->set_placeholder(m_tr->t("common.date_start"), m_tr->t("common.date_end"));
-    update_quick_date(m_quick_date_combos[3], true);
+    update_quick_date(m_quick_date_combos[3]);
     if (m_lottery_bets.search_labels.size() >= 6) {
         m_lottery_bets.search_labels[0]->setText(m_tr->t("lottery_bets.user_label"));
         m_lottery_bets.search_labels[1]->setText(m_tr->t("lottery_bets.serial_label"));
