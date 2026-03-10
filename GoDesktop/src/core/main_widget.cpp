@@ -1,4 +1,6 @@
 #include "core/main_widget.h"
+#include "core/date_range_picker.h"
+#include "core/flow_layout.h"
 #include "core/api_client.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
@@ -367,25 +369,310 @@ QWidget* MainWidget::create_home_page()
 }
 
 // ════════════════════════════════════════
-// CUSTOMERS PAGE (placeholder)
+// CUSTOMERS PAGE (giống hệt web customers.vue)
 // ════════════════════════════════════════
 QWidget* MainWidget::create_customers_page()
 {
-    auto* page = new QWidget;
-    auto* layout = new QVBoxLayout(page);
-    layout->setAlignment(Qt::AlignCenter);
+    m_customers_page = new QWidget;
+    m_customers_page->setObjectName("customersPage");
 
-    auto* label = new QLabel(m_tr->t("nav.customers"));
-    label->setStyleSheet("font-size: 24px; font-weight: bold;");
-    label->setAlignment(Qt::AlignCenter);
-    layout->addWidget(label);
+    auto* page_layout = new QVBoxLayout(m_customers_page);
+    page_layout->setContentsMargins(10, 10, 10, 10);
+    page_layout->setSpacing(0);
 
-    auto* sub = new QLabel(QString::fromUtf8("Coming soon..."));
-    sub->setStyleSheet("font-size: 14px; color: #999;");
-    sub->setAlignment(Qt::AlignCenter);
-    layout->addWidget(sub);
+    // ── Card container (lay-card) ──
+    m_customers_card = new QWidget;
+    m_customers_card->setObjectName("customersCard");
+    auto* card_layout = new QVBoxLayout(m_customers_card);
+    card_layout->setContentsMargins(16, 16, 16, 16);
+    card_layout->setSpacing(12);
 
-    return page;
+    // ── Field header: icon + title (lay-field title) ──
+    m_customers_field_header = new QWidget;
+    auto* header_layout = new QHBoxLayout(m_customers_field_header);
+    header_layout->setContentsMargins(0, 0, 0, 8);
+    header_layout->setSpacing(6);
+    header_layout->setAlignment(Qt::AlignLeft);
+
+    auto* header_icon = new QLabel;
+    QPixmap icon_pix(":/icons/customers");
+    header_icon->setPixmap(icon_pix.scaled(18, 18, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    header_icon->setStyleSheet("border: none;");
+    header_layout->addWidget(header_icon);
+
+    m_customers_title = new QLabel(QString::fromUtf8("QUẢN LÍ HỘI VIÊN THUỘC CẤP"));
+    m_customers_title->setStyleSheet("font-size: 16px; font-weight: 700; border: none;");
+    header_layout->addWidget(m_customers_title);
+    header_layout->addStretch();
+
+    card_layout->addWidget(m_customers_field_header);
+
+    // ── Separator line (giống lay-field border) ──
+    auto* separator = new QWidget;
+    separator->setFixedHeight(1);
+    separator->setObjectName("fieldSeparator");
+    card_layout->addWidget(separator);
+    card_layout->addSpacing(12);
+
+    // ── Search form (inline flow, giống web flex-wrap) ──
+    // Helper lambda: tạo cặp label + widget nằm ngang
+    auto make_field = [this](const QString& label_text, QWidget* field) -> QWidget* {
+        auto* w = new QWidget;
+        w->setStyleSheet("border: none;");
+        auto* h = new QHBoxLayout(w);
+        h->setContentsMargins(0, 0, 0, 0);
+        h->setSpacing(6);
+        auto* lbl = new QLabel(label_text);
+        lbl->setObjectName("searchLabel");
+        m_search_labels.push_back(lbl);
+        h->addWidget(lbl);
+        h->addWidget(field);
+        return w;
+    };
+
+    auto* form_widget = new QWidget;
+    form_widget->setObjectName("searchForm");
+    auto* flow = new FlowLayout(form_widget, 0, 12, 8);
+    Q_UNUSED(flow);
+
+    // Tên tài khoản
+    m_search_username = new QLineEdit;
+    m_search_username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    m_search_username->setFixedWidth(160);
+    m_search_username->setFixedHeight(32);
+    flow->addWidget(make_field(QString::fromUtf8("Tên tài khoản："), m_search_username));
+
+    // Thời gian nạp đầu (single-calendar date range picker)
+    m_date_range_picker = new DateRangePicker;
+    m_date_range_picker->set_placeholder(
+        QString::fromUtf8("Thời gian bắt đầu"),
+        QString::fromUtf8("Thời gian kết thúc")
+    );
+    flow->addWidget(make_field(QString::fromUtf8("Thời gian nạp đầu："), m_date_range_picker));
+
+    // Trạng thái
+    m_search_status = new QComboBox;
+    m_search_status->addItem(QString::fromUtf8("-- Chọn --"), QVariant());
+    m_search_status->addItem(QString::fromUtf8("Chưa đánh giá"), "unrated");
+    m_search_status->addItem(QString::fromUtf8("Bình thường"), "normal");
+    m_search_status->addItem(QString::fromUtf8("Đóng băng"), "frozen");
+    m_search_status->addItem(QString::fromUtf8("Khoá"), "locked");
+    m_search_status->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_search_status->setFixedHeight(32);
+    flow->addWidget(make_field(QString::fromUtf8("Trạng thái："), m_search_status));
+
+    // Sắp xếp theo trường
+    m_search_sort_field = new QComboBox;
+    m_search_sort_field->addItem(QString::fromUtf8("-- Chọn --"), QVariant());
+    m_search_sort_field->addItem(QString::fromUtf8("Số dư"), "balance");
+    m_search_sort_field->addItem(QString::fromUtf8("Lần đăng nhập cuối"), "last_login");
+    m_search_sort_field->addItem(QString::fromUtf8("Thời gian đăng ký"), "created_at");
+    m_search_sort_field->addItem(QString::fromUtf8("Tổng tiền nạp"), "total_deposit");
+    m_search_sort_field->addItem(QString::fromUtf8("Tổng tiền rút"), "total_withdraw");
+    m_search_sort_field->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_search_sort_field->setFixedHeight(32);
+    flow->addWidget(make_field(QString::fromUtf8("Sắp xếp theo trường："), m_search_sort_field));
+
+    // Sắp xếp theo hướng
+    m_search_sort_dir = new QComboBox;
+    m_search_sort_dir->addItem(QString::fromUtf8("Từ lớn đến bé"), "desc");
+    m_search_sort_dir->addItem(QString::fromUtf8("Từ bé đến lớn"), "asc");
+    m_search_sort_dir->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_search_sort_dir->setFixedHeight(32);
+    flow->addWidget(make_field(QString::fromUtf8("Sắp xếp theo hướng："), m_search_sort_dir));
+
+    // Buttons: Tìm kiếm + Đặt lại
+    m_search_btn = new QPushButton(QIcon(":/icons/search"), QString::fromUtf8("Tìm kiếm"));
+    m_search_btn->setObjectName("searchBtn");
+    m_search_btn->setCursor(Qt::PointingHandCursor);
+    m_search_btn->setFixedHeight(32);
+    m_search_btn->setIconSize(QSize(16, 16));
+    flow->addWidget(m_search_btn);
+
+    m_reset_btn = new QPushButton(QIcon(":/icons/refresh"), QString::fromUtf8("Đặt lại"));
+    m_reset_btn->setObjectName("resetBtn");
+    m_reset_btn->setCursor(Qt::PointingHandCursor);
+    m_reset_btn->setFixedHeight(32);
+    m_reset_btn->setIconSize(QSize(16, 16));
+    flow->addWidget(m_reset_btn);
+
+    connect(m_reset_btn, &QPushButton::clicked, this, [this]() {
+        m_search_username->clear();
+        m_date_range_picker->clear_dates();
+        m_search_status->setCurrentIndex(0);
+        m_search_sort_field->setCurrentIndex(0);
+        m_search_sort_dir->setCurrentIndex(0);
+    });
+
+    card_layout->addWidget(form_widget);
+
+    // ── Table group: toolbar + table + pagination gắn liền nhau ──
+    auto* table_group = new QWidget;
+    auto* tg_layout = new QVBoxLayout(table_group);
+    tg_layout->setContentsMargins(0, 0, 0, 0);
+    tg_layout->setSpacing(0);
+
+    // ── Table toolbar (giống web lay-table toolbar) ──
+    m_table_toolbar = new QWidget;
+    m_table_toolbar->setObjectName("tableToolbar");
+    auto* tb_layout = new QHBoxLayout(m_table_toolbar);
+    tb_layout->setContentsMargins(0, 0, 0, 0);
+    tb_layout->setSpacing(0);
+
+    // Left: action buttons
+    auto* tb_left = new QWidget;
+    auto* tb_left_layout = new QHBoxLayout(tb_left);
+    tb_left_layout->setContentsMargins(8, 6, 0, 6);
+    tb_left_layout->setSpacing(0);
+
+    m_add_member_btn = new QPushButton(QString::fromUtf8("+ Thêm hội viên"));
+    m_add_member_btn->setObjectName("tbBtn");
+    m_add_member_btn->setCursor(Qt::PointingHandCursor);
+    m_add_member_btn->setFixedHeight(26);
+    tb_left_layout->addWidget(m_add_member_btn);
+
+    m_add_agent_btn = new QPushButton(QString::fromUtf8("+ Đại lý mới thêm"));
+    m_add_agent_btn->setObjectName("tbBtn");
+    m_add_agent_btn->setCursor(Qt::PointingHandCursor);
+    m_add_agent_btn->setFixedHeight(26);
+    tb_left_layout->addWidget(m_add_agent_btn);
+
+    tb_left_layout->addStretch();
+    tb_layout->addWidget(tb_left, 1);
+
+    // Right: filter/export/print icons
+    auto* tb_right = new QWidget;
+    auto* tb_right_layout = new QHBoxLayout(tb_right);
+    tb_right_layout->setContentsMargins(0, 6, 8, 6);
+    tb_right_layout->setSpacing(4);
+
+    auto make_tool_icon = [](const QString& icon_path, const QString& tooltip) -> QPushButton* {
+        auto* btn = new QPushButton;
+        btn->setObjectName("toolIcon");
+        btn->setIcon(QIcon(icon_path));
+        btn->setIconSize(QSize(16, 16));
+        btn->setFixedSize(28, 26);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setToolTip(tooltip);
+        return btn;
+    };
+
+    tb_right_layout->addWidget(make_tool_icon(":/icons/settings", QString::fromUtf8("Lọc cột")));
+    tb_right_layout->addWidget(make_tool_icon(":/icons/report", QString::fromUtf8("Xuất file")));
+    tb_right_layout->addWidget(make_tool_icon(":/icons/browser", QString::fromUtf8("In")));
+
+    tb_layout->addWidget(tb_right);
+    tg_layout->addWidget(m_table_toolbar);
+
+    // ── Table (QTableWidget giống web lay-table) ──
+    m_customers_table = new QTableWidget(0, 12);
+    m_customers_table->setObjectName("customersTable");
+
+    const QStringList headers = {
+        QString::fromUtf8("Hội viên"),
+        QString::fromUtf8("Loại hình hội viên"),
+        QString::fromUtf8("Tài khoản đại lý"),
+        QString::fromUtf8("Số dư"),
+        QString::fromUtf8("Lần nạp"),
+        QString::fromUtf8("Lần rút"),
+        QString::fromUtf8("Tổng tiền nạp"),
+        QString::fromUtf8("Tổng tiền rút"),
+        QString::fromUtf8("Lần đăng nhập cuối"),
+        QString::fromUtf8("Thời gian đăng ký"),
+        QString::fromUtf8("Trạng thái"),
+        QString::fromUtf8("Thao tác"),
+    };
+    m_customers_table->setHorizontalHeaderLabels(headers);
+
+    // Tất cả cột co giãn đều (Stretch), căn trái
+    m_customers_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_customers_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_customers_table->verticalHeader()->setVisible(false);
+    m_customers_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_customers_table->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_customers_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_customers_table->setAlternatingRowColors(false);
+    m_customers_table->setShowGrid(true);
+    m_customers_table->horizontalHeader()->setHighlightSections(false);
+
+    // Sample data (giống web)
+    m_customers_table->insertRow(0);
+    const QStringList sample = {
+        "an10tynghichoi",
+        QString::fromUtf8("Hội viên chính thức"),
+        "vozer123",
+        "0.0000", "0", "0", "0.0000", "0.0000",
+        "",
+        "2026-03-09 16:20:58",
+        QString::fromUtf8("Bình thường"),
+        ""
+    };
+    for (int c = 0; c < 11; ++c) {
+        auto* item = new QTableWidgetItem(sample[c]);
+        item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        m_customers_table->setItem(0, c, item);
+    }
+    // Thao tác column: button
+    auto* rebate_btn = new QPushButton(QString::fromUtf8("Cài đặt hoàn trả"));
+    rebate_btn->setObjectName("rebateBtn");
+    rebate_btn->setCursor(Qt::PointingHandCursor);
+    rebate_btn->setFixedHeight(24);
+    m_customers_table->setCellWidget(0, 11, rebate_btn);
+    m_customers_table->setRowHeight(0, 38);
+
+    tg_layout->addWidget(m_customers_table, 1);
+
+    // ── Pagination bar (giống web layui-table-page) ──
+    m_pagination_bar = new QWidget;
+    m_pagination_bar->setObjectName("paginationBar");
+    auto* pg_layout = new QHBoxLayout(m_pagination_bar);
+    pg_layout->setContentsMargins(8, 6, 8, 6);
+    pg_layout->setSpacing(8);
+
+    m_page_prev_btn = new QPushButton("<");
+    m_page_prev_btn->setObjectName("pageBtn");
+    m_page_prev_btn->setFixedSize(30, 26);
+    m_page_prev_btn->setEnabled(false);
+    pg_layout->addWidget(m_page_prev_btn);
+
+    m_page_number = new QLabel("1");
+    m_page_number->setObjectName("pageNumber");
+    m_page_number->setFixedSize(30, 26);
+    m_page_number->setAlignment(Qt::AlignCenter);
+    pg_layout->addWidget(m_page_number);
+
+    m_page_next_btn = new QPushButton(">");
+    m_page_next_btn->setObjectName("pageBtn");
+    m_page_next_btn->setFixedSize(30, 26);
+    m_page_next_btn->setEnabled(false);
+    pg_layout->addWidget(m_page_next_btn);
+
+    pg_layout->addSpacing(12);
+
+    m_page_info = new QLabel(QString::fromUtf8("Tổng 1 dòng"));
+    m_page_info->setObjectName("pageInfo");
+    pg_layout->addWidget(m_page_info);
+
+    pg_layout->addSpacing(8);
+
+    m_page_size_combo = new QComboBox;
+    m_page_size_combo->setObjectName("pageSizeCombo");
+    const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
+    for (int ps : page_sizes) {
+        m_page_size_combo->addItem(
+            QString::fromUtf8("%1 dòng/trang").arg(ps), ps);
+    }
+    m_page_size_combo->setFixedHeight(26);
+    pg_layout->addWidget(m_page_size_combo);
+
+    pg_layout->addStretch();
+    tg_layout->addWidget(m_pagination_bar);
+
+    card_layout->addWidget(table_group, 1);
+
+    page_layout->addWidget(m_customers_card, 1);
+
+    return m_customers_page;
 }
 
 QIcon MainWidget::lang_flag_icon(const QString& locale) const
@@ -428,10 +715,10 @@ void MainWidget::apply_theme()
 
     // ── Toolbar — web header: 60px, border-bottom: 1px solid #eee, bg: #fff ──
     m_toolbar->setStyleSheet(QString(
-        "QToolBar { spacing: 0px; padding: 2px 4px; border-bottom: 1px solid %1;"
+        "QToolBar { spacing: 0px; padding: 2px 0px; border-bottom: 1px solid %1;"
         "  background: %2; }"
         "QToolBar > QWidget { background: transparent; }"
-        "QToolButton { padding: 3px 8px; border: 1px solid %3; border-right: none;"
+        "QToolButton { padding: 3px 6px; border: 1px solid %3; border-right: none;"
         "  border-radius: 0px; background-color: %4; font-size: 12px; color: %5; }"
         "QToolButton:hover { background-color: %6; border-color: %7; }"
         "QToolButton::menu-indicator { image: none; }"
@@ -522,6 +809,152 @@ void MainWidget::apply_theme()
     if (auto* home_widget = m_content_stack->widget(0)) {
         home_widget->setStyleSheet(QString("background: %1;").arg(bg));
     }
+
+    // ── Customers page — giống hệt web customers.vue ──
+    m_customers_page->setStyleSheet(QString(
+        "QWidget#customersPage { background: %1; }"
+    ).arg(bg2));
+
+    m_customers_card->setStyleSheet(QString(
+        "QWidget#customersCard { background: %1; border: 1px solid %2; }"
+    ).arg(bg, border_box));
+
+    m_customers_title->setStyleSheet(QString(
+        "font-size: 16px; font-weight: 700; color: %1; border: none;"
+    ).arg(text1));
+
+    // Separator
+    findChild<QWidget*>("fieldSeparator")->setStyleSheet(QString(
+        "background: %1;"
+    ).arg(border_light));
+
+    // Search labels
+    for (auto* lbl : m_search_labels) {
+        lbl->setStyleSheet(QString(
+            "font-size: 13px; color: %1; border: none;"
+        ).arg(text2));
+    }
+
+    // Input fields
+    auto input_style = QString(
+        "QLineEdit, QComboBox, QDateEdit {"
+        "  background: %1; color: %2; border: 1px solid %3;"
+        "  padding: 4px 8px; font-size: 13px;"
+        "}"
+        "QLineEdit:focus, QComboBox:focus, QDateEdit:focus {"
+        "  border-color: %4;"
+        "}"
+        "QComboBox::drop-down {"
+        "  subcontrol-origin: padding; subcontrol-position: center right;"
+        "  width: 20px; border-left: 1px solid %3;"
+        "}"
+        "QComboBox::down-arrow {"
+        "  image: url(:/icons/dropdown_arrow);"
+        "  width: 10px; height: 10px;"
+        "}"
+        "QComboBox QAbstractItemView {"
+        "  background: %1; color: %2; border: 1px solid %3;"
+        "  selection-background-color: %5;"
+        "}"
+    ).arg(bg, text1, border, primary, bg_hover);
+
+    m_search_username->setStyleSheet(input_style);
+
+    // Date range picker button — same border/padding as input fields
+    m_date_range_picker->set_button_style(QString(
+        "QPushButton { background: %1; color: %2;"
+        "  border-style: solid; border-width: 1px; border-color: %3; border-radius: 0px;"
+        "  padding: 4px 8px; font-size: 13px; text-align: left; }"
+        "QPushButton:hover { border-color: %4; }"
+    ).arg(bg, text1, border, primary));
+
+    m_search_status->setStyleSheet(input_style);
+    m_search_sort_field->setStyleSheet(input_style);
+    m_search_sort_dir->setStyleSheet(input_style);
+
+    // Buttons
+    m_search_btn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: #fff; border: none;"
+        "  padding: 0 16px; font-size: 13px; }"
+        "QPushButton:hover { background: #0d8a7e; }"
+    ).arg(primary));
+
+    m_reset_btn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border: 1px solid %3;"
+        "  padding: 0 16px; font-size: 13px; }"
+        "QPushButton:hover { background: %4; }"
+    ).arg(bg, text1, border, bg_hover));
+
+    // Date range popup theme
+    m_date_range_picker->apply_popup_theme(m_theme->theme() == "dark");
+
+    // ── Table toolbar ──
+    m_table_toolbar->setStyleSheet(QString(
+        "QWidget#tableToolbar { background: %1; border: 1px solid %2; border-bottom: none; }"
+    ).arg(bg2, border));
+
+    auto tb_btn_style = QString(
+        "QPushButton#tbBtn { background: %1; color: #fff; border: none;"
+        "  padding: 0 10px; font-size: 12px; }"
+        "QPushButton#tbBtn:hover { background: #0d8a7e; }"
+    ).arg(primary);
+    m_add_member_btn->setStyleSheet(tb_btn_style);
+    m_add_agent_btn->setStyleSheet(tb_btn_style);
+
+    auto tool_icon_style = QString(
+        "QPushButton#toolIcon { background: transparent; border: 1px solid %1; }"
+        "QPushButton#toolIcon:hover { background: %2; }"
+    ).arg(border, bg_hover);
+    for (auto* btn : m_table_toolbar->findChildren<QPushButton*>("toolIcon")) {
+        btn->setStyleSheet(tool_icon_style);
+    }
+
+    // ── Table ──
+    m_customers_table->setStyleSheet(QString(
+        "QTableWidget { background: %1; color: %2; border: 1px solid %3;"
+        "  gridline-color: %3; font-size: 13px; }"
+        "QTableWidget::item { padding: 4px 8px; border: none; }"
+        "QTableWidget::item:selected { background: %4; color: %2; }"
+        "QHeaderView::section { background: %5; color: %2; border: none;"
+        "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
+        "  padding: 6px 8px; font-size: 13px; font-weight: 600; }"
+    ).arg(bg, text1, border, bg_hover, bg2));
+
+    // Rebate button in table
+    for (int r = 0; r < m_customers_table->rowCount(); ++r) {
+        if (auto* w = m_customers_table->cellWidget(r, 11)) {
+            w->setStyleSheet(QString(
+                "QPushButton { background: %1; color: #fff; border: none;"
+                "  padding: 2px 8px; font-size: 11px; }"
+                "QPushButton:hover { background: #0d8a7e; }"
+            ).arg(primary));
+        }
+    }
+
+    // ── Pagination bar ──
+    m_pagination_bar->setStyleSheet(QString(
+        "QWidget#paginationBar { background: %1; border: 1px solid %2; border-top: none; }"
+    ).arg(bg, border));
+
+    auto page_btn_style = QString(
+        "QPushButton#pageBtn { background: %1; color: %2; border: 1px solid %3;"
+        "  font-size: 12px; }"
+        "QPushButton#pageBtn:hover { background: %4; }"
+        "QPushButton#pageBtn:disabled { color: %5; }"
+    ).arg(bg, text1, border, bg_hover, text2);
+    m_page_prev_btn->setStyleSheet(page_btn_style);
+    m_page_next_btn->setStyleSheet(page_btn_style);
+
+    m_page_number->setStyleSheet(QString(
+        "QLabel#pageNumber { background: %1; color: #fff; border: 1px solid %1;"
+        "  font-size: 12px; }"
+    ).arg(primary));
+
+    m_page_info->setStyleSheet(QString(
+        "font-size: 12px; color: %1; border: none;"
+    ).arg(text2));
+
+    m_page_size_combo->setStyleSheet(input_style);
 }
 
 void MainWidget::on_theme_changed()

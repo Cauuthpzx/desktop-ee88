@@ -40,5 +40,8 @@
         <file alias="flag_us">icons/usa-rect.png</file>
         <file alias="flag_cn">icons/china-rect.png</file>
         <file alias="app_icon">icons/maxhub_icon.ico</file>
+        <file alias="dropdown_arrow">icons/dropdown_arrow.png</file>
+        <file alias="search">icons/search.png</file>
+        <file alias="refresh">icons/refresh.png</file>
     </qresource>
 </RCC>

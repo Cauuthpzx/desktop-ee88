@@ -29,6 +29,7 @@ const classes = computed(() => {
     "layui-date-picker",
     {
       "layui-date-range-picker": props.range,
+      "layui-date-range-picker-single": props.range && props.singlePanel,
       "layui-date-picker-static": props.static,
     },
   ];

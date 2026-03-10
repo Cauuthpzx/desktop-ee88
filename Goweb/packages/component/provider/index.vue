@@ -84,7 +84,12 @@ const changeLocales = (lang: string, locales: any, merge: boolean) => {
   }
 };
 
+let currentAppliedTheme: string | null = null;
+
 const changeTheme = (theme: string) => {
+  if (theme === currentAppliedTheme) return;
+  currentAppliedTheme = theme;
+
   const defaultPartial: Partial<Theme> = {
     mode: 1,
     brightness: 100,
@@ -122,14 +127,19 @@ const changeTheme = (theme: string) => {
   }
 };
 
+let lastThemeVarsJson: string | null = null;
+
 const changeThemeVariable = (vars: any) => {
-  if (vars != null) {
-    const keys = Object.keys(vars);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const value = vars[key];
-      document.documentElement.style.setProperty(key, value);
-    }
+  if (vars == null) return;
+  const json = JSON.stringify(vars);
+  if (json === lastThemeVarsJson) return;
+  lastThemeVarsJson = json;
+
+  const keys = Object.keys(vars);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = vars[key];
+    document.documentElement.style.setProperty(key, value);
   }
 };
 

@@ -10,8 +10,14 @@
 #include <QAction>
 #include <QIcon>
 #include <QVector>
+#include <QLineEdit>
+#include <QComboBox>
+#include <QDateEdit>
+#include <QTableWidget>
+#include <QHeaderView>
 
 class ApiClient;
+class DateRangePicker;
 class ThemeManager;
 class Translator;
 
@@ -87,4 +93,30 @@ private:
     QWidget* m_hero_widget;
     QWidget* m_boxes_container;
     QWidget* m_footer;
+
+    // Customers page widgets (for theme update)
+    QWidget* m_customers_page;
+    QWidget* m_customers_card;
+    QWidget* m_customers_field_header;
+    QLabel* m_customers_title;
+    QLineEdit* m_search_username;
+    DateRangePicker* m_date_range_picker;
+    QComboBox* m_search_status;
+    QComboBox* m_search_sort_field;
+    QComboBox* m_search_sort_dir;
+    QPushButton* m_search_btn;
+    QPushButton* m_reset_btn;
+    QVector<QLabel*> m_search_labels;
+
+    // Table toolbar + table + pagination
+    QWidget* m_table_toolbar;
+    QPushButton* m_add_member_btn;
+    QPushButton* m_add_agent_btn;
+    QTableWidget* m_customers_table;
+    QWidget* m_pagination_bar;
+    QLabel* m_page_info;
+    QComboBox* m_page_size_combo;
+    QPushButton* m_page_prev_btn;
+    QPushButton* m_page_next_btn;
+    QLabel* m_page_number;
 };

@@ -66,6 +66,10 @@ export interface DatePickerProps {
    * @version 2.22.1
    */
   static?: boolean;
+  /**
+   * 单面板范围选择 (range模式下只显示一个日历面板)
+   */
+  singlePanel?: boolean;
   teleportProps?: DropdownTeleportProps;
 }
 

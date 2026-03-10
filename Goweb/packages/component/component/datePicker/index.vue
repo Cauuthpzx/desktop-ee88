@@ -41,6 +41,7 @@ const props = withDefaults(defineProps<DatePickerProps>(), {
   yearPage: 15,
   // yearStep: 1,
   static: false,
+  singlePanel: false,
 });
 
 const datePickerSlots = defineSlots<{

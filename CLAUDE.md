@@ -179,6 +179,8 @@ GoWeb/
 - **KHÔNG tạo wrapper component** bọc lại component Layui-Vue khi không cần thiết.
 - Nếu component mặc định thiếu tính năng → sửa trực tiếp trong `packages/component/` source gốc.
 - Tham khảo cách dùng: đọc file `.md` tương ứng trong `docs/src/document/zh-CN/components/`.
+- **Danh sách đầy đủ 77 component** (xem `GoWeb/docs/src/document/zh-CN/components/`):
+  `affix` `animation` `autoComplete` `avatar` `backtop` `badge` `barcode` `breadcrumb` `button` `calendar` `card` `carousel` `cascader` `checkbox` `checkcard` `collapse` `color` `colorPicker` `container` `countup` `datePicker` `descriptions` `drawer` `dropdown` `empty` `exception` `field` `form` `fullscreen` `grid` `icon` `iconPicker` `input` `inputNumber` `jsonSchemaForm` `layer` `layout` `line` `loading` `menu` `noticeBar` `page` `pageHeader` `panel` `popconfirm` `progress` `qrcode` `quote` `radio` `radioButton` `rate` `result` `ripple` `scroll` `segmented` `select` `skeleton` `slider` `space` `splitPanel` `step` `switch` `tab` `table` `tag` `tagInput` `textarea` `timeSelect` `timeline` `tooltip` `transfer` `transition` `tree` `treeSelect` `upload` `watermark`
 
 ### Dev
 ```bash
@@ -248,3 +250,5 @@ Goserver phục vụ cả GoDesktop và GoWeb. Các endpoint:
 > 3. **Hiệu năng đo được** — profile trước khi tối ưu, benchmark mọi thay đổi quan trọng
 > 4. **Đơn giản trước** — không over-engineering, dùng cái có sẵn trước khi tự viết
 > 5. **Mỗi module độc lập** — giao tiếp qua API, fail fast, không truyền data sai qua nhiều layer
+> 6. **Sửa trực tiếp source** — mọi sửa chữa phải sửa trong source gốc, KHÔNG sửa file đã build
+> 7. **Không `!important`, không override** — khi còn cách khác để thực hiện thì KHÔNG dùng `!important` và KHÔNG override CSS/style. Ưu tiên sửa source gốc trong `packages/`

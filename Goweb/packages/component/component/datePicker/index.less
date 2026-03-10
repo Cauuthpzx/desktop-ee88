@@ -53,6 +53,20 @@
     .set-size(@xs,@xs-range-width);
   }
 }
+.layui-date-range-picker-single {
+  &[size="lg"] {
+    .set-size(@lg, 320px);
+  }
+  &[size="md"] {
+    .set-size(@md, 300px);
+  }
+  &[size="sm"] {
+    .set-size(@sm, 272px);
+  }
+  &[size="xs"] {
+    .set-size(@xs, 240px);
+  }
+}
 
 html #layuicss-laydate {
   display: none;
@@ -360,6 +374,10 @@ html #layuicss-laydate {
 /* 双日历 */
 .layui-laydate-range {
   min-width: 546px;
+}
+/* 单面板范围选择 */
+.layui-laydate-range.layui-laydate-range-single {
+  min-width: 272px;
 }
 .layui-laydate-range .layui-laydate-main {
   display: inline-block;

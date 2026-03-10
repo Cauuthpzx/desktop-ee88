@@ -7,6 +7,7 @@ import {
   Ref,
   useSlots,
   onMounted,
+  nextTick,
   VNode,
   Component,
   watch,
@@ -44,6 +45,10 @@ export interface SelectProps {
   contentClass?: string | Array<string | object> | object;
   contentStyle?: StyleValue;
   teleportProps?: DropdownTeleportProps;
+  /**
+   * Tự động đo width theo option dài nhất
+   */
+  fitContent?: boolean;
 }
 
 export interface SelectEmits {
@@ -68,6 +73,7 @@ const props = withDefaults(defineProps<SelectProps>(), {
   modelValue: null,
   disabled: false,
   multiple: false,
+  fitContent: false,
 });
 
 const { size } = useProps(props);
@@ -147,6 +153,7 @@ const onCompositionend = (eventParam: Event) => {
 
 onMounted(() => {
   intOption();
+  nextTick(() => intOption());
   timer = setInterval(intOption, 500);
   watch(
     [selectedValue, _options],
@@ -241,6 +248,49 @@ const _placeholder = computed(() => {
   return hasContent.value ? "" : props.placeholder;
 });
 
+// Thu thập label từ slot VNodes (luôn có sẵn, không cần đợi _options)
+const collectSlotLabels = (nodes: VNode[], result: string[]) => {
+  nodes?.forEach((item) => {
+    if (isArrayChildren(item, item.children)) {
+      collectSlotLabels(item.children as VNode[], result);
+    } else if ((item.type as Component).name == LaySelectOption.name) {
+      const label = (item.props as any)?.label;
+      if (label) result.push(String(label));
+    } else if ((item.type as Component).name == LaySelectOptionGroup.name) {
+      if (item.children) {
+        // @ts-ignore
+        collectSlotLabels(item.children.default() as VNode[], result);
+      }
+    }
+  });
+};
+
+const fitContentWidth = computed(() => {
+  if (!props.fitContent) return undefined;
+  const labels: string[] = [];
+
+  // 1. Đọc từ _options (đã parse)
+  _options.value.forEach((opt: any) => {
+    if (opt.label) labels.push(String(opt.label));
+  });
+
+  // 2. Nếu _options rỗng, đọc trực tiếp từ slot VNode props
+  if (labels.length === 0 && slots.default) {
+    collectSlotLabels(slots.default(), labels);
+  }
+
+  if (props.placeholder) labels.push(props.placeholder);
+  if (labels.length === 0) return undefined;
+  const longest = labels.reduce((a, b) => (a.length > b.length ? a : b), "");
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return undefined;
+  ctx.font = "14px sans-serif";
+  const textWidth = ctx.measureText(longest).width;
+  // padding (10px left + 30px suffix icon area + 10px right) + border
+  return `${Math.ceil(textWidth) + 52}px`;
+});
+
 provide("selectRef", selectRef);
 provide("openState", openState);
 provide("selectedValue", selectedValue);
@@ -257,6 +307,7 @@ provide("searchMethod", props.searchMethod);
       'has-clear': allowClear,
       'has-disabled': disabled,
     }"
+    :style="fitContentWidth ? { width: fitContentWidth } : undefined"
   >
     <lay-dropdown
       ref="selectRef"

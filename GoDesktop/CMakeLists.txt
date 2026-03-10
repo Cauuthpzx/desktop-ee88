@@ -20,6 +20,8 @@ set(SOURCES
     src/core/auth_window.cpp
     src/core/auth_widget.cpp
     src/core/main_widget.cpp
+    src/core/date_range_picker.cpp
+    src/core/flow_layout.cpp
     src/core/theme_manager.cpp
     src/core/translator.cpp
 )
@@ -29,6 +31,7 @@ set(HEADERS
     src/core/auth_window.h
     src/core/auth_widget.h
     src/core/main_widget.h
+    src/core/date_range_picker.h
     src/core/theme_manager.h
     src/core/translator.h
 )

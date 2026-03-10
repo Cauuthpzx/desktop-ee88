@@ -1,5 +1,6 @@
 <template>
   <lay-config-provider
+    v-cloak
     :locale="locale"
     :locales="locales"
     :theme="appStore.theme"
@@ -441,7 +442,12 @@ export default {
 
 .layui-layout-document .layui-header .layui-logo {
   text-align: left;
-  padding-left: 15px;
+  padding-left: 10px;
+  width: 120px;
+}
+
+.layui-layout-document .layui-header .layui-layout-left {
+  left: 120px;
 }
 
 .layui-logo img {

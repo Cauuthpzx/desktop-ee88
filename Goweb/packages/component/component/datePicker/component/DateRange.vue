@@ -264,7 +264,7 @@ function handleConfirm() {
 <template>
   <div
     class="layui-laydate layui-laydate-range"
-    :class="`layui-laydate-range-${props.type}`"
+    :class="[`layui-laydate-range-${props.type}`, props.singlePanel ? 'layui-laydate-range-single' : '']"
   >
     <div class="layui-laydate-range-main">
       <Shortcuts @change-shortcut="handleChangeShortcut" />
@@ -319,8 +319,18 @@ function handleConfirm() {
             </LayDropdown>
           </div>
 
-          <LayIcon type="layui-icon-right" style="visibility: hidden" />
-          <LayIcon type="layui-icon-next" style="visibility: hidden" />
+          <LayIcon
+            v-if="props.singlePanel"
+            type="layui-icon-right"
+            @click="handleChangeYearMonth('add', 'month')"
+          />
+          <LayIcon
+            v-if="props.singlePanel"
+            type="layui-icon-next"
+            @click="handleChangeYearMonth('add', 'year')"
+          />
+          <LayIcon v-if="!props.singlePanel" type="layui-icon-right" style="visibility: hidden" />
+          <LayIcon v-if="!props.singlePanel" type="layui-icon-next" style="visibility: hidden" />
         </div>
         <DateContent
           :classes="classes"
@@ -330,7 +340,7 @@ function handleConfirm() {
         />
       </div>
 
-      <div class="layui-laydate-main layui-laydate-main-date">
+      <div v-if="!props.singlePanel" class="layui-laydate-main layui-laydate-main-date">
         <div class="layui-laydate-header">
           <LayIcon type="layui-icon-prev" style="visibility: hidden" />
           <LayIcon type="layui-icon-left" style="visibility: hidden" />
