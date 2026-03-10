@@ -4,7 +4,11 @@
     "guide": "Hướng dẫn",
     "components": "Thành phần",
     "resources": "Tài nguyên",
-    "customers": "Quản lý khách hàng"
+    "customers": "Quản lý khách hàng",
+    "reports": "Báo Cáo",
+    "report_lottery": "Báo cáo xổ số",
+    "report_transaction": "Sao kê giao dịch",
+    "report_provider": "Báo cáo nhà cung cấp"
   },
   "home": {
     "description": "DUANGO — Nền tảng phát triển ứng dụng đa nền tảng.",

@@ -4,7 +4,11 @@
     "guide": "指南",
     "components": "组件",
     "resources": "生态",
-    "customers": "客户管理"
+    "customers": "客户管理",
+    "reports": "报表",
+    "report_lottery": "彩票报表",
+    "report_transaction": "交易明细",
+    "report_provider": "供应商报表"
   },
   "home": {
     "description": "DUANGO — 多平台应用开发框架。",

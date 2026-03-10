@@ -4,7 +4,11 @@
     "guide": "Guide",
     "components": "Components",
     "resources": "Resources",
-    "customers": "Customer Management"
+    "customers": "Customer Management",
+    "reports": "Reports",
+    "report_lottery": "Lottery Report",
+    "report_transaction": "Transaction Log",
+    "report_provider": "Provider Report"
   },
   "home": {
     "description": "DUANGO — Multi-platform application development framework.",

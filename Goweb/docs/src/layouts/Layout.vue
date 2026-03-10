@@ -37,6 +37,28 @@
           </li>
           <li
             class="layui-nav-item"
+            :class="{
+              'layui-active': currentPath.includes('/zh-CN/reports'),
+            }"
+          >
+            <a href="javascript:void(0);">
+              <lay-icon type="layui-icon-chart-screen" size="14px" style="margin-right: 4px" />
+              {{ t("nav.reports") }}
+            </a>
+            <dl class="layui-nav-child">
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/reports/lottery' }">
+                <router-link to="/zh-CN/reports/lottery">{{ t("nav.report_lottery") }}</router-link>
+              </dd>
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/reports/transaction' }">
+                <router-link to="/zh-CN/reports/transaction">{{ t("nav.report_transaction") }}</router-link>
+              </dd>
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/reports/provider' }">
+                <router-link to="/zh-CN/reports/provider">{{ t("nav.report_provider") }}</router-link>
+              </dd>
+            </dl>
+          </li>
+          <li
+            class="layui-nav-item"
             :class="{ 'layui-active': currentPath.includes('/zh-CN/guide') }"
           >
             <router-link to="/zh-CN/guide"> {{ t("nav.guide") }} </router-link>
@@ -541,5 +563,142 @@ export default {
 .theme-panel > * {
   margin-top: 9px;
   margin-right: 9px;
+}
+
+/* Nav dropdown on hover */
+.layui-layout-left .layui-nav-item:hover > .layui-nav-child {
+  display: block;
+}
+
+.layui-layout-left .layui-nav-child {
+  top: 60px;
+}
+
+.layui-layout-left .layui-nav-child dd a {
+  display: block;
+  padding: 0 20px;
+  color: rgba(0, 0, 0, 0.8);
+  text-decoration: none;
+}
+
+/* ── Crisp light theme (matched to desktop theme_manager.cpp) ── */
+body {
+  color: #213547;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: #ffffff;
+}
+
+/* Backgrounds matching desktop: bg/#fff, bg_secondary/#f9f9f9, bg_tertiary/#f0f0f0 */
+.layui-card {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.customers-container {
+  background: #f0f0f0 !important;
+}
+
+/* Text colors: text_primary/#213547, text_body/rgba(0,0,0,0.85), text_secondary/#666 */
+.layui-table th {
+  color: #213547;
+  font-weight: 600;
+  background: #f9f9f9;
+}
+
+.layui-table td {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.layui-form-label {
+  color: #213547;
+  font-weight: 500;
+}
+
+/* Borders: border/#e2e2e2, border_light/#eeeeee */
+.layui-table,
+.layui-table th,
+.layui-table td {
+  border-color: #e2e2e2;
+}
+
+.layui-input,
+.layui-textarea,
+.layui-select {
+  border-color: #e2e2e2;
+  color: #213547;
+}
+
+.layui-input:focus,
+.layui-textarea:focus {
+  border-color: var(--global-primary-color);
+}
+
+.layui-input::placeholder {
+  color: rgba(60, 60, 60, 0.5);
+}
+
+/* Header */
+.layui-layout-document > .layui-header {
+  border-bottom-color: #e2e2e2;
+}
+
+/* Nav text: text_nav/rgba(0,0,0,0.8) */
+.layui-layout-document .layui-header .layui-nav .layui-nav-item *,
+.layui-layout-document .layui-header .layui-nav .layui-nav-item a,
+.layui-layout-document .layui-header .layui-nav .layui-nav-item a:hover {
+  color: rgba(0, 0, 0, 0.8);
+  font-weight: 500;
+}
+
+/* Field title */
+.layui-elem-field legend {
+  color: #213547;
+  font-weight: 600;
+}
+
+/* Buttons */
+.layui-btn {
+  font-weight: 500;
+}
+
+.layui-btn-primary {
+  border-color: #e2e2e2;
+  color: #213547;
+}
+
+/* Dropdown */
+.layui-nav-child {
+  border-color: #e2e2e2;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.layui-nav-child dd a {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Tag */
+.layui-tag {
+  font-weight: 500;
+}
+
+/* Pagination */
+.layui-laypage a,
+.layui-laypage span {
+  color: #213547;
+}
+
+/* Secondary text */
+.layui-text,
+.summary-title {
+  color: #666666;
+}
+
+/* Footer text: text_footer/rgba(60,60,60,0.5) */
+.layui-footer {
+  color: rgba(60, 60, 60, 0.5);
+  background: #fafafa;
 }
 </style>

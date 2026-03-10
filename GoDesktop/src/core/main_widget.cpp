@@ -13,6 +13,14 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QActionGroup>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QTextDocument>
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QDialog>
 
 MainWidget::MainWidget(ApiClient* api, ThemeManager* theme, Translator* tr, QWidget* parent)
     : QWidget(parent)
@@ -557,9 +565,16 @@ QWidget* MainWidget::create_customers_page()
         return btn;
     };
 
-    tb_right_layout->addWidget(make_tool_icon(":/icons/settings", QString::fromUtf8("Lọc cột")));
-    tb_right_layout->addWidget(make_tool_icon(":/icons/report", QString::fromUtf8("Xuất file")));
-    tb_right_layout->addWidget(make_tool_icon(":/icons/browser", QString::fromUtf8("In")));
+    m_filter_btn = make_tool_icon(":/icons/settings", QString::fromUtf8("Lọc cột"));
+    m_export_btn = make_tool_icon(":/icons/report", QString::fromUtf8("Xuất file"));
+    m_print_btn = make_tool_icon(":/icons/browser", QString::fromUtf8("In"));
+    tb_right_layout->addWidget(m_filter_btn);
+    tb_right_layout->addWidget(m_export_btn);
+    tb_right_layout->addWidget(m_print_btn);
+
+    connect(m_filter_btn, &QPushButton::clicked, this, &MainWidget::on_filter_columns);
+    connect(m_export_btn, &QPushButton::clicked, this, &MainWidget::on_export_csv);
+    connect(m_print_btn, &QPushButton::clicked, this, &MainWidget::on_print_table);
 
     tb_layout->addWidget(tb_right);
     tg_layout->addWidget(m_table_toolbar);
@@ -918,6 +933,7 @@ void MainWidget::apply_theme()
         "QHeaderView::section { background: %5; color: %2; border: none;"
         "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
         "  padding: 6px 8px; font-size: 13px; font-weight: 600; }"
+        "QHeaderView::section:last { border-right: none; }"
     ).arg(bg, text1, border, bg_hover, bg2));
 
     // Rebate button in table
@@ -1041,4 +1057,131 @@ void MainWidget::on_logout()
     m_api->logout([this](bool /*success*/, const QJsonObject& /*data*/) {
         emit logout_requested();
     });
+}
+
+// ── Lọc cột: dialog checkbox ẩn/hiện từng cột ──
+void MainWidget::on_filter_columns()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("Lọc cột"));
+    dlg.setMinimumWidth(250);
+
+    auto* layout = new QVBoxLayout(&dlg);
+    QVector<QCheckBox*> checks;
+
+    for (int i = 0; i < m_customers_table->columnCount(); ++i) {
+        auto* cb = new QCheckBox(m_customers_table->horizontalHeaderItem(i)->text());
+        cb->setChecked(!m_customers_table->isColumnHidden(i));
+        layout->addWidget(cb);
+        checks.append(cb);
+    }
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        for (int i = 0; i < checks.size(); ++i) {
+            m_customers_table->setColumnHidden(i, !checks[i]->isChecked());
+        }
+    }
+}
+
+// ── Xuất CSV ──
+void MainWidget::on_export_csv()
+{
+    QString path = QFileDialog::getSaveFileName(
+        this, QString::fromUtf8("Xuất file CSV"), "customers.csv",
+        "CSV (*.csv);;All Files (*)");
+    if (path.isEmpty()) return;
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Error",
+            QString::fromUtf8("Không thể mở file: %1").arg(path));
+        return;
+    }
+
+    QTextStream out(&file);
+    int cols = m_customers_table->columnCount();
+    int rows = m_customers_table->rowCount();
+
+    // Header
+    QStringList header_parts;
+    for (int c = 0; c < cols; ++c) {
+        if (!m_customers_table->isColumnHidden(c)) {
+            QString h = m_customers_table->horizontalHeaderItem(c)->text();
+            h.replace("\"", "\"\"");
+            header_parts << "\"" + h + "\"";
+        }
+    }
+    out << header_parts.join(",") << "\n";
+
+    // Data
+    for (int r = 0; r < rows; ++r) {
+        QStringList row_parts;
+        for (int c = 0; c < cols; ++c) {
+            if (m_customers_table->isColumnHidden(c)) continue;
+            QString val;
+            if (auto* item = m_customers_table->item(r, c)) {
+                val = item->text();
+            } else if (auto* w = m_customers_table->cellWidget(r, c)) {
+                if (auto* btn = qobject_cast<QPushButton*>(w))
+                    val = btn->text();
+            }
+            val.replace("\"", "\"\"");
+            row_parts << "\"" + val + "\"";
+        }
+        out << row_parts.join(",") << "\n";
+    }
+
+    file.close();
+    QMessageBox::information(this, QString::fromUtf8("Thành công"),
+        QString::fromUtf8("Đã xuất file: %1").arg(path));
+}
+
+// ── In bảng ──
+void MainWidget::on_print_table()
+{
+    QPrinter printer(QPrinter::HighResolution);
+    QPrintDialog dlg(&printer, this);
+    dlg.setWindowTitle(QString::fromUtf8("In bảng khách hàng"));
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    int cols = m_customers_table->columnCount();
+    int rows = m_customers_table->rowCount();
+
+    // Build HTML table
+    QString html = "<html><head><style>"
+        "table { border-collapse: collapse; width: 100%; font-size: 12px; }"
+        "th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }"
+        "th { background: #f0f0f0; font-weight: bold; }"
+        "</style></head><body>";
+    html += QString::fromUtf8("<h3>Quản lí hội viên thuộc cấp</h3>");
+    html += "<table><tr>";
+
+    for (int c = 0; c < cols; ++c) {
+        if (!m_customers_table->isColumnHidden(c)) {
+            html += "<th>" + m_customers_table->horizontalHeaderItem(c)->text() + "</th>";
+        }
+    }
+    html += "</tr>";
+
+    for (int r = 0; r < rows; ++r) {
+        html += "<tr>";
+        for (int c = 0; c < cols; ++c) {
+            if (m_customers_table->isColumnHidden(c)) continue;
+            QString val;
+            if (auto* item = m_customers_table->item(r, c))
+                val = item->text();
+            html += "<td>" + val + "</td>";
+        }
+        html += "</tr>";
+    }
+    html += "</table></body></html>";
+
+    QTextDocument doc;
+    doc.setHtml(html);
+    doc.print(&printer);
 }

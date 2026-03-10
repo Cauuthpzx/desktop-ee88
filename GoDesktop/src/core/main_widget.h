@@ -45,6 +45,9 @@ private:
     QWidget* create_customers_page();
     void apply_theme();
     QIcon lang_flag_icon(const QString& locale) const;
+    void on_filter_columns();
+    void on_export_csv();
+    void on_print_table();
 
     ApiClient* m_api;
     ThemeManager* m_theme;
@@ -112,6 +115,9 @@ private:
     QWidget* m_table_toolbar;
     QPushButton* m_add_member_btn;
     QPushButton* m_add_agent_btn;
+    QPushButton* m_filter_btn;
+    QPushButton* m_export_btn;
+    QPushButton* m_print_btn;
     QTableWidget* m_customers_table;
     QWidget* m_pagination_bar;
     QLabel* m_page_info;

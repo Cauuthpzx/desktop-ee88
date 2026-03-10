@@ -11,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 add_compile_options(-Wall -Wextra -Werror)
 
 # Qt6
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport)
 
 # Sources
 set(SOURCES
@@ -52,4 +52,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Gui
     Qt6::Widgets
     Qt6::Network
+    Qt6::PrintSupport
 )

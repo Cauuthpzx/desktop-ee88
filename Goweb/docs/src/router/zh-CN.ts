@@ -4,6 +4,9 @@ import Resources from "../view/resources.vue";
 import Guide from "../view/guide.vue";
 import Index from "../view/index.vue";
 import Customers from "../view/customers.vue";
+import LotteryReport from "../view/reports/LotteryReport.vue";
+import TransactionLog from "../view/reports/TransactionLog.vue";
+import ProviderReport from "../view/reports/ProviderReport.vue";
 
 const zhCN = [
   {
@@ -36,6 +39,21 @@ const zhCN = [
         path: "/zh-CN/customers",
         component: Customers,
         meta: { title: "Quản lý khách hàng" },
+      },
+      {
+        path: "/zh-CN/reports/lottery",
+        component: LotteryReport,
+        meta: { title: "Báo cáo xổ số" },
+      },
+      {
+        path: "/zh-CN/reports/transaction",
+        component: TransactionLog,
+        meta: { title: "Sao kê giao dịch" },
+      },
+      {
+        path: "/zh-CN/reports/provider",
+        component: ProviderReport,
+        meta: { title: "Báo cáo nhà cung cấp" },
       },
       {
         path: "/zh-CN/resources",
