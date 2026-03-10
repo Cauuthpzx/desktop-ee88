@@ -221,6 +221,7 @@ void MainWidget::navigate_to(int index)
     if (index < m_content_stack->count()) {
         m_content_stack->setCurrentIndex(index);
     }
+    m_active_nav_index = index;
     apply_theme();
 }
 
@@ -275,10 +276,65 @@ void MainWidget::apply_theme()
     m_bet_order_menu->setStyleSheet(menu_style);
     m_deposit_withdraw_menu->setStyleSheet(menu_style);
 
+    // Active nav highlight
+    update_active_nav();
+
     // Delegate to sub-widgets
     m_home_page->apply_theme();
     m_customers_page->apply_theme();
     m_report_pages->apply_theme();
+}
+
+void MainWidget::update_active_nav()
+{
+    const auto primary = m_theme->color("primary");
+    const auto bg2 = m_theme->color("bg_secondary");
+    const auto text_nav = m_theme->color("text_nav");
+    const auto border = m_theme->color("border");
+    const auto bg_hover = m_theme->color("bg_hover");
+    const auto text2 = m_theme->color("text_secondary");
+
+    // Style for active nav button: primary bottom border + primary text
+    auto active_style = QString(
+        "QToolButton { padding: 3px 6px; border: 1px solid %1; border-right: none;"
+        "  border-bottom: 2px solid %2; border-radius: 0px;"
+        "  background-color: %3; font-size: 12px; color: %2; font-weight: bold; }"
+        "QToolButton:hover { background-color: %4; border-color: %1; border-bottom: 2px solid %2; }"
+        "QToolButton::menu-indicator { image: none; }"
+    ).arg(border, primary, bg2, bg_hover);
+
+    // Style for inactive nav button (default)
+    auto inactive_style = QString(
+        "QToolButton { padding: 3px 6px; border: 1px solid %1; border-right: none;"
+        "  border-radius: 0px; background-color: %2; font-size: 12px; color: %3; }"
+        "QToolButton:hover { background-color: %4; border-color: %5; }"
+        "QToolButton::menu-indicator { image: none; }"
+    ).arg(border, bg2, text_nav, bg_hover, text2);
+
+    // Map page index to nav group: 0=home, 1=customers, 2-4=reports, 5-6=bets, 7-8=deposit
+    int active_group = -1;
+    if (m_active_nav_index == 0) active_group = 0;
+    else if (m_active_nav_index == 1) active_group = 1;
+    else if (m_active_nav_index >= 2 && m_active_nav_index <= 4) active_group = 2;
+    else if (m_active_nav_index >= 5 && m_active_nav_index <= 6) active_group = 3;
+    else if (m_active_nav_index >= 7 && m_active_nav_index <= 8) active_group = 4;
+
+    // Find QToolButtons for QAction-based items (Home, Customers)
+    auto find_action_button = [this](QAction* action) -> QToolButton* {
+        for (auto* child : m_toolbar->findChildren<QToolButton*>()) {
+            if (child->defaultAction() == action) return child;
+        }
+        return nullptr;
+    };
+
+    QToolButton* home_btn = find_action_button(m_home_action);
+    QToolButton* customers_btn = find_action_button(m_customers_action);
+
+    if (home_btn) home_btn->setStyleSheet(active_group == 0 ? active_style : inactive_style);
+    if (customers_btn) customers_btn->setStyleSheet(active_group == 1 ? active_style : inactive_style);
+    m_report_button->setStyleSheet(active_group == 2 ? active_style : inactive_style);
+    m_bet_order_button->setStyleSheet(active_group == 3 ? active_style : inactive_style);
+    m_deposit_withdraw_button->setStyleSheet(active_group == 4 ? active_style : inactive_style);
 }
 
 void MainWidget::on_theme_changed()

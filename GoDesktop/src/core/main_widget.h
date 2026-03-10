@@ -38,6 +38,7 @@ private:
     void setup_ui();
     void setup_toolbar();
     void apply_theme();
+    void update_active_nav();
     QIcon lang_flag_icon(const QString& locale) const;
 
     ApiClient* m_api;
@@ -77,6 +78,7 @@ private:
     QLabel* m_username_label;
     QString m_username;
     QStackedWidget* m_content_stack;
+    int m_active_nav_index = 0;
 
     // Sub-widgets (tách SRP)
     HomePage* m_home_page;
