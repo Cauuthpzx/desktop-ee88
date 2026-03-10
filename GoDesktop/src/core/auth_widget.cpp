@@ -241,7 +241,7 @@ void AuthWidget::setup_ui()
     m_card = m_right_panel; // alias — no separate card widget
 
     auto* card_layout = new QVBoxLayout(m_right_panel);
-    card_layout->setContentsMargins(36, 24, 36, 24);
+    card_layout->setContentsMargins(24, 16, 24, 16);
     card_layout->setSpacing(0);
 
     // ── Top bar: close + theme + lang ──
@@ -314,30 +314,30 @@ void AuthWidget::setup_ui()
     top_layout->addWidget(m_close_btn);
 
     card_layout->addWidget(top_bar);
-    card_layout->addSpacing(8);
+    card_layout->addSpacing(4);
 
     // ── Tab Switcher ──
     auto* tab_row = new QWidget;
     tab_row->setStyleSheet("background: transparent; border: none;");
-    tab_row->setFixedHeight(40);
+    tab_row->setFixedHeight(32);
     auto* tab_layout = new QHBoxLayout(tab_row);
     tab_layout->setContentsMargins(0, 0, 0, 0);
     tab_layout->setSpacing(0);
 
     m_tab_login_btn = new QPushButton(t("tab_login"));
-    m_tab_login_btn->setFixedHeight(36);
+    m_tab_login_btn->setFixedHeight(30);
     m_tab_login_btn->setCursor(Qt::PointingHandCursor);
     connect(m_tab_login_btn, &QPushButton::clicked, this, [this]() { switch_tab(0); });
     tab_layout->addWidget(m_tab_login_btn, 1);
 
     m_tab_register_btn = new QPushButton(t("tab_register"));
-    m_tab_register_btn->setFixedHeight(36);
+    m_tab_register_btn->setFixedHeight(30);
     m_tab_register_btn->setCursor(Qt::PointingHandCursor);
     connect(m_tab_register_btn, &QPushButton::clicked, this, [this]() { switch_tab(1); });
     tab_layout->addWidget(m_tab_register_btn, 1);
 
     card_layout->addWidget(tab_row);
-    card_layout->addSpacing(16);
+    card_layout->addSpacing(10);
 
     // ── Form Stack ──
     m_form_stack = new QStackedWidget;
@@ -353,43 +353,43 @@ void AuthWidget::setup_ui()
     m_login_title = new QLabel(t("login_title"));
     m_login_title->setStyleSheet("background: transparent; border: none;");
     lf->addWidget(m_login_title);
-    lf->addSpacing(4);
+    lf->addSpacing(2);
 
     m_login_subtitle = new QLabel(t("login_desc"));
     m_login_subtitle->setStyleSheet("background: transparent; border: none;");
     lf->addWidget(m_login_subtitle);
-    lf->addSpacing(16);
+    lf->addSpacing(10);
 
     m_login_user_lbl = new QLabel(t("username"));
     m_login_user_lbl->setStyleSheet("background: transparent; border: none;");
     lf->addWidget(m_login_user_lbl);
-    lf->addSpacing(4);
+    lf->addSpacing(3);
 
     m_login_user = new QLineEdit;
     m_login_user->setPlaceholderText(t("username_ph"));
-    m_login_user->setFixedHeight(40);
+    m_login_user->setFixedHeight(32);
     connect(m_login_user, &QLineEdit::returnPressed, this, [this]() { m_login_pass->setFocus(); });
     lf->addWidget(m_login_user);
-    lf->addSpacing(10);
+    lf->addSpacing(8);
 
     m_login_pass_lbl = new QLabel(t("password"));
     m_login_pass_lbl->setStyleSheet("background: transparent; border: none;");
     lf->addWidget(m_login_pass_lbl);
-    lf->addSpacing(4);
+    lf->addSpacing(3);
 
     m_login_pass = new QLineEdit;
     m_login_pass->setPlaceholderText(QString::fromUtf8("••••••••"));
     m_login_pass->setEchoMode(QLineEdit::Password);
-    m_login_pass->setFixedHeight(40);
+    m_login_pass->setFixedHeight(32);
     connect(m_login_pass, &QLineEdit::returnPressed, this, &AuthWidget::on_login_submit);
     lf->addWidget(m_login_pass);
-    lf->addSpacing(8);
+    lf->addSpacing(6);
 
     // Remember me
     m_login_remember_lbl = new QLabel(t("remember"));
     m_login_remember_lbl->setStyleSheet("background: transparent; border: none;");
     lf->addWidget(m_login_remember_lbl);
-    lf->addSpacing(8);
+    lf->addSpacing(6);
 
     m_form_stack->addWidget(m_login_page);
 
@@ -413,23 +413,23 @@ void AuthWidget::setup_ui()
     m_reg_user_lbl = new QLabel(t("username"));
     m_reg_user_lbl->setStyleSheet("background: transparent; border: none;");
     rf->addWidget(m_reg_user_lbl);
-    rf->addSpacing(2);
+    rf->addSpacing(3);
 
     m_reg_user = new QLineEdit;
     m_reg_user->setPlaceholderText(t("username_ph"));
-    m_reg_user->setFixedHeight(28);
+    m_reg_user->setFixedHeight(32);
     rf->addWidget(m_reg_user);
-    rf->addSpacing(5);
+    rf->addSpacing(6);
 
     m_reg_pass_lbl = new QLabel(t("password"));
     m_reg_pass_lbl->setStyleSheet("background: transparent; border: none;");
     rf->addWidget(m_reg_pass_lbl);
-    rf->addSpacing(2);
+    rf->addSpacing(3);
 
     m_reg_pass = new QLineEdit;
     m_reg_pass->setPlaceholderText(t("password_ph"));
     m_reg_pass->setEchoMode(QLineEdit::Password);
-    m_reg_pass->setFixedHeight(28);
+    m_reg_pass->setFixedHeight(32);
     connect(m_reg_pass, &QLineEdit::textChanged, this, [this]() { update_strength(); });
     rf->addWidget(m_reg_pass);
     rf->addSpacing(3);
@@ -437,7 +437,7 @@ void AuthWidget::setup_ui()
     // Strength meter
     m_strength_row = new QWidget;
     m_strength_row->setStyleSheet("background: transparent; border: none;");
-    m_strength_row->setFixedHeight(14);
+    m_strength_row->setFixedHeight(16);
     auto* str_layout = new QHBoxLayout(m_strength_row);
     str_layout->setContentsMargins(0, 0, 0, 0);
     str_layout->setSpacing(3);
@@ -452,7 +452,7 @@ void AuthWidget::setup_ui()
     str_layout->addWidget(m_strength_bar_4, 1);
 
     m_strength_label = new QLabel;
-    m_strength_label->setFixedWidth(45);
+    m_strength_label->setFixedWidth(60);
     m_strength_label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_strength_label->setStyleSheet("background: transparent; border: none;");
     str_layout->addWidget(m_strength_label);
@@ -464,12 +464,12 @@ void AuthWidget::setup_ui()
     m_reg_confirm_lbl = new QLabel(t("confirm"));
     m_reg_confirm_lbl->setStyleSheet("background: transparent; border: none;");
     rf->addWidget(m_reg_confirm_lbl);
-    rf->addSpacing(2);
+    rf->addSpacing(3);
 
     m_reg_confirm = new QLineEdit;
     m_reg_confirm->setPlaceholderText(t("confirm_ph"));
     m_reg_confirm->setEchoMode(QLineEdit::Password);
-    m_reg_confirm->setFixedHeight(28);
+    m_reg_confirm->setFixedHeight(32);
     connect(m_reg_confirm, &QLineEdit::returnPressed, this, &AuthWidget::on_register_submit);
     rf->addWidget(m_reg_confirm);
     rf->addSpacing(4);
@@ -490,35 +490,35 @@ void AuthWidget::setup_ui()
     m_error_box = new QWidget;
     m_error_box->setVisible(false);
     auto* err_layout = new QHBoxLayout(m_error_box);
-    err_layout->setContentsMargins(7, 4, 7, 4);
+    err_layout->setContentsMargins(8, 4, 8, 4);
     err_layout->setSpacing(4);
     m_error_label = new QLabel;
     m_error_label->setWordWrap(true);
     m_error_label->setStyleSheet("background: transparent; border: none;");
     err_layout->addWidget(m_error_label, 1);
     card_layout->addWidget(m_error_box);
-    card_layout->addSpacing(5);
+    card_layout->addSpacing(6);
 
     // ── Button row ──
     auto* btn_row = new QWidget;
     btn_row->setStyleSheet("background: transparent; border: none;");
     auto* btn_layout = new QHBoxLayout(btn_row);
     btn_layout->setContentsMargins(0, 0, 0, 0);
-    btn_layout->setSpacing(7);
+    btn_layout->setSpacing(8);
 
     m_login_submit = new QPushButton(t("btn_login"));
-    m_login_submit->setFixedHeight(28);
+    m_login_submit->setFixedHeight(34);
     m_login_submit->setCursor(Qt::PointingHandCursor);
     connect(m_login_submit, &QPushButton::clicked, this, &AuthWidget::on_login_submit);
 
     m_reg_submit = new QPushButton(t("btn_register"));
-    m_reg_submit->setFixedHeight(28);
+    m_reg_submit->setFixedHeight(34);
     m_reg_submit->setCursor(Qt::PointingHandCursor);
     m_reg_submit->setVisible(false);
     connect(m_reg_submit, &QPushButton::clicked, this, &AuthWidget::on_register_submit);
 
     m_cancel_btn = new QPushButton(t("btn_cancel"));
-    m_cancel_btn->setFixedHeight(28);
+    m_cancel_btn->setFixedHeight(34);
     m_cancel_btn->setCursor(Qt::PointingHandCursor);
     connect(m_cancel_btn, &QPushButton::clicked, this, [this]() {
         m_login_user->clear();
@@ -535,14 +535,14 @@ void AuthWidget::setup_ui()
     btn_layout->addWidget(m_cancel_btn, 1);
 
     card_layout->addWidget(btn_row);
-    card_layout->addSpacing(8);
+    card_layout->addSpacing(6);
 
     // ── Social divider ──
     m_divider_row = new QWidget;
     m_divider_row->setStyleSheet("background: transparent; border: none;");
     auto* div_layout = new QHBoxLayout(m_divider_row);
     div_layout->setContentsMargins(0, 0, 0, 0);
-    div_layout->setSpacing(7);
+    div_layout->setSpacing(6);
     m_divider_line_1 = new QWidget; m_divider_line_1->setFixedHeight(1);
     m_divider_line_2 = new QWidget; m_divider_line_2->setFixedHeight(1);
     m_or_label = new QLabel(t("or_continue"));
@@ -551,19 +551,19 @@ void AuthWidget::setup_ui()
     div_layout->addWidget(m_or_label);
     div_layout->addWidget(m_divider_line_2, 1);
     card_layout->addWidget(m_divider_row);
-    card_layout->addSpacing(7);
+    card_layout->addSpacing(6);
 
     // ── Social buttons ──
     m_social_row = new QWidget;
     m_social_row->setStyleSheet("background: transparent; border: none;");
     auto* soc_layout = new QHBoxLayout(m_social_row);
     soc_layout->setContentsMargins(0, 0, 0, 0);
-    soc_layout->setSpacing(7);
+    soc_layout->setSpacing(8);
     m_social_google = new QPushButton("Google");
-    m_social_google->setFixedHeight(25);
+    m_social_google->setFixedHeight(30);
     m_social_google->setCursor(Qt::PointingHandCursor);
     m_social_github = new QPushButton("GitHub");
-    m_social_github->setFixedHeight(25);
+    m_social_github->setFixedHeight(30);
     m_social_github->setCursor(Qt::PointingHandCursor);
     soc_layout->addWidget(m_social_google, 1);
     soc_layout->addWidget(m_social_github, 1);
@@ -659,19 +659,19 @@ void AuthWidget::apply_theme()
     // Heading & desc
     m_heading->setText(t("brand_tagline"));
     m_heading->setStyleSheet(QString(
-        "color: %1; font-size: 14px; font-weight: bold; background: transparent; border: none;"
+        "color: %1; font-size: 16px; font-weight: bold; background: transparent; border: none;"
     ).arg(txt_bright));
 
     m_desc->setText(t("brand_desc"));
     m_desc->setStyleSheet(QString(
-        "color: %1; font-size: 9px; background: transparent; border: none;"
+        "color: %1; font-size: 11px; background: transparent; border: none;"
     ).arg(txt_sec));
 
     // Pills
     for (auto* pill : m_pills) {
         pill->setStyleSheet(QString(
             "background: %1; color: %2; border: 1px solid %3; "
-            "border-radius: 10px; padding: 3px 10px; font-size: 8px;"
+            "border-radius: 10px; padding: 3px 10px; font-size: 11px;"
         ).arg(
             m_dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
             txt_pri,
@@ -682,7 +682,7 @@ void AuthWidget::apply_theme()
     // Input style
     QString input_ss = QString(
         "QLineEdit {"
-        "  border: 1px solid %1; padding: 5px 8px; font-size: 10px;"
+        "  border: 1px solid %1; padding: 5px 10px; font-size: 13px;"
         "  background: %2; color: %3;"
         "}"
         "QLineEdit:focus { border: 1px solid %4; }"
@@ -694,33 +694,33 @@ void AuthWidget::apply_theme()
     }
 
     // Labels
-    QString lbl_ss = QString("color: %1; font-size: 8px; font-weight: bold; background: transparent; border: none;").arg(txt_sec);
+    QString lbl_ss = QString("color: %1; font-size: 11px; font-weight: bold; background: transparent; border: none;").arg(txt_sec);
     for (auto* lbl : {m_login_user_lbl, m_login_pass_lbl, m_reg_user_lbl, m_reg_pass_lbl, m_reg_confirm_lbl}) {
         lbl->setStyleSheet(lbl_ss);
     }
 
     // Title styles
-    QString title_ss = QString("color: %1; font-size: 14px; font-weight: bold; background: transparent; border: none;").arg(txt_bright);
-    QString sub_ss = QString("color: %1; font-size: 9px; background: transparent; border: none;").arg(txt_sec);
+    QString title_ss = QString("color: %1; font-size: 16px; font-weight: bold; background: transparent; border: none;").arg(txt_bright);
+    QString sub_ss = QString("color: %1; font-size: 11px; background: transparent; border: none;").arg(txt_sec);
     m_login_title->setStyleSheet(title_ss);
     m_login_subtitle->setStyleSheet(sub_ss);
     m_reg_title->setStyleSheet(title_ss);
     m_reg_subtitle->setStyleSheet(sub_ss);
 
     // Remember & terms
-    m_login_remember_lbl->setStyleSheet(QString("color: %1; font-size: 8px; background: transparent; border: none;").arg(txt_sec));
-    m_reg_terms_lbl->setStyleSheet(QString("color: %1; font-size: 8px; background: transparent; border: none;").arg(txt_sec));
+    m_login_remember_lbl->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent; border: none;").arg(txt_sec));
+    m_reg_terms_lbl->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent; border: none;").arg(txt_sec));
 
     // Tab buttons
     QString tab_active_ss = QString(
-        "QPushButton { background: rgba(%1); color: %2; border: 1px solid rgba(%3); font-size: 9px; font-weight: 600; }"
+        "QPushButton { background: rgba(%1); color: %2; border: 1px solid rgba(%3); font-size: 13px; font-weight: 600; }"
     ).arg(
         m_dark ? "0,188,212,0.12" : "255,255,255,1",
         txt_bright,
         m_dark ? "0,188,212,0.2" : "0,0,0,0.08"
     );
     QString tab_inactive_ss = QString(
-        "QPushButton { background: transparent; color: %1; border: none; font-size: 9px; font-weight: 600; }"
+        "QPushButton { background: transparent; color: %1; border: none; font-size: 13px; font-weight: 600; }"
         "QPushButton:hover { color: %2; }"
     ).arg(txt_muted, txt_sec);
 
@@ -731,7 +731,7 @@ void AuthWidget::apply_theme()
     QString primary_ss = QString(
         "QPushButton {"
         "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 %1, stop:0.5 %2, stop:1 %3);"
-        "  color: #fff; border: none; font-size: 9px; font-weight: bold;"
+        "  color: #fff; border: none; font-size: 13px; font-weight: bold;"
         "}"
         "QPushButton:hover {"
         "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #0097A7, stop:0.5 %2, stop:1 %3);"
@@ -744,17 +744,17 @@ void AuthWidget::apply_theme()
 
     // Cancel button
     m_cancel_btn->setStyleSheet(QString(
-        "QPushButton { background: transparent; color: %1; border: 1px solid rgba(248,113,113,0.3); font-size: 9px; font-weight: bold; }"
+        "QPushButton { background: transparent; color: %1; border: 1px solid rgba(248,113,113,0.3); font-size: 13px; font-weight: bold; }"
         "QPushButton:hover { background: rgba(248,113,113,0.1); border-color: %1; }"
     ).arg(err_color));
 
     // Error box
     m_error_box->setStyleSheet("background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);");
-    m_error_label->setStyleSheet(QString("color: %1; font-size: 9px; background: transparent; border: none;").arg(err_color));
+    m_error_label->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent; border: none;").arg(err_color));
 
     // Social buttons
     QString social_ss = QString(
-        "QPushButton { background: %1; color: %2; border: 1px solid %3; font-size: 9px; }"
+        "QPushButton { background: %1; color: %2; border: 1px solid %3; font-size: 12px; }"
         "QPushButton:hover { background: %4; border-color: %5; color: %6; }"
     ).arg(
         m_dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
@@ -769,19 +769,19 @@ void AuthWidget::apply_theme()
     QString line_bg = m_dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
     m_divider_line_1->setStyleSheet(QString("background: %1; border: none;").arg(line_bg));
     m_divider_line_2->setStyleSheet(QString("background: %1; border: none;").arg(line_bg));
-    m_or_label->setStyleSheet(QString("color: %1; font-size: 7px; background: transparent; border: none;").arg(txt_muted));
+    m_or_label->setStyleSheet(QString("color: %1; font-size: 10px; background: transparent; border: none;").arg(txt_muted));
 
     // Footer
-    m_footer_text->setStyleSheet(QString("color: %1; font-size: 8px; background: transparent; border: none;").arg(txt_muted));
+    m_footer_text->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent; border: none;").arg(txt_muted));
     m_footer_link->setStyleSheet(QString(
-        "QPushButton { color: %1; font-size: 8px; font-weight: 600; border: none; background: transparent; padding: 0; }"
+        "QPushButton { color: %1; font-size: 11px; font-weight: 600; border: none; background: transparent; padding: 0; }"
         "QPushButton:hover { color: #00E5FF; }"
     ).arg(cyan));
 
     // Theme toggle
     m_theme_toggle->setText(m_dark ? QString::fromUtf8("\u263E") : QString::fromUtf8("\u2600"));
     m_theme_toggle->setStyleSheet(QString(
-        "QPushButton { background: %1; color: %2; border: 1px solid %3; font-size: 10px; }"
+        "QPushButton { background: %1; color: %2; border: 1px solid %3; font-size: 14px; }"
         "QPushButton:hover { border-color: %4; color: %4; background: rgba(0,188,212,0.1); }"
     ).arg(
         m_dark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)",
@@ -792,7 +792,7 @@ void AuthWidget::apply_theme()
 
     // Close button
     m_close_btn->setStyleSheet(QString(
-        "QPushButton { background: transparent; color: %1; border: none; font-size: 10px; font-weight: bold; }"
+        "QPushButton { background: transparent; color: %1; border: none; font-size: 14px; font-weight: bold; }"
         "QPushButton:hover { color: %2; background: rgba(248,113,113,0.1); }"
     ).arg(txt_muted, err_color));
 
@@ -800,7 +800,7 @@ void AuthWidget::apply_theme()
     for (int i = 0; i < m_lang_btns.size(); ++i) {
         bool active = (m_lang == QStringList{"vi","en","zh"}[i]);
         m_lang_btns[i]->setStyleSheet(QString(
-            "QPushButton { background: %1; color: %2; border: 1px solid %3; font-size: 7px; font-weight: bold; }"
+            "QPushButton { background: %1; color: %2; border: 1px solid %3; font-size: 10px; font-weight: bold; }"
             "QPushButton:hover { border-color: %4; background: rgba(0,188,212,0.1); }"
         ).arg(
             active ? "rgba(0,188,212,0.15)" : (m_dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)"),
@@ -874,7 +874,7 @@ void AuthWidget::update_strength()
 
     m_strength_label->setText(score > 0 ? t(labels[score]) : "");
     m_strength_label->setStyleSheet(QString(
-        "color: %1; font-size: 7px; font-weight: bold; background: transparent; border: none;"
+        "color: %1; font-size: 10px; font-weight: bold; background: transparent; border: none;"
     ).arg(score > 0 ? colors[score] : "transparent"));
 }
 
