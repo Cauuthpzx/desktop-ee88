@@ -17,24 +17,32 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport)
 set(SOURCES
     src/main.cpp
     src/core/api_client.cpp
+    src/core/auth_i18n.cpp
     src/core/auth_window.cpp
     src/core/auth_widget.cpp
-    src/core/main_widget.cpp
+    src/core/customers_page.cpp
     src/core/date_range_picker.cpp
     src/core/flow_layout.cpp
+    src/core/home_page.cpp
+    src/core/main_widget.cpp
     src/core/report_page_builder.cpp
+    src/core/report_pages.cpp
     src/core/theme_manager.cpp
     src/core/translator.cpp
 )
 
 set(HEADERS
     src/core/api_client.h
+    src/core/auth_i18n.h
     src/core/auth_window.h
     src/core/auth_widget.h
-    src/core/main_widget.h
+    src/core/customers_page.h
     src/core/date_range_picker.h
     src/core/flow_layout.h
+    src/core/home_page.h
+    src/core/main_widget.h
     src/core/report_page_builder.h
+    src/core/report_pages.h
     src/core/theme_manager.h
     src/core/translator.h
 )

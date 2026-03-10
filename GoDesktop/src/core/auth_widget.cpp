@@ -1,145 +1,17 @@
 #include "core/auth_widget.h"
+#include "core/auth_i18n.h"
 #include "core/api_client.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFont>
 #include <QPixmap>
-#include <QMap>
 #include <QRegularExpression>
 #include <QJsonObject>
 
-// ═══════════════════════════════════════════════
-// i18n translations
-// ═══════════════════════════════════════════════
-static const QMap<QString, QMap<QString, QString>> I18N = {
-    {"vi", {
-        {"brand_tagline", QString::fromUtf8("Quản lý thông minh,\nKết nối mọi thứ")},
-        {"brand_desc", QString::fromUtf8("Nền tảng quản lý tập trung giúp bạn kiểm soát,\ntự động hóa và tối ưu hiệu suất làm việc.")},
-        {"tab_login", QString::fromUtf8("Đăng nhập")},
-        {"tab_register", QString::fromUtf8("Đăng ký")},
-        {"login_title", QString::fromUtf8("Chào mừng trở lại")},
-        {"login_desc", QString::fromUtf8("Đăng nhập để tiếp tục quản lý dự án của bạn")},
-        {"register_title", QString::fromUtf8("Tạo tài khoản")},
-        {"register_desc", QString::fromUtf8("Đăng ký để bắt đầu sử dụng MaxHub")},
-        {"username", QString::fromUtf8("Tên tài khoản")},
-        {"username_ph", QString::fromUtf8("Nhập tên tài khoản")},
-        {"password", QString::fromUtf8("Mật khẩu")},
-        {"password_ph", QString::fromUtf8("Tối thiểu 8 ký tự")},
-        {"confirm", QString::fromUtf8("Xác nhận mật khẩu")},
-        {"confirm_ph", QString::fromUtf8("Nhập lại mật khẩu")},
-        {"remember", QString::fromUtf8("Ghi nhớ đăng nhập")},
-        {"btn_login", QString::fromUtf8("Đăng nhập")},
-        {"btn_register", QString::fromUtf8("Đăng ký")},
-        {"btn_cancel", QString::fromUtf8("Huỷ")},
-        {"or_continue", QString::fromUtf8("Hoặc tiếp tục với")},
-        {"no_account", QString::fromUtf8("Chưa có tài khoản?")},
-        {"has_account", QString::fromUtf8("Đã có tài khoản?")},
-        {"register_now", QString::fromUtf8("Đăng ký ngay")},
-        {"login_now", QString::fromUtf8("Đăng nhập")},
-        {"agree_terms", QString::fromUtf8("Tôi đồng ý với Điều khoản và Chính sách bảo mật")},
-        {"strength_weak", QString::fromUtf8("Yếu")},
-        {"strength_fair", QString::fromUtf8("Trung bình")},
-        {"strength_good", QString::fromUtf8("Tốt")},
-        {"strength_strong", QString::fromUtf8("Mạnh")},
-        {"err_required", QString::fromUtf8("Vui lòng nhập đầy đủ thông tin")},
-        {"err_min_pass", QString::fromUtf8("Mật khẩu phải có tối thiểu 8 ký tự")},
-        {"err_confirm", QString::fromUtf8("Mật khẩu xác nhận không khớp")},
-        {"err_terms", QString::fromUtf8("Vui lòng đồng ý với điều khoản sử dụng")},
-        {"err_login", QString::fromUtf8("Đăng nhập thất bại")},
-        {"err_register", QString::fromUtf8("Đăng ký thất bại")},
-        {"loading_login", QString::fromUtf8("Đang đăng nhập...")},
-        {"loading_register", QString::fromUtf8("Đang đăng ký...")},
-        {"terms_title", QString::fromUtf8("Điều khoản sử dụng")},
-        {"privacy_title", QString::fromUtf8("Chính sách bảo mật")},
-    }},
-    {"en", {
-        {"brand_tagline", "Smart Management,\nConnect Everything"},
-        {"brand_desc", "A centralized management platform to help you\ncontrol, automate, and optimize your workflow."},
-        {"tab_login", "Login"},
-        {"tab_register", "Register"},
-        {"login_title", "Welcome Back"},
-        {"login_desc", "Sign in to continue managing your projects"},
-        {"register_title", "Create Account"},
-        {"register_desc", "Register to start using MaxHub"},
-        {"username", "Username"},
-        {"username_ph", "Enter username"},
-        {"password", "Password"},
-        {"password_ph", "Minimum 8 characters"},
-        {"confirm", "Confirm Password"},
-        {"confirm_ph", "Re-enter password"},
-        {"remember", "Remember me"},
-        {"btn_login", "Sign In"},
-        {"btn_register", "Register"},
-        {"btn_cancel", "Cancel"},
-        {"or_continue", "Or continue with"},
-        {"no_account", "Don't have an account?"},
-        {"has_account", "Already have an account?"},
-        {"register_now", "Register now"},
-        {"login_now", "Sign In"},
-        {"agree_terms", "I agree to the Terms of Service and Privacy Policy"},
-        {"strength_weak", "Weak"},
-        {"strength_fair", "Fair"},
-        {"strength_good", "Good"},
-        {"strength_strong", "Strong"},
-        {"err_required", "Please fill in all fields"},
-        {"err_min_pass", "Password must be at least 8 characters"},
-        {"err_confirm", "Passwords do not match"},
-        {"err_terms", "Please agree to the terms of service"},
-        {"err_login", "Login failed"},
-        {"err_register", "Registration failed"},
-        {"loading_login", "Signing in..."},
-        {"loading_register", "Registering..."},
-        {"terms_title", "Terms of Service"},
-        {"privacy_title", "Privacy Policy"},
-    }},
-    {"zh", {
-        {"brand_tagline", QString::fromUtf8("智能管理,\n连接一切")},
-        {"brand_desc", QString::fromUtf8("一个集中管理平台，帮助您控制、\n自动化和优化工作流程。")},
-        {"tab_login", QString::fromUtf8("登录")},
-        {"tab_register", QString::fromUtf8("注册")},
-        {"login_title", QString::fromUtf8("欢迎回来")},
-        {"login_desc", QString::fromUtf8("登录以继续管理您的项目")},
-        {"register_title", QString::fromUtf8("创建账号")},
-        {"register_desc", QString::fromUtf8("注册以开始使用 MaxHub")},
-        {"username", QString::fromUtf8("用户名")},
-        {"username_ph", QString::fromUtf8("输入用户名")},
-        {"password", QString::fromUtf8("密码")},
-        {"password_ph", QString::fromUtf8("最少8个字符")},
-        {"confirm", QString::fromUtf8("确认密码")},
-        {"confirm_ph", QString::fromUtf8("再次输入密码")},
-        {"remember", QString::fromUtf8("记住登录")},
-        {"btn_login", QString::fromUtf8("登录")},
-        {"btn_register", QString::fromUtf8("注册")},
-        {"btn_cancel", QString::fromUtf8("取消")},
-        {"or_continue", QString::fromUtf8("或者通过以下方式继续")},
-        {"no_account", QString::fromUtf8("没有账号？")},
-        {"has_account", QString::fromUtf8("已有账号？")},
-        {"register_now", QString::fromUtf8("立即注册")},
-        {"login_now", QString::fromUtf8("登录")},
-        {"agree_terms", QString::fromUtf8("我同意服务条款和隐私政策")},
-        {"strength_weak", QString::fromUtf8("弱")},
-        {"strength_fair", QString::fromUtf8("一般")},
-        {"strength_good", QString::fromUtf8("良好")},
-        {"strength_strong", QString::fromUtf8("强")},
-        {"err_required", QString::fromUtf8("请填写所有字段")},
-        {"err_min_pass", QString::fromUtf8("密码至少需要8个字符")},
-        {"err_confirm", QString::fromUtf8("两次密码不一致")},
-        {"err_terms", QString::fromUtf8("请同意服务条款")},
-        {"err_login", QString::fromUtf8("登录失败")},
-        {"err_register", QString::fromUtf8("注册失败")},
-        {"loading_login", QString::fromUtf8("正在登录...")},
-        {"loading_register", QString::fromUtf8("正在注册...")},
-        {"terms_title", QString::fromUtf8("服务条款")},
-        {"privacy_title", QString::fromUtf8("隐私政策")},
-    }},
-};
-
 QString AuthWidget::t(const QString& key) const
 {
-    if (I18N.contains(m_lang) && I18N[m_lang].contains(key))
-        return I18N[m_lang][key];
-    return I18N["vi"][key];
+    return AuthI18n::t(m_lang, key);
 }
 
 AuthWidget::AuthWidget(ApiClient* api, QWidget* parent)
