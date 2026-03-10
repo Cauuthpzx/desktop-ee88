@@ -7,6 +7,10 @@ import Customers from "../view/customers.vue";
 import LotteryReport from "../view/reports/LotteryReport.vue";
 import TransactionLog from "../view/reports/TransactionLog.vue";
 import ProviderReport from "../view/reports/ProviderReport.vue";
+import WithdrawalHistory from "../view/commission/WithdrawalHistory.vue";
+import DepositHistory from "../view/commission/DepositHistory.vue";
+import LotteryBets from "../view/bets/LotteryBets.vue";
+import ProviderBets from "../view/bets/ProviderBets.vue";
 
 const zhCN = [
   {
@@ -54,6 +58,26 @@ const zhCN = [
         path: "/zh-CN/reports/provider",
         component: ProviderReport,
         meta: { title: "Báo cáo nhà cung cấp" },
+      },
+      {
+        path: "/zh-CN/commission/withdrawal",
+        component: WithdrawalHistory,
+        meta: { title: "Lịch sử rút tiền" },
+      },
+      {
+        path: "/zh-CN/commission/deposit",
+        component: DepositHistory,
+        meta: { title: "Lịch sử nạp tiền" },
+      },
+      {
+        path: "/zh-CN/bets/lottery",
+        component: LotteryBets,
+        meta: { title: "Đơn cược xổ số" },
+      },
+      {
+        path: "/zh-CN/bets/provider",
+        component: ProviderBets,
+        meta: { title: "Đơn cược nhà cung cấp" },
       },
       {
         path: "/zh-CN/resources",

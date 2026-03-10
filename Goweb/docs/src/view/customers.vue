@@ -21,7 +21,6 @@
                   type="date"
                   range
                   single-panel
-                  size="lg"
                   allow-clear
                   :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
                 ></lay-date-picker>

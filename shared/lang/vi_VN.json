@@ -8,7 +8,13 @@
     "reports": "Báo Cáo",
     "report_lottery": "Báo cáo xổ số",
     "report_transaction": "Sao kê giao dịch",
-    "report_provider": "Báo cáo nhà cung cấp"
+    "report_provider": "Báo cáo nhà cung cấp",
+    "commission": "Rút Hoa Hồng",
+    "commission_withdrawal": "Lịch sử rút tiền",
+    "commission_deposit": "Lịch sử nạp tiền",
+    "bets": "Quản lý đơn cược",
+    "bets_lottery": "Đơn cược xổ số",
+    "bets_provider": "Đơn cược nhà cung cấp"
   },
   "home": {
     "description": "DUANGO — Nền tảng phát triển ứng dụng đa nền tảng.",

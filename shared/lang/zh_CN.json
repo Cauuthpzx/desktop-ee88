@@ -8,7 +8,13 @@
     "reports": "报表",
     "report_lottery": "彩票报表",
     "report_transaction": "交易明细",
-    "report_provider": "供应商报表"
+    "report_provider": "供应商报表",
+    "commission": "佣金提取",
+    "commission_withdrawal": "提款记录",
+    "commission_deposit": "充值记录",
+    "bets": "投注管理",
+    "bets_lottery": "彩票投注",
+    "bets_provider": "供应商投注"
   },
   "home": {
     "description": "DUANGO — 多平台应用开发框架。",

@@ -20,7 +20,7 @@
             :class="{ 'layui-active': currentPath.includes('/zh-CN/index') }"
           >
             <router-link to="/zh-CN/index">
-              <lay-icon type="layui-icon-home" size="14px" style="margin-right: 4px" />
+              <lay-icon type="layui-icon-home" size="16px" style="margin-right: 4px" />
               {{ t("nav.home") }}
             </router-link>
           </li>
@@ -31,7 +31,7 @@
             }"
           >
             <router-link to="/zh-CN/customers">
-              <lay-icon type="layui-icon-group" size="14px" style="margin-right: 4px" />
+              <lay-icon type="layui-icon-group" size="16px" style="margin-right: 4px" />
               {{ t("nav.customers") }}
             </router-link>
           </li>
@@ -42,7 +42,7 @@
             }"
           >
             <a href="javascript:void(0);">
-              <lay-icon type="layui-icon-chart-screen" size="14px" style="margin-right: 4px" />
+              <lay-icon type="layui-icon-chart-screen" size="16px" style="margin-right: 4px" />
               {{ t("nav.reports") }}
             </a>
             <dl class="layui-nav-child">
@@ -54,6 +54,44 @@
               </dd>
               <dd :class="{ 'layui-this': currentPath === '/zh-CN/reports/provider' }">
                 <router-link to="/zh-CN/reports/provider">{{ t("nav.report_provider") }}</router-link>
+              </dd>
+            </dl>
+          </li>
+          <li
+            class="layui-nav-item"
+            :class="{
+              'layui-active': currentPath.includes('/zh-CN/commission'),
+            }"
+          >
+            <a href="javascript:void(0);">
+              <lay-icon type="layui-icon-diamond" size="16px" style="margin-right: 4px" />
+              {{ t("nav.commission") }}
+            </a>
+            <dl class="layui-nav-child">
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/commission/withdrawal' }">
+                <router-link to="/zh-CN/commission/withdrawal">{{ t("nav.commission_withdrawal") }}</router-link>
+              </dd>
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/commission/deposit' }">
+                <router-link to="/zh-CN/commission/deposit">{{ t("nav.commission_deposit") }}</router-link>
+              </dd>
+            </dl>
+          </li>
+          <li
+            class="layui-nav-item"
+            :class="{
+              'layui-active': currentPath.includes('/zh-CN/bets'),
+            }"
+          >
+            <a href="javascript:void(0);">
+              <lay-icon type="layui-icon-form" size="16px" style="margin-right: 4px" />
+              {{ t("nav.bets") }}
+            </a>
+            <dl class="layui-nav-child">
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/bets/lottery' }">
+                <router-link to="/zh-CN/bets/lottery">{{ t("nav.bets_lottery") }}</router-link>
+              </dd>
+              <dd :class="{ 'layui-this': currentPath === '/zh-CN/bets/provider' }">
+                <router-link to="/zh-CN/bets/provider">{{ t("nav.bets_provider") }}</router-link>
               </dd>
             </dl>
           </li>
@@ -96,7 +134,7 @@
           <li class="layui-nav-item">
             <lay-dropdown>
               <a href="javascript:void(0);">
-                <lay-icon size="15px" type="layui-icon-theme"> </lay-icon>
+                <lay-icon size="17px" type="layui-icon-theme"> </lay-icon>
               </a>
               <template #content>
                 <div class="theme-panel">
@@ -185,7 +223,7 @@
           <li class="layui-nav-item" v-if="authStore.is_authenticated">
             <lay-dropdown>
               <a href="javascript:void(0);">
-                <lay-icon type="layui-icon-username" size="14px" />
+                <lay-icon type="layui-icon-username" size="16px" />
                 {{ authStore.user?.username || 'User' }}
               </a>
               <template #content>
@@ -499,7 +537,7 @@ export default {
 .locale-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .locale-flag {
@@ -508,6 +546,7 @@ export default {
   object-fit: cover;
   border-radius: 2px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+  margin-right: 4px;
 }
 
 .locale-label {
@@ -581,9 +620,9 @@ export default {
   text-decoration: none;
 }
 
-/* ── Crisp light theme (matched to desktop theme_manager.cpp) ── */
+/* ── Sharp & crisp light theme ── */
 body {
-  color: #213547;
+  color: #1a1a1a;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -591,44 +630,51 @@ body {
   background: #ffffff;
 }
 
-/* Backgrounds matching desktop: bg/#fff, bg_secondary/#f9f9f9, bg_tertiary/#f0f0f0 */
+/* Pure white backgrounds */
 .layui-card {
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .customers-container {
-  background: #f0f0f0 !important;
+  background: #f0f2f5 !important;
 }
 
-/* Text colors: text_primary/#213547, text_body/rgba(0,0,0,0.85), text_secondary/#666 */
+/* Stronger text colors */
 .layui-table th {
-  color: #213547;
-  font-weight: 600;
-  background: #f9f9f9;
+  color: #1a1a1a;
+  font-weight: 400 !important;
+  background: #fafafa;
+}
+
+.layui-table th .layui-table-cell-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .layui-table td {
-  color: rgba(0, 0, 0, 0.85);
+  color: #262626;
 }
 
 .layui-form-label {
-  color: #213547;
+  color: #1a1a1a;
   font-weight: 500;
 }
 
-/* Borders: border/#e2e2e2, border_light/#eeeeee */
+/* Crisper borders */
 .layui-table,
 .layui-table th,
 .layui-table td {
-  border-color: #e2e2e2;
+  border-color: #e0e0e0;
 }
 
 .layui-input,
 .layui-textarea,
 .layui-select {
-  border-color: #e2e2e2;
-  color: #213547;
+  border-color: #d0d0d0;
+  color: #1a1a1a;
 }
 
 .layui-input:focus,
@@ -637,25 +683,25 @@ body {
 }
 
 .layui-input::placeholder {
-  color: rgba(60, 60, 60, 0.5);
+  color: #999;
 }
 
-/* Header */
+/* Header sharper */
 .layui-layout-document > .layui-header {
-  border-bottom-color: #e2e2e2;
+  border-bottom-color: #d9d9d9;
 }
 
-/* Nav text: text_nav/rgba(0,0,0,0.8) */
+/* Nav text sharper */
 .layui-layout-document .layui-header .layui-nav .layui-nav-item *,
 .layui-layout-document .layui-header .layui-nav .layui-nav-item a,
 .layui-layout-document .layui-header .layui-nav .layui-nav-item a:hover {
-  color: rgba(0, 0, 0, 0.8);
+  color: #1a1a1a;
   font-weight: 500;
 }
 
 /* Field title */
 .layui-elem-field legend {
-  color: #213547;
+  color: #1a1a1a;
   font-weight: 600;
 }
 
@@ -665,21 +711,21 @@ body {
 }
 
 .layui-btn-primary {
-  border-color: #e2e2e2;
-  color: #213547;
+  border-color: #d0d0d0;
+  color: #333;
 }
 
-/* Dropdown */
+/* Dropdown sharper */
 .layui-nav-child {
-  border-color: #e2e2e2;
+  border-color: #d9d9d9;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
 .layui-nav-child dd a {
-  color: rgba(0, 0, 0, 0.85) !important;
+  color: #262626 !important;
 }
 
-/* Tag */
+/* Tag sharper */
 .layui-tag {
   font-weight: 500;
 }
@@ -687,18 +733,6 @@ body {
 /* Pagination */
 .layui-laypage a,
 .layui-laypage span {
-  color: #213547;
-}
-
-/* Secondary text */
-.layui-text,
-.summary-title {
-  color: #666666;
-}
-
-/* Footer text: text_footer/rgba(60,60,60,0.5) */
-.layui-footer {
-  color: rgba(60, 60, 60, 0.5);
-  background: #fafafa;
+  color: #333;
 }
 </style>

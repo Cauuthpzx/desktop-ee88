@@ -3,13 +3,13 @@
     <lay-field>
       <template #title>
         <span class="field-title">
-          <lay-icon type="layui-icon-chart-screen" size="18px"></lay-icon>
-          SAO KÊ GIAO DỊCH
+          <lay-icon type="layui-icon-form" size="18px"></lay-icon>
+          ĐƠN CƯỢC BÊN THỨ 3
         </span>
       </template>
 
       <lay-form :model="searchForm" class="search-form" mode="inline" label-width="auto">
-        <lay-form-item>
+        <lay-form-item label="Thời gian cược：">
           <lay-date-picker
             v-model="dateForm.dateRange"
             type="date"
@@ -28,8 +28,11 @@
             <lay-select-option :value="quickDateValues.lastMonth" label="Tháng trước"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Tên tài khoản：">
-          <lay-input v-model="searchForm.username" placeholder="Nhập tên tài khoản" style="width: 200px"></lay-input>
+        <lay-form-item label="Mã giao dịch：">
+          <lay-input v-model="searchForm.serialNo" placeholder="Nhập hoàn chỉnh đơn giao dịch" style="width: 200px"></lay-input>
+        </lay-form-item>
+        <lay-form-item label="Tên tài khoản thuộc nhà cái：">
+          <lay-input v-model="searchForm.platformUsername" placeholder="Nhập tên tài khoản thuộc nhà cái" style="width: 200px"></lay-input>
         </lay-form-item>
         <lay-form-item>
           <lay-button type="primary" @click="handleSearch">
@@ -44,12 +47,6 @@
 
     <lay-table :columns="columns" :data-source="tableData" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
     </lay-table>
-
-    <div class="summary-section">
-      <span class="summary-title">Phương pháp tổng hợp [nhóm]:</span>
-      <lay-table :columns="summaryColumns" :data-source="summaryData" even skin="nob">
-      </lay-table>
-    </div>
   </PageLayout>
 </template>
 
@@ -57,50 +54,28 @@
 import { reactive, ref } from "vue";
 import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
+
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
 
 const searchForm = reactive({
-  username: "",
+  serialNo: "",
+  platformUsername: "",
 });
 
 const columns = ref([
-  { title: "Tên tài khoản", key: "username", width: "150px" },
-  { title: "Thuộc đại lý", key: "user_parent_format", width: "150px" },
-  { title: "Số lần nạp", key: "deposit_count" },
-  { title: "Số tiền nạp", key: "deposit_amount", minWidth: "150px" },
-  { title: "Số lần rút", key: "withdrawal_count", minWidth: "150px" },
-  { title: "Số tiền rút", key: "withdrawal_amount", minWidth: "160px" },
-  { title: "Phí dịch vụ", key: "charge_fee", minWidth: "150px" },
-  { title: "Hoa hồng đại lý", key: "agent_commission", minWidth: "150px" },
-  { title: "Ưu đãi", key: "promotion", minWidth: "150px" },
-  { title: "Hoàn trả bên thứ 3", key: "third_rebate", minWidth: "150px" },
-  { title: "Tiền thưởng từ bên thứ 3", key: "third_activity_amount", minWidth: "150px" },
-  { title: "Thời gian", key: "date", minWidth: "160px" },
+  { title: "Mã giao dịch", key: "serial_no", width: "250px" },
+  { title: "Nhà cung cấp game bên thứ 3", key: "platform_id_name", minWidth: "150px" },
+  { title: "Tên tài khoản thuộc nhà cái", key: "platform_username", minWidth: "150px" },
+  { title: "Loại hình trò chơi", key: "c_name", minWidth: "150px" },
+  { title: "Tên trò chơi bên thứ 3", key: "game_name", minWidth: "150px" },
+  { title: "Tiền cược", key: "bet_amount", minWidth: "150px" },
+  { title: "Tiền cược hợp lệ", key: "turnover", minWidth: "150px" },
+  { title: "Tiền thưởng", key: "prize", minWidth: "150px" },
+  { title: "Thắng thua", key: "win_lose", minWidth: "150px" },
+  { title: "Thời gian cược", key: "bet_time", minWidth: "160px" },
 ]);
 
 const tableData = ref([] as any[]);
-
-const summaryColumns = ref([
-  { title: "Số tiền nạp", key: "total_deposit_amount" },
-  { title: "Số tiền rút", key: "total_withdrawal_amount" },
-  { title: "Phí dịch vụ", key: "total_charge_fee" },
-  { title: "Hoa hồng đại lý", key: "total_agent_commission" },
-  { title: "Ưu đãi", key: "total_promotion" },
-  { title: "Hoàn trả bên thứ 3", key: "total_third_rebate" },
-  { title: "Tiền thưởng từ bên thứ 3", key: "total_third_activity_amount" },
-]);
-
-const summaryData = ref([
-  {
-    total_deposit_amount: "0.00",
-    total_withdrawal_amount: "0.00",
-    total_charge_fee: "0.00",
-    total_agent_commission: "0.00",
-    total_promotion: "0.00",
-    total_third_rebate: "0.00",
-    total_third_activity_amount: "0",
-  },
-]);
 
 const pagination = reactive({
   current: 1,
@@ -110,18 +85,19 @@ const pagination = reactive({
   layout: ["prev", "page", "next", "skip", "count", "limit"],
 });
 
-function handlePageChange(page: any) {
-  pagination.current = page.current;
-  pagination.limit = page.limit;
-}
-
 function handleSearch() {
   console.log("search", { ...dateForm, ...searchForm });
 }
 
 function handleReset() {
   resetDate();
-  searchForm.username = "";
+  searchForm.serialNo = "";
+  searchForm.platformUsername = "";
+}
+
+function handlePageChange(page: any) {
+  pagination.current = page.current;
+  pagination.limit = page.limit;
 }
 </script>
 
@@ -139,16 +115,5 @@ function handleReset() {
   gap: 6px;
   font-size: 16px;
   font-weight: 700;
-}
-
-.summary-section {
-  margin-top: 10px;
-  padding: 0;
-}
-
-.summary-title {
-  font-weight: bold;
-  display: block;
-  margin-bottom: 6px;
 }
 </style>

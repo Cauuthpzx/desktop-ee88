@@ -8,7 +8,13 @@
     "reports": "Reports",
     "report_lottery": "Lottery Report",
     "report_transaction": "Transaction Log",
-    "report_provider": "Provider Report"
+    "report_provider": "Provider Report",
+    "commission": "Commission",
+    "commission_withdrawal": "Withdrawal History",
+    "commission_deposit": "Deposit History",
+    "bets": "Bet Management",
+    "bets_lottery": "Lottery Bets",
+    "bets_provider": "Provider Bets"
   },
   "home": {
     "description": "DUANGO — Multi-platform application development framework.",

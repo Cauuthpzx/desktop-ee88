@@ -164,7 +164,7 @@ function removeAllSortState() {
                   />
                 </template>
                 <template v-else>
-                  <span>
+                  <span class="layui-table-cell-text" :title="column.title">
                     <LayRender
                       v-if="column.titleSlot"
                       :slots="tableSlots"
