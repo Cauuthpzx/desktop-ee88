@@ -4,7 +4,7 @@
       <template #title>
         <span class="field-title">
           <lay-icon type="layui-icon-chart-screen" size="18px"></lay-icon>
-          BÁO CÁO XỔ SỐ
+          {{ t("lottery_report.title") }}
         </span>
       </template>
 
@@ -16,20 +16,20 @@
             range
             single-panel
             allow-clear
-            :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
+            :placeholder="[t('common.date_start'), t('common.date_end')]"
           ></lay-date-picker>
         </lay-form-item>
         <lay-form-item>
-          <lay-select v-model="dateForm.quickDate" placeholder="Hôm nay" fit-content @change="onQuickDateChange">
-            <lay-select-option :value="quickDateValues.today" label="Hôm nay"></lay-select-option>
-            <lay-select-option :value="quickDateValues.yesterday" label="Hôm qua"></lay-select-option>
-            <lay-select-option :value="quickDateValues.thisWeek" label="Tuần này"></lay-select-option>
-            <lay-select-option :value="quickDateValues.thisMonth" label="Tháng này"></lay-select-option>
-            <lay-select-option :value="quickDateValues.lastMonth" label="Tháng trước"></lay-select-option>
+          <lay-select v-model="dateForm.quickDate" :placeholder="t('common.today')" fit-content @change="onQuickDateChange">
+            <lay-select-option :value="quickDateValues.today" :label="t('common.today')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.yesterday" :label="t('common.yesterday')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.thisWeek" :label="t('common.this_week')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.thisMonth" :label="t('common.this_month')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.lastMonth" :label="t('common.last_month')"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Tên loại xổ：">
-          <lay-select v-model="searchForm.lotteryId" placeholder="Chọn hoặc nhập để tìm kiếm" allow-clear searchable style="width: 200px">
+        <lay-form-item :label="t('lottery_report.lottery_type_label')">
+          <lay-select v-model="searchForm.lotteryId" :placeholder="t('common.search_or_type')" allow-clear searchable style="width: 200px">
             <lay-select-option-group label="Sicbo">
               <lay-select-option value="67" label="Sicbo 30 giây"></lay-select-option>
               <lay-select-option value="66" label="Sicbo 20 giây"></lay-select-option>
@@ -111,15 +111,15 @@
             </lay-select-option-group>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Tên tài khoản：">
-          <lay-input v-model="searchForm.username" placeholder="Nhập tên tài khoản" style="width: 200px"></lay-input>
+        <lay-form-item :label="t('common.username_label')">
+          <lay-input v-model="searchForm.username" :placeholder="t('common.username_placeholder')" style="width: 200px"></lay-input>
         </lay-form-item>
         <lay-form-item>
           <lay-button type="primary" @click="handleSearch">
-            <lay-icon type="layui-icon-search"></lay-icon> Tìm kiếm
+            <lay-icon type="layui-icon-search"></lay-icon> {{ t("common.search") }}
           </lay-button>
           <lay-button @click="handleReset">
-            <lay-icon type="layui-icon-refresh"></lay-icon> Đặt lại
+            <lay-icon type="layui-icon-refresh"></lay-icon> {{ t("common.reset") }}
           </lay-button>
         </lay-form-item>
       </lay-form>
@@ -129,7 +129,7 @@
     </lay-table>
 
     <div class="summary-section">
-      <span class="summary-title">Phương pháp tổng hợp [nhóm]:</span>
+      <span class="summary-title">{{ t("common.summary_group") }}</span>
       <lay-table :columns="summaryColumns" :data-source="summaryData" even skin="nob">
       </lay-table>
     </div>
@@ -137,10 +137,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
+import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
 
+const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
 
 const searchForm = reactive({
@@ -148,30 +150,30 @@ const searchForm = reactive({
   username: "",
 });
 
-const columns = ref([
-  { title: "Tên tài khoản", key: "username", width: "150px" },
-  { title: "Thuộc đại lý", key: "user_parent_format", width: "150px" },
-  { title: "Số lần cược", key: "bet_count", minWidth: "150px" },
-  { title: "Tiền cược", key: "bet_amount", minWidth: "150px" },
-  { title: "Tiền cược hợp lệ (trừ cược hoà)", key: "valid_amount", minWidth: "160px" },
-  { title: "Hoàn trả", key: "rebate_amount", minWidth: "150px" },
-  { title: "Thắng thua", key: "result", minWidth: "150px" },
-  { title: "Kết quả thắng thua (không gồm hoàn trả)", key: "win_lose", minWidth: "180px" },
-  { title: "Tiền trúng", key: "prize", minWidth: "150px" },
-  { title: "Tên loại xổ", key: "lottery_name", width: "160px" },
+const columns = computed(() => [
+  { title: t("lottery_report.col_username"), key: "username", width: "150px" },
+  { title: t("lottery_report.col_agent"), key: "user_parent_format", width: "150px" },
+  { title: t("lottery_report.col_bet_count"), key: "bet_count", minWidth: "150px" },
+  { title: t("lottery_report.col_bet_amount"), key: "bet_amount", minWidth: "150px" },
+  { title: t("lottery_report.col_valid_bet"), key: "valid_amount", minWidth: "160px" },
+  { title: t("lottery_report.col_rebate"), key: "rebate_amount", minWidth: "150px" },
+  { title: t("lottery_report.col_win_loss"), key: "result", minWidth: "150px" },
+  { title: t("lottery_report.col_result"), key: "win_lose", minWidth: "180px" },
+  { title: t("lottery_report.col_prize"), key: "prize", minWidth: "150px" },
+  { title: t("lottery_report.col_lottery_type"), key: "lottery_name", width: "160px" },
 ]);
 
 const tableData = ref([] as any[]);
 
-const summaryColumns = ref([
-  { title: "Số khách đặt cược", key: "total_bet_number" },
-  { title: "Số lần cược", key: "total_bet_count" },
-  { title: "Tiền cược", key: "total_bet_amount" },
-  { title: "Tiền cược hợp lệ (trừ cược hoà)", key: "total_valid_amount" },
-  { title: "Hoàn trả", key: "total_rebate_amount" },
-  { title: "Thắng thua", key: "total_result" },
-  { title: "Kết quả thắng thua (không gồm hoàn trả)", key: "total_win_lose" },
-  { title: "Tiền trúng", key: "total_prize" },
+const summaryColumns = computed(() => [
+  { title: t("lottery_report.sum_bettors"), key: "total_bet_number" },
+  { title: t("lottery_report.sum_bet_count"), key: "total_bet_count" },
+  { title: t("lottery_report.sum_bet_amount"), key: "total_bet_amount" },
+  { title: t("lottery_report.sum_valid_bet"), key: "total_valid_amount" },
+  { title: t("lottery_report.sum_rebate"), key: "total_rebate_amount" },
+  { title: t("lottery_report.sum_win_loss"), key: "total_result" },
+  { title: t("lottery_report.sum_result"), key: "total_win_lose" },
+  { title: t("lottery_report.sum_prize"), key: "total_prize" },
 ]);
 
 const summaryData = ref([

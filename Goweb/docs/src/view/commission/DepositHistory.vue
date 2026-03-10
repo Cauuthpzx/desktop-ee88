@@ -4,44 +4,44 @@
       <template #title>
         <span class="field-title">
           <lay-icon type="layui-icon-diamond" size="18px"></lay-icon>
-          DANH SÁCH NẠP TIỀN
+          {{ t("deposit_history.title") }}
         </span>
       </template>
 
       <lay-form :model="searchForm" class="search-form" mode="inline" label-width="auto">
-        <lay-form-item label="Thời gian tạo đơn：">
+        <lay-form-item :label="t('deposit_history.order_time_label')">
           <lay-date-picker
             v-model="searchForm.dateRange"
             type="date"
             range
             single-panel
             allow-clear
-            :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
+            :placeholder="[t('common.date_start'), t('common.date_end')]"
           ></lay-date-picker>
         </lay-form-item>
-        <lay-form-item label="Tên tài khoản：">
-          <lay-input v-model="searchForm.username" placeholder="Nhập tên tài khoản" style="width: 300px"></lay-input>
+        <lay-form-item :label="t('common.username_label')">
+          <lay-input v-model="searchForm.username" :placeholder="t('common.username_placeholder')" style="width: 300px"></lay-input>
         </lay-form-item>
-        <lay-form-item label="Loại hình giao dịch：">
-          <lay-select v-model="searchForm.type" placeholder="Chọn" allow-clear searchable style="width: 220px">
-            <lay-select-option value="1" label="Nạp tiền"></lay-select-option>
-            <lay-select-option value="2" label="Rút tiền"></lay-select-option>
+        <lay-form-item :label="t('deposit_history.type_label')">
+          <lay-select v-model="searchForm.type" :placeholder="t('common.select')" allow-clear searchable style="width: 220px">
+            <lay-select-option value="1" :label="t('deposit_history.type_deposit')"></lay-select-option>
+            <lay-select-option value="2" :label="t('deposit_history.type_withdraw')"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Trạng thái giao dịch：">
-          <lay-select v-model="searchForm.status" placeholder="Chọn" allow-clear searchable style="width: 180px">
-            <lay-select-option value="0" label="Chờ xử lí"></lay-select-option>
-            <lay-select-option value="1" label="Hoàn tất"></lay-select-option>
-            <lay-select-option value="2" label="Đang xử lí"></lay-select-option>
-            <lay-select-option value="3" label="Trạng thái không thành công"></lay-select-option>
+        <lay-form-item :label="t('deposit_history.status_label')">
+          <lay-select v-model="searchForm.status" :placeholder="t('common.select')" allow-clear searchable style="width: 180px">
+            <lay-select-option value="0" :label="t('deposit_history.status_pending')"></lay-select-option>
+            <lay-select-option value="1" :label="t('deposit_history.status_complete')"></lay-select-option>
+            <lay-select-option value="2" :label="t('deposit_history.status_processing')"></lay-select-option>
+            <lay-select-option value="3" :label="t('deposit_history.status_failed')"></lay-select-option>
           </lay-select>
         </lay-form-item>
         <lay-form-item>
           <lay-button type="primary" @click="handleSearch">
-            <lay-icon type="layui-icon-search"></lay-icon> Tìm kiếm
+            <lay-icon type="layui-icon-search"></lay-icon> {{ t("common.search") }}
           </lay-button>
           <lay-button @click="handleReset">
-            <lay-icon type="layui-icon-refresh"></lay-icon> Đặt lại
+            <lay-icon type="layui-icon-refresh"></lay-icon> {{ t("common.reset") }}
           </lay-button>
         </lay-form-item>
       </lay-form>
@@ -53,8 +53,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
+import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
+
+const { t } = useI18n();
 
 const searchForm = reactive({
   dateRange: [] as string[],
@@ -63,13 +66,13 @@ const searchForm = reactive({
   status: null as string | null,
 });
 
-const columns = ref([
-  { title: "Tên tài khoản", key: "username" },
-  { title: "Thuộc đại lý", key: "user_parent_format" },
-  { title: "Số tiền", key: "amount" },
-  { title: "Loại hình giao dịch", key: "type" },
-  { title: "Trạng thái giao dịch", key: "status" },
-  { title: "Thời gian tạo đơn", key: "create_time" },
+const columns = computed(() => [
+  { title: t("deposit_history.col_username"), key: "username" },
+  { title: t("deposit_history.col_agent"), key: "user_parent_format" },
+  { title: t("deposit_history.col_amount"), key: "amount" },
+  { title: t("deposit_history.col_type"), key: "type" },
+  { title: t("deposit_history.col_status"), key: "status" },
+  { title: t("deposit_history.col_order_time"), key: "create_time" },
 ]);
 
 const tableData = ref([] as any[]);

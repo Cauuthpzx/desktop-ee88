@@ -4,7 +4,7 @@
       <template #title>
         <span class="field-title">
           <lay-icon type="layui-icon-form" size="18px"></lay-icon>
-          DANH SÁCH ĐƠN CƯỢC
+          {{ t("lottery_bets.title") }}
         </span>
       </template>
 
@@ -16,23 +16,23 @@
             range
             single-panel
             allow-clear
-            :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
+            :placeholder="[t('common.date_start'), t('common.date_end')]"
           ></lay-date-picker>
         </lay-form-item>
         <lay-form-item>
-          <lay-select v-model="dateForm.quickDate" placeholder="Hôm nay" fit-content @change="onQuickDateChange">
-            <lay-select-option :value="quickDateValues.today" label="Hôm nay"></lay-select-option>
-            <lay-select-option :value="quickDateValues.yesterday" label="Hôm qua"></lay-select-option>
+          <lay-select v-model="dateForm.quickDate" :placeholder="t('common.today')" fit-content @change="onQuickDateChange">
+            <lay-select-option :value="quickDateValues.today" :label="t('common.today')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.yesterday" :label="t('common.yesterday')"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Tên người dùng：">
-          <lay-input v-model="searchForm.username" placeholder="Vui lòng nhập đầy đủ Tên người dùng" style="width: 200px"></lay-input>
+        <lay-form-item :label="t('lottery_bets.user_label')">
+          <lay-input v-model="searchForm.username" :placeholder="t('lottery_bets.user_placeholder')" style="width: 200px"></lay-input>
         </lay-form-item>
-        <lay-form-item label="Mã giao dịch：">
-          <lay-input v-model="searchForm.serialNo" placeholder="Nhập đầy đủ mã giao dịch" style="width: 200px"></lay-input>
+        <lay-form-item :label="t('lottery_bets.serial_label')">
+          <lay-input v-model="searchForm.serialNo" :placeholder="t('lottery_bets.serial_placeholder')" style="width: 200px"></lay-input>
         </lay-form-item>
-        <lay-form-item label="Trò chơi：">
-          <lay-select v-model="searchForm.lotteryId" placeholder="Chọn" allow-clear searchable style="width: 150px">
+        <lay-form-item :label="t('lottery_bets.game_label')">
+          <lay-select v-model="searchForm.lotteryId" :placeholder="t('common.select')" allow-clear searchable style="width: 150px">
             <lay-select-option value="67" label="Sicbo 30 giây"></lay-select-option>
             <lay-select-option value="66" label="Sicbo 20 giây"></lay-select-option>
             <lay-select-option value="68" label="Sicbo 40 giây"></lay-select-option>
@@ -100,32 +100,32 @@
             <lay-select-option value="72" label="Oẳn tù tì"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Loại trò chơi：">
-          <lay-select v-model="searchForm.playTypeId" placeholder="Chọn" allow-clear searchable style="width: 180px">
+        <lay-form-item :label="t('lottery_bets.game_type_label')">
+          <lay-select v-model="searchForm.playTypeId" :placeholder="t('common.select')" allow-clear searchable style="width: 180px">
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Cách chơi：">
-          <lay-select v-model="searchForm.playId" placeholder="Chọn" allow-clear searchable style="width: 180px">
+        <lay-form-item :label="t('lottery_bets.play_method_label')">
+          <lay-select v-model="searchForm.playId" :placeholder="t('common.select')" allow-clear searchable style="width: 180px">
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Trạng thái：">
-          <lay-select v-model="searchForm.status" placeholder="Chọn" allow-clear searchable style="width: 150px">
-            <lay-select-option value="-9" label="Chưa thanh toán"></lay-select-option>
-            <lay-select-option value="1" label="Trúng"></lay-select-option>
-            <lay-select-option value="-1" label="Không trúng"></lay-select-option>
-            <lay-select-option value="2" label="Hoà"></lay-select-option>
-            <lay-select-option value="3" label="Khách huỷ đơn"></lay-select-option>
-            <lay-select-option value="4" label="Hệ thống huỷ đơn"></lay-select-option>
-            <lay-select-option value="5" label="Đơn cược bất thường"></lay-select-option>
-            <lay-select-option value="6" label="Chưa thanh toán (khôi phục thủ công)"></lay-select-option>
+        <lay-form-item :label="t('lottery_bets.status_label')">
+          <lay-select v-model="searchForm.status" :placeholder="t('common.select')" allow-clear searchable style="width: 150px">
+            <lay-select-option value="-9" :label="t('lottery_bets.status_unpaid')"></lay-select-option>
+            <lay-select-option value="1" :label="t('lottery_bets.status_win')"></lay-select-option>
+            <lay-select-option value="-1" :label="t('lottery_bets.status_lose')"></lay-select-option>
+            <lay-select-option value="2" :label="t('lottery_bets.status_draw')"></lay-select-option>
+            <lay-select-option value="3" :label="t('lottery_bets.status_user_cancel')"></lay-select-option>
+            <lay-select-option value="4" :label="t('lottery_bets.status_system_cancel')"></lay-select-option>
+            <lay-select-option value="5" :label="t('lottery_bets.status_abnormal')"></lay-select-option>
+            <lay-select-option value="6" :label="t('lottery_bets.status_manual_restore')"></lay-select-option>
           </lay-select>
         </lay-form-item>
         <lay-form-item>
           <lay-button type="primary" @click="handleSearch">
-            <lay-icon type="layui-icon-search"></lay-icon> Tìm kiếm
+            <lay-icon type="layui-icon-search"></lay-icon> {{ t("common.search") }}
           </lay-button>
           <lay-button @click="handleReset">
-            <lay-icon type="layui-icon-refresh"></lay-icon> Đặt lại
+            <lay-icon type="layui-icon-refresh"></lay-icon> {{ t("common.reset") }}
           </lay-button>
         </lay-form-item>
       </lay-form>
@@ -135,7 +135,7 @@
     </lay-table>
 
     <div class="summary-section">
-      <span class="summary-title">Dữ liệu tổng hợp:</span>
+      <span class="summary-title">{{ t("common.summary_data") }}</span>
       <lay-table :columns="summaryColumns" :data-source="summaryData" even skin="nob">
       </lay-table>
     </div>
@@ -143,10 +143,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
+import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
 
+const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate({ onlyTodayYesterday: true });
 
 const searchForm = reactive({
@@ -158,27 +160,27 @@ const searchForm = reactive({
   status: null as string | null,
 });
 
-const columns = ref([
-  { title: "Mã giao dịch", key: "serial_no", width: "200px" },
-  { title: "Tên người dùng", key: "username", width: "150px" },
-  { title: "Thời gian cược", key: "create_time", width: "160px" },
-  { title: "Trò chơi", key: "lottery_name", minWidth: "150px" },
-  { title: "Loại trò chơi", key: "play_type_name", minWidth: "150px" },
-  { title: "Cách chơi", key: "play_name", minWidth: "150px" },
-  { title: "Kỳ", key: "issue", minWidth: "150px" },
-  { title: "Thông tin cược", key: "content", minWidth: "150px" },
-  { title: "Tiền cược", key: "money", minWidth: "150px" },
-  { title: "Tiền hoàn trả", key: "rebate_amount", minWidth: "150px" },
-  { title: "Thắng thua", key: "result", minWidth: "150px" },
-  { title: "Trạng thái", key: "status_text", width: "100px" },
+const columns = computed(() => [
+  { title: t("lottery_bets.col_serial"), key: "serial_no", width: "200px" },
+  { title: t("lottery_bets.col_username"), key: "username", width: "150px" },
+  { title: t("lottery_bets.col_bet_time"), key: "create_time", width: "160px" },
+  { title: t("lottery_bets.col_game"), key: "lottery_name", minWidth: "150px" },
+  { title: t("lottery_bets.col_game_type"), key: "play_type_name", minWidth: "150px" },
+  { title: t("lottery_bets.col_play_method"), key: "play_name", minWidth: "150px" },
+  { title: t("lottery_bets.col_period"), key: "issue", minWidth: "150px" },
+  { title: t("lottery_bets.col_bet_info"), key: "content", minWidth: "150px" },
+  { title: t("lottery_bets.col_bet_amount"), key: "money", minWidth: "150px" },
+  { title: t("lottery_bets.col_rebate_amount"), key: "rebate_amount", minWidth: "150px" },
+  { title: t("lottery_bets.col_win_loss"), key: "result", minWidth: "150px" },
+  { title: t("lottery_bets.col_status"), key: "status_text", width: "100px" },
 ]);
 
 const tableData = ref([] as any[]);
 
-const summaryColumns = ref([
-  { title: "Tiền cược", key: "total_money" },
-  { title: "Tiền hoàn trả", key: "total_rebate_amount" },
-  { title: "Thắng thua", key: "total_result" },
+const summaryColumns = computed(() => [
+  { title: t("lottery_bets.sum_bet_amount"), key: "total_money" },
+  { title: t("lottery_bets.sum_rebate_amount"), key: "total_rebate_amount" },
+  { title: t("lottery_bets.sum_win_loss"), key: "total_result" },
 ]);
 
 const summaryData = ref([

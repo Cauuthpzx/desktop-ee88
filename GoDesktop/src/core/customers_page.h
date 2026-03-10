@@ -11,14 +11,16 @@
 
 class DateRangePicker;
 class ThemeManager;
+class Translator;
 
 class CustomersPage : public QWidget {
     Q_OBJECT
 
 public:
-    explicit CustomersPage(ThemeManager* theme, QWidget* parent = nullptr);
+    explicit CustomersPage(ThemeManager* theme, Translator* tr, QWidget* parent = nullptr);
 
     void apply_theme();
+    void retranslate();
 
 private:
     void setup_ui();
@@ -27,6 +29,7 @@ private:
     void on_print_table();
 
     ThemeManager* m_theme;
+    Translator* m_tr;
 
     QWidget* m_card;
     QWidget* m_field_header;

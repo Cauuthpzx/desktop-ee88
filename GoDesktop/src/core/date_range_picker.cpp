@@ -1,4 +1,5 @@
 #include "core/date_range_picker.h"
+#include "core/translator.h"
 
 #include <QTextCharFormat>
 
@@ -61,6 +62,12 @@ void DateRangePicker::set_button_style(const QString& style)
     m_button->setStyleSheet(style);
 }
 
+void DateRangePicker::set_translator(Translator* tr)
+{
+    m_tr = tr;
+    m_popup->set_translator(tr);
+}
+
 void DateRangePicker::apply_popup_theme(bool dark)
 {
     m_popup->apply_theme(dark);
@@ -99,7 +106,7 @@ DateRangePopup::DateRangePopup(QWidget* parent)
     lay->setContentsMargins(8, 8, 8, 8);
     lay->setSpacing(6);
 
-    m_hint_label = new QLabel(QString::fromUtf8("Chọn ngày bắt đầu"));
+    m_hint_label = new QLabel(m_tr ? m_tr->t("common.select_start_date") : "Select start date");
     m_hint_label->setAlignment(Qt::AlignCenter);
     m_hint_label->setStyleSheet("font-size: 12px; border: none;");
     lay->addWidget(m_hint_label);
@@ -114,14 +121,14 @@ DateRangePopup::DateRangePopup(QWidget* parent)
     auto* btn_layout = new QHBoxLayout;
     btn_layout->setSpacing(8);
 
-    m_clear_btn = new QPushButton(QString::fromUtf8("Xoá"));
+    m_clear_btn = new QPushButton(m_tr ? m_tr->t("common.clear") : "Clear");
     m_clear_btn->setCursor(Qt::PointingHandCursor);
     m_clear_btn->setFixedHeight(28);
     btn_layout->addWidget(m_clear_btn);
 
     btn_layout->addStretch();
 
-    m_confirm_btn = new QPushButton(QString::fromUtf8("Đồng ý"));
+    m_confirm_btn = new QPushButton(m_tr ? m_tr->t("common.confirm") : "Confirm");
     m_confirm_btn->setCursor(Qt::PointingHandCursor);
     m_confirm_btn->setFixedHeight(28);
     btn_layout->addWidget(m_confirm_btn);
@@ -140,7 +147,7 @@ void DateRangePopup::clear()
     m_start = QDate();
     m_end = QDate();
     m_selecting_end = false;
-    m_hint_label->setText(QString::fromUtf8("Chọn ngày bắt đầu"));
+    m_hint_label->setText(m_tr ? m_tr->t("common.select_start_date") : "Select start date");
     clear_highlight();
 }
 
@@ -176,7 +183,7 @@ void DateRangePopup::on_date_clicked(const QDate& date)
         m_start = date;
         m_end = QDate();
         m_selecting_end = true;
-        m_hint_label->setText(QString::fromUtf8("Chọn ngày kết thúc"));
+        m_hint_label->setText(m_tr ? m_tr->t("common.select_end_date") : "Select end date");
         clear_highlight();
         QTextCharFormat fmt;
         fmt.setBackground(QColor("#16baaa"));
@@ -234,6 +241,22 @@ void DateRangePopup::highlight_range()
             m_calendar->setDateTextFormat(d, range_fmt);
         }
         d = d.addDays(1);
+    }
+}
+
+void DateRangePopup::set_translator(Translator* tr)
+{
+    m_tr = tr;
+    retranslate();
+}
+
+void DateRangePopup::retranslate()
+{
+    if (!m_tr) return;
+    m_clear_btn->setText(m_tr->t("common.clear"));
+    m_confirm_btn->setText(m_tr->t("common.confirm"));
+    if (!m_selecting_end && !m_start.isValid()) {
+        m_hint_label->setText(m_tr->t("common.select_start_date"));
     }
 }
 

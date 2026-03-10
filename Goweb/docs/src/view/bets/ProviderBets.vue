@@ -4,42 +4,42 @@
       <template #title>
         <span class="field-title">
           <lay-icon type="layui-icon-form" size="18px"></lay-icon>
-          ĐƠN CƯỢC BÊN THỨ 3
+          {{ t("provider_bets.title") }}
         </span>
       </template>
 
       <lay-form :model="searchForm" class="search-form" mode="inline" label-width="auto">
-        <lay-form-item label="Thời gian cược：">
+        <lay-form-item :label="t('provider_bets.bet_time_label')">
           <lay-date-picker
             v-model="dateForm.dateRange"
             type="date"
             range
             single-panel
             allow-clear
-            :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
+            :placeholder="[t('common.date_start'), t('common.date_end')]"
           ></lay-date-picker>
         </lay-form-item>
         <lay-form-item>
-          <lay-select v-model="dateForm.quickDate" placeholder="Hôm nay" fit-content @change="onQuickDateChange">
-            <lay-select-option :value="quickDateValues.today" label="Hôm nay"></lay-select-option>
-            <lay-select-option :value="quickDateValues.yesterday" label="Hôm qua"></lay-select-option>
-            <lay-select-option :value="quickDateValues.thisWeek" label="Tuần này"></lay-select-option>
-            <lay-select-option :value="quickDateValues.thisMonth" label="Tháng này"></lay-select-option>
-            <lay-select-option :value="quickDateValues.lastMonth" label="Tháng trước"></lay-select-option>
+          <lay-select v-model="dateForm.quickDate" :placeholder="t('common.today')" fit-content @change="onQuickDateChange">
+            <lay-select-option :value="quickDateValues.today" :label="t('common.today')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.yesterday" :label="t('common.yesterday')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.thisWeek" :label="t('common.this_week')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.thisMonth" :label="t('common.this_month')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.lastMonth" :label="t('common.last_month')"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Mã giao dịch：">
-          <lay-input v-model="searchForm.serialNo" placeholder="Nhập hoàn chỉnh đơn giao dịch" style="width: 200px"></lay-input>
+        <lay-form-item :label="t('provider_bets.serial_label')">
+          <lay-input v-model="searchForm.serialNo" :placeholder="t('provider_bets.serial_placeholder')" style="width: 200px"></lay-input>
         </lay-form-item>
-        <lay-form-item label="Tên tài khoản thuộc nhà cái：">
-          <lay-input v-model="searchForm.platformUsername" placeholder="Nhập tên tài khoản thuộc nhà cái" style="width: 200px"></lay-input>
+        <lay-form-item :label="t('provider_bets.platform_user_label')">
+          <lay-input v-model="searchForm.platformUsername" :placeholder="t('provider_bets.platform_user_placeholder')" style="width: 200px"></lay-input>
         </lay-form-item>
         <lay-form-item>
           <lay-button type="primary" @click="handleSearch">
-            <lay-icon type="layui-icon-search"></lay-icon> Tìm kiếm
+            <lay-icon type="layui-icon-search"></lay-icon> {{ t("common.search") }}
           </lay-button>
           <lay-button @click="handleReset">
-            <lay-icon type="layui-icon-refresh"></lay-icon> Đặt lại
+            <lay-icon type="layui-icon-refresh"></lay-icon> {{ t("common.reset") }}
           </lay-button>
         </lay-form-item>
       </lay-form>
@@ -51,10 +51,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
+import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
 
+const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
 
 const searchForm = reactive({
@@ -62,17 +64,17 @@ const searchForm = reactive({
   platformUsername: "",
 });
 
-const columns = ref([
-  { title: "Mã giao dịch", key: "serial_no", width: "250px" },
-  { title: "Nhà cung cấp game bên thứ 3", key: "platform_id_name", minWidth: "150px" },
-  { title: "Tên tài khoản thuộc nhà cái", key: "platform_username", minWidth: "150px" },
-  { title: "Loại hình trò chơi", key: "c_name", minWidth: "150px" },
-  { title: "Tên trò chơi bên thứ 3", key: "game_name", minWidth: "150px" },
-  { title: "Tiền cược", key: "bet_amount", minWidth: "150px" },
-  { title: "Tiền cược hợp lệ", key: "turnover", minWidth: "150px" },
-  { title: "Tiền thưởng", key: "prize", minWidth: "150px" },
-  { title: "Thắng thua", key: "win_lose", minWidth: "150px" },
-  { title: "Thời gian cược", key: "bet_time", minWidth: "160px" },
+const columns = computed(() => [
+  { title: t("provider_bets.col_serial"), key: "serial_no", width: "250px" },
+  { title: t("provider_bets.col_provider"), key: "platform_id_name", minWidth: "150px" },
+  { title: t("provider_bets.col_platform_user"), key: "platform_username", minWidth: "150px" },
+  { title: t("provider_bets.col_game_type"), key: "c_name", minWidth: "150px" },
+  { title: t("provider_bets.col_game_name"), key: "game_name", minWidth: "150px" },
+  { title: t("provider_bets.col_bet_amount"), key: "bet_amount", minWidth: "150px" },
+  { title: t("provider_bets.col_valid_bet"), key: "turnover", minWidth: "150px" },
+  { title: t("provider_bets.col_bonus"), key: "prize", minWidth: "150px" },
+  { title: t("provider_bets.col_win_loss"), key: "win_lose", minWidth: "150px" },
+  { title: t("provider_bets.col_bet_time"), key: "bet_time", minWidth: "160px" },
 ]);
 
 const tableData = ref([] as any[]);

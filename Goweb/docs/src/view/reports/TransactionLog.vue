@@ -4,7 +4,7 @@
       <template #title>
         <span class="field-title">
           <lay-icon type="layui-icon-chart-screen" size="18px"></lay-icon>
-          SAO KÊ GIAO DỊCH
+          {{ t("transaction_log.title") }}
         </span>
       </template>
 
@@ -16,27 +16,27 @@
             range
             single-panel
             allow-clear
-            :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
+            :placeholder="[t('common.date_start'), t('common.date_end')]"
           ></lay-date-picker>
         </lay-form-item>
         <lay-form-item>
-          <lay-select v-model="dateForm.quickDate" placeholder="Hôm nay" fit-content @change="onQuickDateChange">
-            <lay-select-option :value="quickDateValues.today" label="Hôm nay"></lay-select-option>
-            <lay-select-option :value="quickDateValues.yesterday" label="Hôm qua"></lay-select-option>
-            <lay-select-option :value="quickDateValues.thisWeek" label="Tuần này"></lay-select-option>
-            <lay-select-option :value="quickDateValues.thisMonth" label="Tháng này"></lay-select-option>
-            <lay-select-option :value="quickDateValues.lastMonth" label="Tháng trước"></lay-select-option>
+          <lay-select v-model="dateForm.quickDate" :placeholder="t('common.today')" fit-content @change="onQuickDateChange">
+            <lay-select-option :value="quickDateValues.today" :label="t('common.today')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.yesterday" :label="t('common.yesterday')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.thisWeek" :label="t('common.this_week')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.thisMonth" :label="t('common.this_month')"></lay-select-option>
+            <lay-select-option :value="quickDateValues.lastMonth" :label="t('common.last_month')"></lay-select-option>
           </lay-select>
         </lay-form-item>
-        <lay-form-item label="Tên tài khoản：">
-          <lay-input v-model="searchForm.username" placeholder="Nhập tên tài khoản" style="width: 200px"></lay-input>
+        <lay-form-item :label="t('common.username_label')">
+          <lay-input v-model="searchForm.username" :placeholder="t('common.username_placeholder')" style="width: 200px"></lay-input>
         </lay-form-item>
         <lay-form-item>
           <lay-button type="primary" @click="handleSearch">
-            <lay-icon type="layui-icon-search"></lay-icon> Tìm kiếm
+            <lay-icon type="layui-icon-search"></lay-icon> {{ t("common.search") }}
           </lay-button>
           <lay-button @click="handleReset">
-            <lay-icon type="layui-icon-refresh"></lay-icon> Đặt lại
+            <lay-icon type="layui-icon-refresh"></lay-icon> {{ t("common.reset") }}
           </lay-button>
         </lay-form-item>
       </lay-form>
@@ -46,7 +46,7 @@
     </lay-table>
 
     <div class="summary-section">
-      <span class="summary-title">Phương pháp tổng hợp [nhóm]:</span>
+      <span class="summary-title">{{ t("common.summary_group") }}</span>
       <lay-table :columns="summaryColumns" :data-source="summaryData" even skin="nob">
       </lay-table>
     </div>
@@ -54,40 +54,43 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
+import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
+
+const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
 
 const searchForm = reactive({
   username: "",
 });
 
-const columns = ref([
-  { title: "Tên tài khoản", key: "username", width: "150px" },
-  { title: "Thuộc đại lý", key: "user_parent_format", width: "150px" },
-  { title: "Số lần nạp", key: "deposit_count" },
-  { title: "Số tiền nạp", key: "deposit_amount", minWidth: "150px" },
-  { title: "Số lần rút", key: "withdrawal_count", minWidth: "150px" },
-  { title: "Số tiền rút", key: "withdrawal_amount", minWidth: "160px" },
-  { title: "Phí dịch vụ", key: "charge_fee", minWidth: "150px" },
-  { title: "Hoa hồng đại lý", key: "agent_commission", minWidth: "150px" },
-  { title: "Ưu đãi", key: "promotion", minWidth: "150px" },
-  { title: "Hoàn trả bên thứ 3", key: "third_rebate", minWidth: "150px" },
-  { title: "Tiền thưởng từ bên thứ 3", key: "third_activity_amount", minWidth: "150px" },
-  { title: "Thời gian", key: "date", minWidth: "160px" },
+const columns = computed(() => [
+  { title: t("transaction_log.col_username"), key: "username", width: "150px" },
+  { title: t("transaction_log.col_agent"), key: "user_parent_format", width: "150px" },
+  { title: t("transaction_log.col_deposit_count"), key: "deposit_count" },
+  { title: t("transaction_log.col_deposit_amount"), key: "deposit_amount", minWidth: "150px" },
+  { title: t("transaction_log.col_withdraw_count"), key: "withdrawal_count", minWidth: "150px" },
+  { title: t("transaction_log.col_withdraw_amount"), key: "withdrawal_amount", minWidth: "160px" },
+  { title: t("transaction_log.col_service_fee"), key: "charge_fee", minWidth: "150px" },
+  { title: t("transaction_log.col_agent_commission"), key: "agent_commission", minWidth: "150px" },
+  { title: t("transaction_log.col_promotion"), key: "promotion", minWidth: "150px" },
+  { title: t("transaction_log.col_third_party_rebate"), key: "third_rebate", minWidth: "150px" },
+  { title: t("transaction_log.col_third_party_bonus"), key: "third_activity_amount", minWidth: "150px" },
+  { title: t("transaction_log.col_time"), key: "date", minWidth: "160px" },
 ]);
 
 const tableData = ref([] as any[]);
 
-const summaryColumns = ref([
-  { title: "Số tiền nạp", key: "total_deposit_amount" },
-  { title: "Số tiền rút", key: "total_withdrawal_amount" },
-  { title: "Phí dịch vụ", key: "total_charge_fee" },
-  { title: "Hoa hồng đại lý", key: "total_agent_commission" },
-  { title: "Ưu đãi", key: "total_promotion" },
-  { title: "Hoàn trả bên thứ 3", key: "total_third_rebate" },
-  { title: "Tiền thưởng từ bên thứ 3", key: "total_third_activity_amount" },
+const summaryColumns = computed(() => [
+  { title: t("transaction_log.sum_deposit_amount"), key: "total_deposit_amount" },
+  { title: t("transaction_log.sum_withdraw_amount"), key: "total_withdrawal_amount" },
+  { title: t("transaction_log.sum_service_fee"), key: "total_charge_fee" },
+  { title: t("transaction_log.sum_agent_commission"), key: "total_agent_commission" },
+  { title: t("transaction_log.sum_promotion"), key: "total_promotion" },
+  { title: t("transaction_log.sum_third_party_rebate"), key: "total_third_rebate" },
+  { title: t("transaction_log.sum_third_party_bonus"), key: "total_third_activity_amount" },
 ]);
 
 const summaryData = ref([

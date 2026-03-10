@@ -2,6 +2,7 @@
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
+#include "core/translator.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -16,9 +17,10 @@
 #include <QDialog>
 #include <QMessageBox>
 
-CustomersPage::CustomersPage(ThemeManager* theme, QWidget* parent)
+CustomersPage::CustomersPage(ThemeManager* theme, Translator* tr, QWidget* parent)
     : QWidget(parent)
     , m_theme(theme)
+    , m_tr(tr)
 {
     setup_ui();
 }
@@ -51,7 +53,7 @@ void CustomersPage::setup_ui()
     header_icon->setStyleSheet("border: none;");
     header_layout->addWidget(header_icon);
 
-    m_title = new QLabel(QString::fromUtf8("QUẢN LÍ HỘI VIÊN THUỘC CẤP"));
+    m_title = new QLabel(m_tr->t("customers.title"));
     m_title->setStyleSheet("font-size: 16px; font-weight: 700; border: none;");
     header_layout->addWidget(m_title);
     header_layout->addStretch();
@@ -86,54 +88,55 @@ void CustomersPage::setup_ui()
     Q_UNUSED(flow);
 
     m_search_username = new QLineEdit;
-    m_search_username->setPlaceholderText(QString::fromUtf8("Nhập tên tài khoản"));
+    m_search_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
     m_search_username->setFixedWidth(160);
     m_search_username->setFixedHeight(32);
-    flow->addWidget(make_field(QString::fromUtf8("Tên tài khoản："), m_search_username));
+    flow->addWidget(make_field(m_tr->t("common.username_label"), m_search_username));
 
     m_date_range_picker = new DateRangePicker;
+    m_date_range_picker->set_translator(m_tr);
     m_date_range_picker->set_placeholder(
-        QString::fromUtf8("Thời gian bắt đầu"),
-        QString::fromUtf8("Thời gian kết thúc")
+        m_tr->t("common.date_start"),
+        m_tr->t("common.date_end")
     );
-    flow->addWidget(make_field(QString::fromUtf8("Thời gian nạp đầu："), m_date_range_picker));
+    flow->addWidget(make_field(m_tr->t("customers.first_deposit_date"), m_date_range_picker));
 
     m_search_status = new QComboBox;
-    m_search_status->addItem(QString::fromUtf8("-- Chọn --"), QVariant());
-    m_search_status->addItem(QString::fromUtf8("Chưa đánh giá"), "unrated");
-    m_search_status->addItem(QString::fromUtf8("Bình thường"), "normal");
-    m_search_status->addItem(QString::fromUtf8("Đóng băng"), "frozen");
-    m_search_status->addItem(QString::fromUtf8("Khoá"), "locked");
+    m_search_status->addItem(m_tr->t("common.select"), QVariant());
+    m_search_status->addItem(m_tr->t("customers.status_unrated"), "unrated");
+    m_search_status->addItem(m_tr->t("customers.status_normal"), "normal");
+    m_search_status->addItem(m_tr->t("customers.status_frozen"), "frozen");
+    m_search_status->addItem(m_tr->t("customers.status_locked"), "locked");
     m_search_status->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     m_search_status->setFixedHeight(32);
-    flow->addWidget(make_field(QString::fromUtf8("Trạng thái："), m_search_status));
+    flow->addWidget(make_field(m_tr->t("customers.status_label"), m_search_status));
 
     m_search_sort_field = new QComboBox;
-    m_search_sort_field->addItem(QString::fromUtf8("-- Chọn --"), QVariant());
-    m_search_sort_field->addItem(QString::fromUtf8("Số dư"), "balance");
-    m_search_sort_field->addItem(QString::fromUtf8("Lần đăng nhập cuối"), "last_login");
-    m_search_sort_field->addItem(QString::fromUtf8("Thời gian đăng ký"), "created_at");
-    m_search_sort_field->addItem(QString::fromUtf8("Tổng tiền nạp"), "total_deposit");
-    m_search_sort_field->addItem(QString::fromUtf8("Tổng tiền rút"), "total_withdraw");
+    m_search_sort_field->addItem(m_tr->t("common.select"), QVariant());
+    m_search_sort_field->addItem(m_tr->t("customers.sort_balance"), "balance");
+    m_search_sort_field->addItem(m_tr->t("customers.sort_last_login"), "last_login");
+    m_search_sort_field->addItem(m_tr->t("customers.sort_created_at"), "created_at");
+    m_search_sort_field->addItem(m_tr->t("customers.sort_total_deposit"), "total_deposit");
+    m_search_sort_field->addItem(m_tr->t("customers.sort_total_withdraw"), "total_withdraw");
     m_search_sort_field->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     m_search_sort_field->setFixedHeight(32);
-    flow->addWidget(make_field(QString::fromUtf8("Sắp xếp theo trường："), m_search_sort_field));
+    flow->addWidget(make_field(m_tr->t("customers.sort_field_label"), m_search_sort_field));
 
     m_search_sort_dir = new QComboBox;
-    m_search_sort_dir->addItem(QString::fromUtf8("Từ lớn đến bé"), "desc");
-    m_search_sort_dir->addItem(QString::fromUtf8("Từ bé đến lớn"), "asc");
+    m_search_sort_dir->addItem(m_tr->t("customers.sort_desc"), "desc");
+    m_search_sort_dir->addItem(m_tr->t("customers.sort_asc"), "asc");
     m_search_sort_dir->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     m_search_sort_dir->setFixedHeight(32);
-    flow->addWidget(make_field(QString::fromUtf8("Sắp xếp theo hướng："), m_search_sort_dir));
+    flow->addWidget(make_field(m_tr->t("customers.sort_dir_label"), m_search_sort_dir));
 
-    m_search_btn = new QPushButton(QIcon(":/icons/search"), QString::fromUtf8("Tìm kiếm"));
+    m_search_btn = new QPushButton(QIcon(":/icons/search"), m_tr->t("common.search"));
     m_search_btn->setObjectName("searchBtn");
     m_search_btn->setCursor(Qt::PointingHandCursor);
     m_search_btn->setFixedHeight(32);
     m_search_btn->setIconSize(QSize(16, 16));
     flow->addWidget(m_search_btn);
 
-    m_reset_btn = new QPushButton(QIcon(":/icons/refresh"), QString::fromUtf8("Đặt lại"));
+    m_reset_btn = new QPushButton(QIcon(":/icons/refresh"), m_tr->t("common.reset"));
     m_reset_btn->setObjectName("resetBtn");
     m_reset_btn->setCursor(Qt::PointingHandCursor);
     m_reset_btn->setFixedHeight(32);
@@ -168,13 +171,13 @@ void CustomersPage::setup_ui()
     tb_left_layout->setContentsMargins(8, 6, 0, 6);
     tb_left_layout->setSpacing(0);
 
-    m_add_member_btn = new QPushButton(QString::fromUtf8("+ Thêm hội viên"));
+    m_add_member_btn = new QPushButton("+ " + m_tr->t("customers.add_member"));
     m_add_member_btn->setObjectName("tbBtn");
     m_add_member_btn->setCursor(Qt::PointingHandCursor);
     m_add_member_btn->setFixedHeight(26);
     tb_left_layout->addWidget(m_add_member_btn);
 
-    m_add_agent_btn = new QPushButton(QString::fromUtf8("+ Đại lý mới thêm"));
+    m_add_agent_btn = new QPushButton("+ " + m_tr->t("customers.add_agent"));
     m_add_agent_btn->setObjectName("tbBtn");
     m_add_agent_btn->setCursor(Qt::PointingHandCursor);
     m_add_agent_btn->setFixedHeight(26);
@@ -199,9 +202,9 @@ void CustomersPage::setup_ui()
         return btn;
     };
 
-    m_filter_btn = make_tool_icon(":/icons/settings", QString::fromUtf8("Lọc cột"));
-    m_export_btn = make_tool_icon(":/icons/report", QString::fromUtf8("Xuất file"));
-    m_print_btn = make_tool_icon(":/icons/browser", QString::fromUtf8("In"));
+    m_filter_btn = make_tool_icon(":/icons/settings", m_tr->t("common.filter_columns"));
+    m_export_btn = make_tool_icon(":/icons/report", m_tr->t("common.export_file"));
+    m_print_btn = make_tool_icon(":/icons/browser", m_tr->t("common.print"));
     tb_right_layout->addWidget(m_filter_btn);
     tb_right_layout->addWidget(m_export_btn);
     tb_right_layout->addWidget(m_print_btn);
@@ -218,18 +221,18 @@ void CustomersPage::setup_ui()
     m_table->setObjectName("customersTable");
 
     const QStringList headers = {
-        QString::fromUtf8("Hội viên"),
-        QString::fromUtf8("Loại hình hội viên"),
-        QString::fromUtf8("Tài khoản đại lý"),
-        QString::fromUtf8("Số dư"),
-        QString::fromUtf8("Lần nạp"),
-        QString::fromUtf8("Lần rút"),
-        QString::fromUtf8("Tổng tiền nạp"),
-        QString::fromUtf8("Tổng tiền rút"),
-        QString::fromUtf8("Lần đăng nhập cuối"),
-        QString::fromUtf8("Thời gian đăng ký"),
-        QString::fromUtf8("Trạng thái"),
-        QString::fromUtf8("Thao tác"),
+        m_tr->t("customers.col_member"),
+        m_tr->t("customers.col_member_type"),
+        m_tr->t("customers.col_agent_account"),
+        m_tr->t("customers.col_balance"),
+        m_tr->t("customers.col_deposit_count"),
+        m_tr->t("customers.col_withdraw_count"),
+        m_tr->t("customers.col_total_deposit"),
+        m_tr->t("customers.col_total_withdraw"),
+        m_tr->t("customers.col_last_login"),
+        m_tr->t("customers.col_register_time"),
+        m_tr->t("customers.col_status"),
+        m_tr->t("customers.col_action"),
     };
     m_table->setHorizontalHeaderLabels(headers);
     m_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -246,12 +249,12 @@ void CustomersPage::setup_ui()
     m_table->insertRow(0);
     const QStringList sample = {
         "an10tynghichoi",
-        QString::fromUtf8("Hội viên chính thức"),
+        m_tr->t("customers.type_official"),
         "vozer123",
         "0.0000", "0", "0", "0.0000", "0.0000",
         "",
         "2026-03-09 16:20:58",
-        QString::fromUtf8("Bình thường"),
+        m_tr->t("customers.status_normal"),
         ""
     };
     for (int c = 0; c < 11; ++c) {
@@ -259,7 +262,7 @@ void CustomersPage::setup_ui()
         item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         m_table->setItem(0, c, item);
     }
-    auto* rebate_btn = new QPushButton(QString::fromUtf8("Cài đặt hoàn trả"));
+    auto* rebate_btn = new QPushButton(m_tr->t("customers.rebate_settings"));
     rebate_btn->setObjectName("rebateBtn");
     rebate_btn->setCursor(Qt::PointingHandCursor);
     rebate_btn->setFixedHeight(24);
@@ -295,7 +298,7 @@ void CustomersPage::setup_ui()
 
     pg_layout->addSpacing(12);
 
-    m_page_info = new QLabel(QString::fromUtf8("Tổng 1 dòng"));
+    m_page_info = new QLabel(m_tr->t("common.total_rows").arg(1));
     m_page_info->setObjectName("pageInfo");
     pg_layout->addWidget(m_page_info);
 
@@ -306,7 +309,7 @@ void CustomersPage::setup_ui()
     const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
     for (int ps : page_sizes) {
         m_page_size_combo->addItem(
-            QString::fromUtf8("%1 dòng/trang").arg(ps), ps);
+            m_tr->t("common.rows_per_page").arg(ps), ps);
     }
     m_page_size_combo->setFixedHeight(28);
     pg_layout->addWidget(m_page_size_combo);
@@ -471,7 +474,7 @@ void CustomersPage::apply_theme()
 void CustomersPage::on_filter_columns()
 {
     QDialog dlg(this);
-    dlg.setWindowTitle(QString::fromUtf8("Lọc cột"));
+    dlg.setWindowTitle(m_tr->t("common.filter_columns"));
     dlg.setMinimumWidth(250);
 
     auto* layout = new QVBoxLayout(&dlg);
@@ -499,14 +502,14 @@ void CustomersPage::on_filter_columns()
 void CustomersPage::on_export_csv()
 {
     QString path = QFileDialog::getSaveFileName(
-        this, QString::fromUtf8("Xuất file CSV"), "customers.csv",
+        this, m_tr->t("common.export_csv"), "customers.csv",
         "CSV (*.csv);;All Files (*)");
     if (path.isEmpty()) return;
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::warning(this, "Error",
-            QString::fromUtf8("Không thể mở file: %1").arg(path));
+        QMessageBox::warning(this, m_tr->t("common.export_file"),
+            m_tr->t("common.export_error").arg(path));
         return;
     }
 
@@ -542,15 +545,15 @@ void CustomersPage::on_export_csv()
     }
 
     file.close();
-    QMessageBox::information(this, QString::fromUtf8("Thành công"),
-        QString::fromUtf8("Đã xuất file: %1").arg(path));
+    QMessageBox::information(this, m_tr->t("common.export_success"),
+        m_tr->t("common.export_done").arg(path));
 }
 
 void CustomersPage::on_print_table()
 {
     QPrinter printer(QPrinter::HighResolution);
     QPrintDialog dlg(&printer, this);
-    dlg.setWindowTitle(QString::fromUtf8("In bảng khách hàng"));
+    dlg.setWindowTitle(m_tr->t("common.print_table"));
     if (dlg.exec() != QDialog::Accepted) return;
 
     int cols = m_table->columnCount();
@@ -561,7 +564,7 @@ void CustomersPage::on_print_table()
         "th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }"
         "th { background: #f0f0f0; font-weight: bold; }"
         "</style></head><body>";
-    html += QString::fromUtf8("<h3>Quản lí hội viên thuộc cấp</h3>");
+    html += "<h3>" + m_tr->t("customers.title") + "</h3>";
     html += "<table><tr>";
 
     for (int c = 0; c < cols; ++c) {
@@ -587,4 +590,70 @@ void CustomersPage::on_print_table()
     QTextDocument doc;
     doc.setHtml(html);
     doc.print(&printer);
+}
+
+void CustomersPage::retranslate()
+{
+    m_title->setText(m_tr->t("customers.title"));
+
+    // Search labels
+    if (m_search_labels.size() >= 5) {
+        m_search_labels[0]->setText(m_tr->t("common.username_label"));
+        m_search_labels[1]->setText(m_tr->t("customers.first_deposit_date"));
+        m_search_labels[2]->setText(m_tr->t("customers.status_label"));
+        m_search_labels[3]->setText(m_tr->t("customers.sort_field_label"));
+        m_search_labels[4]->setText(m_tr->t("customers.sort_dir_label"));
+    }
+
+    m_search_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
+    m_date_range_picker->set_placeholder(m_tr->t("common.date_start"), m_tr->t("common.date_end"));
+
+    // Status combo
+    m_search_status->setItemText(0, m_tr->t("common.select"));
+    m_search_status->setItemText(1, m_tr->t("customers.status_unrated"));
+    m_search_status->setItemText(2, m_tr->t("customers.status_normal"));
+    m_search_status->setItemText(3, m_tr->t("customers.status_frozen"));
+    m_search_status->setItemText(4, m_tr->t("customers.status_locked"));
+
+    // Sort field combo
+    m_search_sort_field->setItemText(0, m_tr->t("common.select"));
+    m_search_sort_field->setItemText(1, m_tr->t("customers.sort_balance"));
+    m_search_sort_field->setItemText(2, m_tr->t("customers.sort_last_login"));
+    m_search_sort_field->setItemText(3, m_tr->t("customers.sort_created_at"));
+    m_search_sort_field->setItemText(4, m_tr->t("customers.sort_total_deposit"));
+    m_search_sort_field->setItemText(5, m_tr->t("customers.sort_total_withdraw"));
+
+    // Sort dir combo
+    m_search_sort_dir->setItemText(0, m_tr->t("customers.sort_desc"));
+    m_search_sort_dir->setItemText(1, m_tr->t("customers.sort_asc"));
+
+    // Buttons
+    m_search_btn->setText(m_tr->t("common.search"));
+    m_reset_btn->setText(m_tr->t("common.reset"));
+    m_add_member_btn->setText("+ " + m_tr->t("customers.add_member"));
+    m_add_agent_btn->setText("+ " + m_tr->t("customers.add_agent"));
+
+    // Toolbar tooltips
+    m_filter_btn->setToolTip(m_tr->t("common.filter_columns"));
+    m_export_btn->setToolTip(m_tr->t("common.export_file"));
+    m_print_btn->setToolTip(m_tr->t("common.print"));
+
+    // Table headers
+    m_table->setHorizontalHeaderLabels({
+        m_tr->t("customers.col_member"), m_tr->t("customers.col_member_type"),
+        m_tr->t("customers.col_agent_account"), m_tr->t("customers.col_balance"),
+        m_tr->t("customers.col_deposit_count"), m_tr->t("customers.col_withdraw_count"),
+        m_tr->t("customers.col_total_deposit"), m_tr->t("customers.col_total_withdraw"),
+        m_tr->t("customers.col_last_login"), m_tr->t("customers.col_register_time"),
+        m_tr->t("customers.col_status"), m_tr->t("customers.col_action"),
+    });
+
+    // Pagination
+    m_page_info->setText(m_tr->t("common.total_rows").arg(m_table->rowCount()));
+    const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
+    for (int i = 0; i < 9 && i < m_page_size_combo->count(); ++i)
+        m_page_size_combo->setItemText(i, m_tr->t("common.rows_per_page").arg(page_sizes[i]));
+
+    // Date picker popup
+    m_date_range_picker->set_translator(m_tr);
 }

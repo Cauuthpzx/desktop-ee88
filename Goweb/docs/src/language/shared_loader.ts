@@ -14,6 +14,15 @@ function map_shared(shared: Record<string, any>, locale: string) {
   const extras = web_extras[locale] || web_extras.en_US;
   return {
     nav: shared.nav,
+    common: shared.common,
+    customers: shared.customers,
+    lottery_report: shared.lottery_report,
+    transaction_log: shared.transaction_log,
+    provider_report: shared.provider_report,
+    lottery_bets: shared.lottery_bets,
+    provider_bets: shared.provider_bets,
+    withdrawal_history: shared.withdrawal_history,
+    deposit_history: shared.deposit_history,
     home: {
       description: shared.home.description,
       tagline: shared.home.tagline,

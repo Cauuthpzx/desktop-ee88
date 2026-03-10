@@ -7,53 +7,53 @@
             <template #title>
               <span class="field-title">
                 <lay-icon type="layui-icon-group" size="18px"></lay-icon>
-                QUẢN LÍ HỘI VIÊN THUỘC CẤP
+                {{ t("customers.title") }}
               </span>
             </template>
 
             <lay-form :model="searchForm" class="search-form" mode="inline" label-width="auto">
-              <lay-form-item label="Tên tài khoản：">
-                <lay-input v-model="searchForm.username" placeholder="Nhập tên tài khoản"></lay-input>
+              <lay-form-item :label="t('common.username_label')">
+                <lay-input v-model="searchForm.username" :placeholder="t('common.username_placeholder')"></lay-input>
               </lay-form-item>
-              <lay-form-item label="Thời gian nạp đầu：">
+              <lay-form-item :label="t('customers.first_deposit_date')">
                 <lay-date-picker
                   v-model="searchForm.dateRange"
                   type="date"
                   range
                   single-panel
                   allow-clear
-                  :placeholder="['Thời gian bắt đầu', 'Thời gian kết thúc']"
+                  :placeholder="[t('common.date_start'), t('common.date_end')]"
                 ></lay-date-picker>
               </lay-form-item>
-              <lay-form-item label="Trạng thái：">
-                <lay-select v-model="searchForm.status" placeholder="Chọn" allow-clear fit-content>
-                  <lay-select-option value="unrated" label="Chưa đánh giá"></lay-select-option>
-                  <lay-select-option value="normal" label="Bình thường"></lay-select-option>
-                  <lay-select-option value="frozen" label="Đóng băng"></lay-select-option>
-                  <lay-select-option value="locked" label="Khoá"></lay-select-option>
+              <lay-form-item :label="t('customers.status_label')">
+                <lay-select v-model="searchForm.status" :placeholder="t('common.select')" allow-clear fit-content>
+                  <lay-select-option value="unrated" :label="t('customers.status_unrated')"></lay-select-option>
+                  <lay-select-option value="normal" :label="t('customers.status_normal')"></lay-select-option>
+                  <lay-select-option value="frozen" :label="t('customers.status_frozen')"></lay-select-option>
+                  <lay-select-option value="locked" :label="t('customers.status_locked')"></lay-select-option>
                 </lay-select>
               </lay-form-item>
-              <lay-form-item label="Sắp xếp theo trường：">
-                <lay-select v-model="searchForm.sortField" placeholder="Chọn" allow-clear fit-content>
-                  <lay-select-option value="balance" label="Số dư"></lay-select-option>
-                  <lay-select-option value="last_login" label="Lần đăng nhập cuối"></lay-select-option>
-                  <lay-select-option value="created_at" label="Thời gian đăng ký"></lay-select-option>
-                  <lay-select-option value="total_deposit" label="Tổng tiền nạp"></lay-select-option>
-                  <lay-select-option value="total_withdraw" label="Tổng tiền rút"></lay-select-option>
+              <lay-form-item :label="t('customers.sort_field_label')">
+                <lay-select v-model="searchForm.sortField" :placeholder="t('common.select')" allow-clear fit-content>
+                  <lay-select-option value="balance" :label="t('customers.sort_balance')"></lay-select-option>
+                  <lay-select-option value="last_login" :label="t('customers.sort_last_login')"></lay-select-option>
+                  <lay-select-option value="created_at" :label="t('customers.sort_created_at')"></lay-select-option>
+                  <lay-select-option value="total_deposit" :label="t('customers.sort_total_deposit')"></lay-select-option>
+                  <lay-select-option value="total_withdraw" :label="t('customers.sort_total_withdraw')"></lay-select-option>
                 </lay-select>
               </lay-form-item>
-              <lay-form-item label="Sắp xếp theo hướng：">
-                <lay-select v-model="searchForm.sortDir" placeholder="Từ lớn đến bé" fit-content>
-                  <lay-select-option value="desc" label="Từ lớn đến bé"></lay-select-option>
-                  <lay-select-option value="asc" label="Từ bé đến lớn"></lay-select-option>
+              <lay-form-item :label="t('customers.sort_dir_label')">
+                <lay-select v-model="searchForm.sortDir" :placeholder="t('customers.sort_desc')" fit-content>
+                  <lay-select-option value="desc" :label="t('customers.sort_desc')"></lay-select-option>
+                  <lay-select-option value="asc" :label="t('customers.sort_asc')"></lay-select-option>
                 </lay-select>
               </lay-form-item>
               <lay-form-item>
                 <lay-button type="primary" @click="handleSearch">
-                  <lay-icon type="layui-icon-search"></lay-icon> Tìm kiếm
+                  <lay-icon type="layui-icon-search"></lay-icon> {{ t("common.search") }}
                 </lay-button>
                 <lay-button @click="handleReset">
-                  <lay-icon type="layui-icon-refresh"></lay-icon> Đặt lại
+                  <lay-icon type="layui-icon-refresh"></lay-icon> {{ t("common.reset") }}
                 </lay-button>
               </lay-form-item>
             </lay-form>
@@ -64,10 +64,10 @@
             <template #toolbar>
               <lay-button-group>
                 <lay-button type="primary" size="xs" @click="handleAddMember">
-                  <lay-icon type="layui-icon-addition"></lay-icon> Thêm hội viên
+                  <lay-icon type="layui-icon-addition"></lay-icon> {{ t("customers.add_member") }}
                 </lay-button>
                 <lay-button type="primary" size="xs" @click="handleAddAgent">
-                  <lay-icon type="layui-icon-addition"></lay-icon> Đại lý mới thêm
+                  <lay-icon type="layui-icon-addition"></lay-icon> {{ t("customers.add_agent") }}
                 </lay-button>
               </lay-button-group>
             </template>
@@ -75,7 +75,7 @@
               <lay-tag :type="statusTagType(row.status_format)">{{ row.status_format }}</lay-tag>
             </template>
             <template #operator="{ row }">
-              <lay-button type="primary" size="xs" @click="handleRebate(row)">Cài đặt hoàn trả</lay-button>
+              <lay-button type="primary" size="xs" @click="handleRebate(row)">{{ t("customers.rebate_settings") }}</lay-button>
             </template>
           </lay-table>
         </template>
@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
 import { useI18n } from "layui-component/index";
 
 const { t } = useI18n();
@@ -98,25 +98,25 @@ const searchForm = reactive({
   sortDir: "desc",
 });
 
-const columns = ref([
-  { title: "Hội viên", key: "username", width: "150px" },
-  { title: "Loại hình hội viên", key: "type_format", width: "130px" },
-  { title: "Tài khoản đại lý", key: "parent_user", width: "150px" },
-  { title: "Số dư", key: "money", width: "120px" },
-  { title: "Lần nạp", key: "deposit_count", width: "80px" },
-  { title: "Lần rút", key: "withdrawal_count", width: "80px" },
-  { title: "Tổng tiền nạp", key: "deposit_amount", width: "120px" },
-  { title: "Tổng tiền rút", key: "withdrawal_amount", width: "120px" },
-  { title: "Lần đăng nhập cuối", key: "login_time", width: "160px" },
-  { title: "Thời gian đăng ký", key: "register_time", width: "160px" },
-  { title: "Trạng thái", key: "status_format", width: "100px", customSlot: "status_format" },
-  { title: "Thao tác", key: "operator", width: "130px", customSlot: "operator", fixed: "right" },
+const columns = computed(() => [
+  { title: t("customers.col_member"), key: "username", width: "150px" },
+  { title: t("customers.col_member_type"), key: "type_format", width: "130px" },
+  { title: t("customers.col_agent_account"), key: "parent_user", width: "150px" },
+  { title: t("customers.col_balance"), key: "money", width: "120px" },
+  { title: t("customers.col_deposit_count"), key: "deposit_count", width: "80px" },
+  { title: t("customers.col_withdraw_count"), key: "withdrawal_count", width: "80px" },
+  { title: t("customers.col_total_deposit"), key: "deposit_amount", width: "120px" },
+  { title: t("customers.col_total_withdraw"), key: "withdrawal_amount", width: "120px" },
+  { title: t("customers.col_last_login"), key: "login_time", width: "160px" },
+  { title: t("customers.col_register_time"), key: "register_time", width: "160px" },
+  { title: t("customers.col_status"), key: "status_format", width: "100px", customSlot: "status_format" },
+  { title: t("customers.col_action"), key: "operator", width: "130px", customSlot: "operator", fixed: "right" },
 ]);
 
 const tableData = ref([
   {
     username: "an10tynghichoi",
-    type_format: "Hội viên chính thức",
+    type_format: t("customers.type_official"),
     parent_user: "vozer123",
     money: "0.0000",
     deposit_count: 0,
@@ -125,7 +125,7 @@ const tableData = ref([
     withdrawal_amount: "0.0000",
     login_time: "",
     register_time: "2026-03-09 16:20:58",
-    status_format: "Bình thường",
+    status_format: t("customers.status_normal"),
   },
 ]);
 
@@ -138,9 +138,9 @@ const pagination = reactive({
 });
 
 function statusTagType(status: string) {
-  if (status === "Bình thường") return "normal";
-  if (status === "Đóng băng") return "warm";
-  if (status === "Khoá") return "danger";
+  if (status === t("customers.status_normal")) return "normal";
+  if (status === t("customers.status_frozen")) return "warm";
+  if (status === t("customers.status_locked")) return "danger";
   return "";
 }
 

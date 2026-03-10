@@ -56,6 +56,15 @@ private:
     QMenu* m_deposit_withdraw_menu;
     QAction* m_settings_action;
 
+    // Menu actions (for retranslation)
+    QAction* m_act_lottery_report;
+    QAction* m_act_transaction_log;
+    QAction* m_act_provider_report;
+    QAction* m_act_provider_bets;
+    QAction* m_act_lottery_bets;
+    QAction* m_act_deposit_log;
+    QAction* m_act_withdraw_log;
+
     // Account dropdown
     QToolButton* m_account_button;
     QMenu* m_account_menu;

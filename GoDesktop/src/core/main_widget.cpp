@@ -42,8 +42,8 @@ void MainWidget::setup_ui()
 
     // Sub-widgets
     m_home_page = new HomePage(m_theme, m_tr, this);
-    m_customers_page = new CustomersPage(m_theme, this);
-    m_report_pages = new ReportPages(m_theme, this);
+    m_customers_page = new CustomersPage(m_theme, m_tr, this);
+    m_report_pages = new ReportPages(m_theme, m_tr, this);
 
     m_content_stack = new QStackedWidget;
     m_content_stack->addWidget(m_home_page);                                  // 0
@@ -74,30 +74,30 @@ void MainWidget::setup_toolbar()
     // Trang Chủ
     m_home_action = m_toolbar->addAction(
         QIcon(":/icons/home"),
-        QString::fromUtf8("Trang Chủ"));
+        m_tr->t("nav.home"));
     connect(m_home_action, &QAction::triggered, this, [this]() { navigate_to(0); });
 
     // Quản Lý Khách Hàng
     m_customers_action = m_toolbar->addAction(
         QIcon(":/icons/customers"),
-        QString::fromUtf8("Quản Lý Khách Hàng"));
+        m_tr->t("nav.customers"));
     connect(m_customers_action, &QAction::triggered, this, [this]() { navigate_to(1); });
 
     // Báo Cáo — dropdown
     m_report_menu = new QMenu(this);
-    auto* act_lottery_report = m_report_menu->addAction(QIcon(":/icons/menu_lottery_report"),
-        QString::fromUtf8("Báo cáo xổ số"));
-    auto* act_transaction_log = m_report_menu->addAction(QIcon(":/icons/menu_transaction_log"),
-        QString::fromUtf8("Sao kê giao dịch"));
-    auto* act_provider_report = m_report_menu->addAction(QIcon(":/icons/menu_provider_report"),
-        QString::fromUtf8("Báo cáo nhà cung cấp"));
-    connect(act_lottery_report, &QAction::triggered, this, [this]() { navigate_to(2); });
-    connect(act_transaction_log, &QAction::triggered, this, [this]() { navigate_to(3); });
-    connect(act_provider_report, &QAction::triggered, this, [this]() { navigate_to(4); });
+    m_act_lottery_report = m_report_menu->addAction(QIcon(":/icons/menu_lottery_report"),
+        m_tr->t("nav.report_lottery"));
+    m_act_transaction_log = m_report_menu->addAction(QIcon(":/icons/menu_transaction_log"),
+        m_tr->t("nav.report_transaction"));
+    m_act_provider_report = m_report_menu->addAction(QIcon(":/icons/menu_provider_report"),
+        m_tr->t("nav.report_provider"));
+    connect(m_act_lottery_report, &QAction::triggered, this, [this]() { navigate_to(2); });
+    connect(m_act_transaction_log, &QAction::triggered, this, [this]() { navigate_to(3); });
+    connect(m_act_provider_report, &QAction::triggered, this, [this]() { navigate_to(4); });
 
     m_report_button = new QToolButton(this);
     m_report_button->setIcon(QIcon(":/icons/report"));
-    m_report_button->setText(QString::fromUtf8("Báo Cáo"));
+    m_report_button->setText(m_tr->t("nav.reports"));
     m_report_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     m_report_button->setPopupMode(QToolButton::InstantPopup);
     m_report_button->setMenu(m_report_menu);
@@ -105,16 +105,16 @@ void MainWidget::setup_toolbar()
 
     // Đơn Cược — dropdown
     m_bet_order_menu = new QMenu(this);
-    auto* act_provider_bets = m_bet_order_menu->addAction(QIcon(":/icons/menu_third_party_bet"),
-        QString::fromUtf8("Đơn cược bên thứ 3"));
-    auto* act_lottery_bets = m_bet_order_menu->addAction(QIcon(":/icons/menu_lottery_bet"),
-        QString::fromUtf8("Đơn cược xổ số"));
-    connect(act_provider_bets, &QAction::triggered, this, [this]() { navigate_to(6); });
-    connect(act_lottery_bets, &QAction::triggered, this, [this]() { navigate_to(5); });
+    m_act_provider_bets = m_bet_order_menu->addAction(QIcon(":/icons/menu_third_party_bet"),
+        m_tr->t("nav.bets_provider"));
+    m_act_lottery_bets = m_bet_order_menu->addAction(QIcon(":/icons/menu_lottery_bet"),
+        m_tr->t("nav.bets_lottery"));
+    connect(m_act_provider_bets, &QAction::triggered, this, [this]() { navigate_to(6); });
+    connect(m_act_lottery_bets, &QAction::triggered, this, [this]() { navigate_to(5); });
 
     m_bet_order_button = new QToolButton(this);
     m_bet_order_button->setIcon(QIcon(":/icons/bet_order"));
-    m_bet_order_button->setText(QString::fromUtf8("Đơn Cược"));
+    m_bet_order_button->setText(m_tr->t("nav.bets"));
     m_bet_order_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     m_bet_order_button->setPopupMode(QToolButton::InstantPopup);
     m_bet_order_button->setMenu(m_bet_order_menu);
@@ -122,16 +122,16 @@ void MainWidget::setup_toolbar()
 
     // Nạp - Rút — dropdown
     m_deposit_withdraw_menu = new QMenu(this);
-    auto* act_deposit_log = m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_deposit_log"),
-        QString::fromUtf8("Danh sách nạp tiền"));
-    auto* act_withdraw_log = m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_withdraw_log"),
-        QString::fromUtf8("Lịch sử rút tiền"));
-    connect(act_deposit_log, &QAction::triggered, this, [this]() { navigate_to(8); });
-    connect(act_withdraw_log, &QAction::triggered, this, [this]() { navigate_to(7); });
+    m_act_deposit_log = m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_deposit_log"),
+        m_tr->t("nav.commission_deposit"));
+    m_act_withdraw_log = m_deposit_withdraw_menu->addAction(QIcon(":/icons/menu_withdraw_log"),
+        m_tr->t("nav.commission_withdrawal"));
+    connect(m_act_deposit_log, &QAction::triggered, this, [this]() { navigate_to(8); });
+    connect(m_act_withdraw_log, &QAction::triggered, this, [this]() { navigate_to(7); });
 
     m_deposit_withdraw_button = new QToolButton(this);
     m_deposit_withdraw_button->setIcon(QIcon(":/icons/deposit_withdraw"));
-    m_deposit_withdraw_button->setText(QString::fromUtf8("Nạp - Rút"));
+    m_deposit_withdraw_button->setText(m_tr->t("nav.commission"));
     m_deposit_withdraw_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     m_deposit_withdraw_button->setPopupMode(QToolButton::InstantPopup);
     m_deposit_withdraw_button->setMenu(m_deposit_withdraw_menu);
@@ -146,7 +146,7 @@ void MainWidget::setup_toolbar()
     // Theme toggle
     m_theme_action = m_toolbar->addAction(
         QIcon(m_theme->theme() == "dark" ? ":/icons/sun_theme" : ":/icons/moon_theme"),
-        m_theme->theme() == "dark" ? QString::fromUtf8("Sáng") : QString::fromUtf8("Tối"));
+        m_theme->theme() == "dark" ? m_tr->t("home.light_mode") : m_tr->t("home.dark_mode"));
     connect(m_theme_action, &QAction::triggered, this, [this]() {
         m_theme->toggle_theme();
     });
@@ -202,7 +202,7 @@ void MainWidget::setup_toolbar()
     // Cài Đặt
     m_settings_action = m_toolbar->addAction(
         QIcon(":/icons/settings"),
-        QString::fromUtf8("Cài Đặt"));
+        m_tr->t("nav.settings"));
 
     // Hidden label
     m_username_label = new QLabel;
@@ -255,7 +255,7 @@ void MainWidget::apply_theme()
     m_theme_action->setIcon(QIcon(m_theme->theme() == "dark"
         ? ":/icons/sun_theme" : ":/icons/moon_theme"));
     m_theme_action->setText(m_theme->theme() == "dark"
-        ? QString::fromUtf8("Sáng") : QString::fromUtf8("Tối"));
+        ? m_tr->t("home.light_mode") : m_tr->t("home.dark_mode"));
 
     // Lang button
     m_lang_button->setIcon(lang_flag_icon(m_tr->locale()));
@@ -288,13 +288,43 @@ void MainWidget::on_theme_changed()
 
 void MainWidget::on_locale_changed()
 {
+    // Language button
     m_lang_button->setIcon(lang_flag_icon(m_tr->locale()));
     m_lang_button->setText(m_tr->locale_label(m_tr->locale()));
 
+    // Account menu
     m_change_pwd_action->setText(m_tr->t("auth.change_password"));
     m_logout_action->setText(m_tr->t("auth.logout"));
 
+    // Toolbar nav items
+    m_home_action->setText(m_tr->t("nav.home"));
+    m_customers_action->setText(m_tr->t("nav.customers"));
+    m_report_button->setText(m_tr->t("nav.reports"));
+    m_bet_order_button->setText(m_tr->t("nav.bets"));
+    m_deposit_withdraw_button->setText(m_tr->t("nav.commission"));
+    m_settings_action->setText(m_tr->t("nav.settings"));
+
+    // Report menu actions
+    m_act_lottery_report->setText(m_tr->t("nav.report_lottery"));
+    m_act_transaction_log->setText(m_tr->t("nav.report_transaction"));
+    m_act_provider_report->setText(m_tr->t("nav.report_provider"));
+
+    // Bet order menu actions
+    m_act_provider_bets->setText(m_tr->t("nav.bets_provider"));
+    m_act_lottery_bets->setText(m_tr->t("nav.bets_lottery"));
+
+    // Deposit/withdraw menu actions
+    m_act_deposit_log->setText(m_tr->t("nav.commission_deposit"));
+    m_act_withdraw_log->setText(m_tr->t("nav.commission_withdrawal"));
+
+    // Theme toggle text
+    m_theme_action->setText(m_theme->theme() == "dark"
+        ? m_tr->t("home.light_mode") : m_tr->t("home.dark_mode"));
+
+    // Sub-widgets
     m_home_page->retranslate();
+    m_customers_page->retranslate();
+    m_report_pages->retranslate();
 }
 
 void MainWidget::on_change_password()
@@ -316,7 +346,7 @@ void MainWidget::on_change_password()
 
     if (new_pwd.length() < 8) {
         QMessageBox::warning(this,
-            QString::fromUtf8("Error"),
+            m_tr->t("auth.change_password"),
             m_tr->t("auth.password_min"));
         return;
     }
@@ -328,7 +358,7 @@ void MainWidget::on_change_password()
     );
     if (!ok || confirm != new_pwd) {
         QMessageBox::warning(this,
-            QString::fromUtf8("Error"),
+            m_tr->t("auth.change_password"),
             m_tr->t("auth.password_mismatch"));
         return;
     }
@@ -336,11 +366,11 @@ void MainWidget::on_change_password()
     m_api->change_password(old_pwd, new_pwd, [this](bool success, const QJsonObject& data) {
         if (success) {
             QMessageBox::information(this,
-                QString::fromUtf8("OK"),
+                m_tr->t("auth.change_password"),
                 m_tr->t("auth.change_success"));
         } else {
             const auto msg = data.value("message").toString(m_tr->t("auth.change_failed"));
-            QMessageBox::warning(this, QString::fromUtf8("Error"), msg);
+            QMessageBox::warning(this, m_tr->t("auth.change_password"), msg);
         }
     });
 }

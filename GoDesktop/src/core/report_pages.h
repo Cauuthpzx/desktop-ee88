@@ -7,12 +7,13 @@
 
 class DateRangePicker;
 class ThemeManager;
+class Translator;
 
 class ReportPages : public QObject {
     Q_OBJECT
 
 public:
-    explicit ReportPages(ThemeManager* theme, QObject* parent = nullptr);
+    explicit ReportPages(ThemeManager* theme, Translator* tr, QObject* parent = nullptr);
 
     QWidget* create_lottery_report_page();
     QWidget* create_transaction_log_page();
@@ -23,9 +24,11 @@ public:
     QWidget* create_deposit_history_page();
 
     void apply_theme();
+    void retranslate();
 
 private:
     ThemeManager* m_theme;
+    Translator* m_tr;
 
     ReportPageWidgets m_lottery_report;
     ReportPageWidgets m_transaction_log;

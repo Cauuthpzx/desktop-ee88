@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 
 class DateRangePopup;
+class Translator;
 
 /**
  * Single-calendar date range picker.
@@ -20,6 +21,7 @@ class DateRangePicker : public QWidget {
 
 public:
     explicit DateRangePicker(QWidget* parent = nullptr);
+    void set_translator(Translator* tr);
 
     QDate start_date() const;
     QDate end_date() const;
@@ -37,6 +39,7 @@ private slots:
 private:
     QPushButton* m_button;
     DateRangePopup* m_popup;
+    Translator* m_tr = nullptr;
     QString m_placeholder_start;
     QString m_placeholder_end;
 
@@ -57,6 +60,8 @@ public:
     QDate end_date() const { return m_end; }
     void clear();
     void apply_theme(bool dark);
+    void set_translator(Translator* tr);
+    void retranslate();
 
 signals:
     void dates_confirmed(const QDate& start, const QDate& end);
@@ -72,6 +77,7 @@ private:
     QLabel* m_hint_label;
     QPushButton* m_confirm_btn;
     QPushButton* m_clear_btn;
+    Translator* m_tr = nullptr;
     QDate m_start;
     QDate m_end;
     bool m_selecting_end;

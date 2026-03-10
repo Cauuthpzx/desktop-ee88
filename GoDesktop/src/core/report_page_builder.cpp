@@ -1,6 +1,7 @@
 #include "core/report_page_builder.h"
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
+#include "core/translator.h"
 
 #include <QPixmap>
 #include <QScrollArea>
@@ -24,7 +25,8 @@ ReportPageWidgets ReportPageBuilder::build_page(
     const QString& icon_path,
     const QString& title_text,
     const QStringList& column_headers,
-    FlowLayout* &out_flow)
+    FlowLayout* &out_flow,
+    Translator* tr)
 {
     ReportPageWidgets w;
 
@@ -102,9 +104,9 @@ ReportPageWidgets ReportPageBuilder::build_page(
         return btn;
     };
 
-    w.filter_btn = make_tool_icon(":/icons/settings", QString::fromUtf8("Lọc cột"));
-    w.export_btn = make_tool_icon(":/icons/report", QString::fromUtf8("Xuất file"));
-    w.print_btn = make_tool_icon(":/icons/browser", QString::fromUtf8("In"));
+    w.filter_btn = make_tool_icon(":/icons/settings", tr ? tr->t("common.filter_columns") : "Filter");
+    w.export_btn = make_tool_icon(":/icons/report", tr ? tr->t("common.export_file") : "Export");
+    w.print_btn = make_tool_icon(":/icons/browser", tr ? tr->t("common.print") : "Print");
     tb_layout->addWidget(w.filter_btn);
     tb_layout->addWidget(w.export_btn);
     tb_layout->addWidget(w.print_btn);
@@ -155,7 +157,7 @@ ReportPageWidgets ReportPageBuilder::build_page(
 
     pg_layout->addSpacing(12);
 
-    w.page_info = new QLabel(QString::fromUtf8("Tổng 0 dòng"));
+    w.page_info = new QLabel(tr ? tr->t("common.total_rows").arg(0) : "Total 0 rows");
     w.page_info->setObjectName("pageInfo");
     pg_layout->addWidget(w.page_info);
 
@@ -166,7 +168,7 @@ ReportPageWidgets ReportPageBuilder::build_page(
     const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
     for (int ps : page_sizes) {
         w.page_size_combo->addItem(
-            QString::fromUtf8("%1 dòng/trang").arg(ps), ps);
+            tr ? tr->t("common.rows_per_page").arg(ps) : QString("%1/page").arg(ps), ps);
     }
     w.page_size_combo->setFixedHeight(28);
     pg_layout->addWidget(w.page_size_combo);

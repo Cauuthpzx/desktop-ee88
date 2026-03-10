@@ -16,6 +16,7 @@
 class DateRangePicker;
 class FlowLayout;
 class ThemeManager;
+class Translator;
 
 // Cấu trúc chứa tất cả widget của 1 trang báo cáo
 struct ReportPageWidgets {
@@ -54,7 +55,8 @@ public:
         const QString& icon_path,
         const QString& title_text,
         const QStringList& column_headers,
-        FlowLayout* &out_flow  // trả về flow layout để caller thêm search fields
+        FlowLayout* &out_flow,  // trả về flow layout để caller thêm search fields
+        Translator* tr = nullptr
     );
 
     // Thêm summary section bên dưới table
