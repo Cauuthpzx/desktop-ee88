@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"goserver/internal/config"
@@ -14,7 +17,6 @@ import (
 	"goserver/internal/middleware"
 	"goserver/internal/repository"
 	"goserver/internal/service"
-	"goserver/pkg/utils"
 )
 
 func setupLogger() *os.File {
@@ -24,15 +26,13 @@ func setupLogger() *os.File {
 	logFile := filepath.Join(logDir, time.Now().Format("2006-01-02")+".log")
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		log.Printf("[WARN] Cannot open log file: %v, logging to console only", err)
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+		slog.Warn("Cannot open log file, logging to console only", "error", err)
 		return nil
 	}
 
-	// Ghi cả console + file
 	multi := io.MultiWriter(os.Stdout, f)
-	log.SetOutput(multi)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-
+	slog.SetDefault(slog.New(slog.NewJSONHandler(multi, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	return f
 }
 
@@ -42,17 +42,24 @@ func main() {
 		defer logFile.Close()
 	}
 
+	// Config
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		slog.Error("Invalid config", "error", err)
+		os.Exit(1)
+	}
 
 	// Database
 	db, err := database.NewPostgres(cfg.DBConnString())
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := database.Migrate(db); err != nil {
-		log.Fatal("Failed to run migrations:", err)
+		slog.Error("Failed to run migrations", "error", err)
+		os.Exit(1)
 	}
 
 	// Layers
@@ -62,6 +69,7 @@ func main() {
 
 	authHandler := handler.NewAuthHandler(authService)
 	oauthHandler := handler.NewOAuthHandler(oauthService, cfg)
+	healthHandler := handler.NewHealthHandler(db)
 
 	// Router
 	mux := http.NewServeMux()
@@ -69,6 +77,10 @@ func main() {
 	// Rate limiters
 	loginLimiter := middleware.NewRateLimiter(5, time.Minute)
 	registerLimiter := middleware.NewRateLimiter(3, time.Minute)
+
+	// Health (không qua auth/rate limit)
+	mux.HandleFunc("GET /health/live", healthHandler.Live)
+	mux.HandleFunc("GET /health/ready", healthHandler.Ready)
 
 	// Public routes
 	mux.Handle("POST /api/auth/register",
@@ -89,13 +101,47 @@ func main() {
 	mux.Handle("POST /api/auth/logout",
 		authMw(http.HandlerFunc(authHandler.Logout)))
 
-	// Wrap with logging, CORS and error recovery
-	finalHandler := middleware.RequestLogger(utils.CORS(utils.RecoverErrors(mux)))
+	// Middleware stack (thứ tự: outermost → innermost)
+	// Recovery → SecurityHeaders → RequestLogger → CORS → BodyLimit → Timeout → Router
+	var h http.Handler = mux
+	h = middleware.Timeout(10 * time.Second)(h)
+	h = middleware.BodyLimit(1 << 20)(h) // 1MB
+	h = middleware.CORS(cfg.AllowedOrigins)(h)
+	h = middleware.RequestLogger(h)
+	h = middleware.SecurityHeaders(h)
+	h = middleware.Recovery(h)
 
-	// Start server
-	addr := ":" + cfg.ServerPort
-	log.Printf("[SERVER] Starting on %s", addr)
-	if err := http.ListenAndServe(addr, finalHandler); err != nil {
-		log.Fatal("Server failed:", err)
+	// Server với timeouts
+	srv := &http.Server{
+		Addr:         ":" + cfg.ServerPort,
+		Handler:      h,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+		IdleTimeout:  cfg.IdleTimeout,
 	}
+
+	// Graceful shutdown
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		slog.Info("Server starting", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-done
+	slog.Info("Server shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Server stopped gracefully")
 }

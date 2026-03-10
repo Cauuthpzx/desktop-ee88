@@ -18,16 +18,16 @@ var (
 	ErrInvalidUsername   = errors.New("username must be 3-32 characters, alphanumeric and underscore only")
 	ErrPasswordTooShort = errors.New("password must be at least 8 characters")
 	ErrInvalidCredentials = errors.New("invalid username or password")
-	ErrSamePassword    = errors.New("new password must be different from old password")
+	ErrSamePassword     = errors.New("new password must be different from old password")
 	ErrWrongOldPassword = errors.New("old password is incorrect")
 )
 
 type AuthService struct {
-	repo *repository.UserRepository
+	repo repository.UserRepo
 	cfg  *config.Config
 }
 
-func NewAuthService(repo *repository.UserRepository, cfg *config.Config) *AuthService {
+func NewAuthService(repo repository.UserRepo, cfg *config.Config) *AuthService {
 	return &AuthService{repo: repo, cfg: cfg}
 }
 

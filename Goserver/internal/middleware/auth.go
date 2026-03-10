@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -40,8 +40,14 @@ func AuthMiddleware(authService *service.AuthService) func(http.Handler) http.Ha
 			}
 
 			if userID == 0 {
-				log.Printf("[AUTH] Unauthorized: %s %s from %s", r.Method, r.URL.Path, getIP(r))
-				http.Error(w, `{"status":"error","message":"unauthorized"}`, http.StatusUnauthorized)
+				slog.Warn("unauthorized request",
+					"method", r.Method,
+					"path", r.URL.Path,
+					"ip", getIP(r),
+				)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"status":"error","code":"UNAUTHORIZED","message":"unauthorized"}`))
 				return
 			}
 

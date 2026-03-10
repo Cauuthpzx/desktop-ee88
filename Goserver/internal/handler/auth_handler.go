@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -24,30 +24,37 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req model.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, model.AuthResponse{
-			Status:  "error",
-			Message: "invalid request body",
+		writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+			Status: "error", Code: "BAD_REQUEST", Message: "invalid request body",
 		})
 		return
 	}
 
 	user, token, err := h.authService.Register(r.Context(), &req)
 	if err != nil {
-		log.Printf("[REGISTER] Failed for '%s': %v", req.Username, err)
+		slog.Error("register failed", "username", req.Username, "error", err)
 		switch {
 		case errors.Is(err, service.ErrInvalidUsername):
-			writeJSON(w, http.StatusBadRequest, model.AuthResponse{Status: "error", Message: err.Error()})
+			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+				Status: "error", Code: "BAD_REQUEST", Message: err.Error(),
+			})
 		case errors.Is(err, service.ErrPasswordTooShort):
-			writeJSON(w, http.StatusBadRequest, model.AuthResponse{Status: "error", Message: err.Error()})
+			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+				Status: "error", Code: "BAD_REQUEST", Message: err.Error(),
+			})
 		case errors.Is(err, repository.ErrUsernameExists):
-			writeJSON(w, http.StatusConflict, model.AuthResponse{Status: "error", Message: "username already exists"})
+			writeJSON(w, http.StatusConflict, model.ErrorResponse{
+				Status: "error", Code: "CONFLICT", Message: "username already exists",
+			})
 		default:
-			writeJSON(w, http.StatusInternalServerError, model.AuthResponse{Status: "error", Message: "internal server error"})
+			writeJSON(w, http.StatusInternalServerError, model.ErrorResponse{
+				Status: "error", Code: "INTERNAL_ERROR", Message: "internal server error",
+			})
 		}
 		return
 	}
 
-	log.Printf("[REGISTER] OK: user '%s' (ID %d)", user.Username, user.ID)
+	slog.Info("register ok", "username", user.Username, "user_id", user.ID)
 	writeJSON(w, http.StatusCreated, model.AuthResponse{
 		Status: "success",
 		Data: &model.AuthData{
@@ -60,25 +67,28 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, model.AuthResponse{
-			Status:  "error",
-			Message: "invalid request body",
+		writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+			Status: "error", Code: "BAD_REQUEST", Message: "invalid request body",
 		})
 		return
 	}
 
 	user, token, sessionCookie, err := h.authService.Login(r.Context(), &req)
 	if err != nil {
-		log.Printf("[LOGIN] Failed for '%s': %v", req.Username, err)
+		slog.Error("login failed", "username", req.Username, "error", err)
 		if errors.Is(err, service.ErrInvalidCredentials) {
-			writeJSON(w, http.StatusUnauthorized, model.AuthResponse{Status: "error", Message: err.Error()})
+			writeJSON(w, http.StatusUnauthorized, model.ErrorResponse{
+				Status: "error", Code: "UNAUTHORIZED", Message: err.Error(),
+			})
 		} else {
-			writeJSON(w, http.StatusInternalServerError, model.AuthResponse{Status: "error", Message: "internal server error"})
+			writeJSON(w, http.StatusInternalServerError, model.ErrorResponse{
+				Status: "error", Code: "INTERNAL_ERROR", Message: "internal server error",
+			})
 		}
 		return
 	}
 
-	log.Printf("[LOGIN] OK: user '%s' (ID %d)", user.Username, user.ID)
+	slog.Info("login ok", "username", user.Username, "user_id", user.ID)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    sessionCookie,
@@ -103,30 +113,37 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	var req model.ChangePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, model.AuthResponse{
-			Status:  "error",
-			Message: "invalid request body",
+		writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+			Status: "error", Code: "BAD_REQUEST", Message: "invalid request body",
 		})
 		return
 	}
 
 	err := h.authService.ChangePassword(r.Context(), userID, &req)
 	if err != nil {
-		log.Printf("[CHANGE_PASS] Failed for user %d: %v", userID, err)
+		slog.Error("change password failed", "user_id", userID, "error", err)
 		switch {
 		case errors.Is(err, service.ErrPasswordTooShort):
-			writeJSON(w, http.StatusBadRequest, model.AuthResponse{Status: "error", Message: err.Error()})
+			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+				Status: "error", Code: "BAD_REQUEST", Message: err.Error(),
+			})
 		case errors.Is(err, service.ErrSamePassword):
-			writeJSON(w, http.StatusBadRequest, model.AuthResponse{Status: "error", Message: err.Error()})
+			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{
+				Status: "error", Code: "BAD_REQUEST", Message: err.Error(),
+			})
 		case errors.Is(err, service.ErrWrongOldPassword):
-			writeJSON(w, http.StatusForbidden, model.AuthResponse{Status: "error", Message: err.Error()})
+			writeJSON(w, http.StatusForbidden, model.ErrorResponse{
+				Status: "error", Code: "FORBIDDEN", Message: err.Error(),
+			})
 		default:
-			writeJSON(w, http.StatusInternalServerError, model.AuthResponse{Status: "error", Message: "internal server error"})
+			writeJSON(w, http.StatusInternalServerError, model.ErrorResponse{
+				Status: "error", Code: "INTERNAL_ERROR", Message: "internal server error",
+			})
 		}
 		return
 	}
 
-	log.Printf("[CHANGE_PASS] OK: user %d", userID)
+	slog.Info("change password ok", "user_id", userID)
 	writeJSON(w, http.StatusOK, model.AuthResponse{
 		Status:  "success",
 		Message: "password changed successfully",
@@ -135,7 +152,8 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
-	log.Printf("[LOGOUT] User %d", userID)
+	slog.Info("logout", "user_id", userID)
+
 	cookie, err := r.Cookie("session")
 	if err == nil {
 		_ = h.authService.Logout(r.Context(), cookie.Value)

@@ -1,7 +1,7 @@
 package database
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -50,13 +50,13 @@ END $$;
 `
 
 func Migrate(db *sqlx.DB) error {
-	log.Println("[DB] Running migrations...")
+	slog.Info("Running database migrations...")
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
 	if _, err := db.Exec(migrateEmailToUsername); err != nil {
 		return err
 	}
-	log.Println("[DB] Migrations completed")
+	slog.Info("Migrations completed")
 	return nil
 }

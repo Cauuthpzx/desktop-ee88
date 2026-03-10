@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -47,8 +47,16 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		v.lastSeen = time.Now()
 		if v.count > rl.limit {
 			rl.mu.Unlock()
-			log.Printf("[RATE] Limit exceeded: %s %s from %s (%d/%d)", r.Method, r.URL.Path, ip, v.count, rl.limit)
-			http.Error(w, `{"status":"error","message":"rate limit exceeded"}`, http.StatusTooManyRequests)
+			slog.Warn("rate limit exceeded",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"ip", ip,
+				"count", v.count,
+				"limit", rl.limit,
+			)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"status":"error","code":"RATE_LIMITED","message":"rate limit exceeded"}`))
 			return
 		}
 		rl.mu.Unlock()

@@ -18,14 +18,14 @@ import (
 )
 
 type OAuthService struct {
-	repo           *repository.UserRepository
+	repo           repository.UserRepo
 	authService    *AuthService
 	googleConfig   *oauth2.Config
 	facebookConfig *oauth2.Config
 	cfg            *config.Config
 }
 
-func NewOAuthService(repo *repository.UserRepository, authService *AuthService, cfg *config.Config) *OAuthService {
+func NewOAuthService(repo repository.UserRepo, authService *AuthService, cfg *config.Config) *OAuthService {
 	return &OAuthService{
 		repo:        repo,
 		authService: authService,
@@ -166,7 +166,6 @@ func parseUserInfo(resp *http.Response) (*oauthUserInfo, error) {
 		return nil, err
 	}
 
-	// Facebook may not return email if user settings don't allow it
 	if info.Email == "" && info.ID != "" {
 		info.Email = fmt.Sprintf("%s@oauth.noemail", info.ID)
 	}

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -23,18 +23,20 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-// RequestLogger ghi log mọi HTTP request: method, path, status, duration, IP.
+// RequestLogger ghi log mọi HTTP request dạng structured.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
 		rw := &responseWriter{ResponseWriter: w, status: 200}
 		next.ServeHTTP(rw, r)
 
-		duration := time.Since(start)
-		ip := getIP(r)
-
-		log.Printf("[HTTP] %s %s | %d | %v | %s | %d bytes",
-			r.Method, r.URL.Path, rw.status, duration, ip, rw.size)
+		slog.Info("http request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration_ms", time.Since(start).Milliseconds(),
+			"ip", getIP(r),
+			"bytes", rw.size,
+		)
 	})
 }

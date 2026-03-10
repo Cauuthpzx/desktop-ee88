@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 
 	"goserver/internal/model"
 )
 
 var (
-	ErrUserNotFound    = errors.New("user not found")
-	ErrUsernameExists  = errors.New("username already exists")
+	ErrUserNotFound   = errors.New("user not found")
+	ErrUsernameExists = errors.New("username already exists")
 )
 
 type UserRepository struct {
@@ -132,18 +133,9 @@ func (r *UserRepository) CreateOAuth(ctx context.Context, oauth *model.OAuth) er
 }
 
 func isUniqueViolation(err error) bool {
-	return err != nil && (contains(err.Error(), "unique") || contains(err.Error(), "duplicate"))
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchString(s, substr)
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == "23505"
 	}
 	return false
 }

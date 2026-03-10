@@ -23,7 +23,7 @@ SERVICES = {
     "Goserver": {
         "cwd": os.path.join(PROJECT_ROOT, "Goserver"),
         "cmd": ["go", "run", "cmd/server/main.go"],
-        "env": {"DB_PASSWORD": "hiepmun2021"},
+        "env": {"DB_PASSWORD": "hiepmun2021", "JWT_SECRET": "maxhub-dev-jwt-secret-2026"},
         "color": "#2ecc71",
         "port": 8080,
     },
