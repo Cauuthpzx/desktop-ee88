@@ -281,7 +281,7 @@ SettingsDialog::SettingsDialog(ThemeManager* theme, Translator* tr,
     : QDialog(parent), m_theme(theme), m_tr(tr), m_api(api)
 {
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-    setFixedSize(920, 580);
+    setFixedSize(1000, 580);
     m_feedback = new Feedback(this, m_theme);
     setup_ui();
     load_agents();
@@ -356,8 +356,9 @@ void SettingsDialog::setup_ui()
     m_table->horizontalHeader()->setStretchLastSection(false);
     m_table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
 
+    m_table->setWordWrap(false);
     m_table->setColumnWidth(0, 55);
-    m_table->setColumnWidth(1, 60);
+    m_table->setColumnWidth(1, 140);
     m_table->setColumnWidth(2, 95);
     m_table->setColumnWidth(3, 90);
     m_table->setColumnWidth(4, 140);

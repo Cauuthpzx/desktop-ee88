@@ -625,12 +625,12 @@ export default {
 
     // EE88 Agent management
     const agentColumns = [
-      { title: "Mã ĐL", key: "id", width: "6%", align: "center" },
-      { title: "Tên đại lý", key: "name", width: "7%", align: "center" },
-      { title: "Tài khoản", key: "ext_username", width: "10%", align: "center" },
-      { title: "Trạng thái", key: "status", width: "8%", align: "center", customSlot: "status" },
-      { title: "Ngày tạo", key: "created_at", width: "15%", align: "center" },
-      { title: "Thao tác", key: "action", width: "44%", align: "center", customSlot: "action" },
+      { title: "Mã ĐL", key: "id", width: "5%", align: "center" },
+      { title: "Tên đại lý", key: "name", width: "13%", align: "center" },
+      { title: "Tài khoản", key: "ext_username", width: "9%", align: "center" },
+      { title: "Trạng thái", key: "status", width: "7%", align: "center", customSlot: "status" },
+      { title: "Ngày tạo", key: "created_at", width: "13%", align: "center" },
+      { title: "Thao tác", key: "action", width: "43%", align: "center", customSlot: "action" },
       { title: "Auto Login", key: "auto_login", width: "10%", align: "center", customSlot: "autoLogin" },
     ];
 
@@ -1035,7 +1035,7 @@ export default {
 /* ── Sharp & crisp light theme ── */
 body {
   color: #1a1a1a;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -1068,6 +1068,12 @@ body {
 
 .layui-table td {
   color: #262626;
+}
+
+.ee88-table-wrap .layui-table td .layui-table-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .layui-form-label {
