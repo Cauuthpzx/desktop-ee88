@@ -332,6 +332,11 @@
     "msg_cookies_failed": "Gán cookies thất bại",
     "msg_update_failed": "Cập nhật thất bại"
   },
+  "sidebar": {
+    "navigation": "Điều hướng",
+    "reports": "Báo cáo",
+    "system": "Hệ thống"
+  },
   "deposit_history": {
     "title": "DANH SÁCH NẠP TIỀN",
     "order_time_label": "Thời gian tạo đơn：",

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -37,13 +36,11 @@ const (
 	lockTimeout         = 5 * time.Minute
 	reloginCooldown     = 2 * time.Minute
 	cookieLifetime      = 24 * time.Hour
-	loginAllConcurrency = 5
-	loginAllDelay       = 3 * time.Second
-	loginAllJitter      = 2 * time.Second
 )
 
 type EE88LoginService struct {
 	agentRepo repository.AgentRepo
+	cache     *AgentCache
 	solver    *utils.CaptchaSolver
 	lock      *utils.DistributedLock
 	cooldowns sync.Map // map[int64]time.Time — agent_id → last relogin time
@@ -52,6 +49,7 @@ type EE88LoginService struct {
 func NewEE88LoginService(agentRepo repository.AgentRepo) *EE88LoginService {
 	return &EE88LoginService{
 		agentRepo: agentRepo,
+		cache:     GetAgentCache(),
 		solver:    utils.GetCaptchaSolver(),
 		lock:      utils.NewDistributedLock(lockTimeout),
 	}
@@ -362,7 +360,10 @@ func (s *EE88LoginService) attemptLogin(
 		if initResult.EncryptPublicKey != "" {
 			updateFields["encrypt_public_key"] = initResult.EncryptPublicKey
 		}
-		_, _ = s.agentRepo.Update(ctx, agentID, updateFields)
+		updated, _ := s.agentRepo.Update(ctx, agentID, updateFields)
+		if updated != nil {
+			s.cache.Set(agentID, updated)
+		}
 
 		slog.Info("Đăng nhập EE88 thành công", "agent_id", agentID, "captcha_attempts", attempt)
 		return &model.LoginResult{Success: true, CaptchaAttempts: attempt}, nil
@@ -413,6 +414,7 @@ func (s *EE88LoginService) LogoutAgent(ctx context.Context, agentID int64) error
 		"status":         "offline",
 		"login_error":    sql.NullString{},
 	})
+	s.cache.ClearCookie(agentID)
 
 	slog.Info("Agent đã logout", "agent_id", agentID)
 	return nil
@@ -432,26 +434,25 @@ func (s *EE88LoginService) LoginAllAgents(ctx context.Context, triggeredBy, ipAd
 
 	result := &model.LoginAllResult{Total: len(agents)}
 	var mu sync.Mutex
-	sem := make(chan struct{}, loginAllConcurrency) // Concurrency limit
 	var wg sync.WaitGroup
 
-	for i, agent := range agents {
+	// N agents = N goroutines chạy đồng thời
+	for _, agent := range agents {
 		if ctx.Err() != nil {
 			break
 		}
 
-		sem <- struct{}{} // Acquire slot
 		wg.Add(1)
-
-		go func(ag *model.Agent, index int) {
+		go func(ag *model.Agent) {
 			defer wg.Done()
-			defer func() { <-sem }() // Release slot
-
-			// Delay giữa các login để tránh rate limit
-			if index > 0 {
-				jitter := time.Duration(rand.Int63n(int64(loginAllJitter)))
-				time.Sleep(loginAllDelay + jitter)
-			}
+			defer func() {
+				if r := recover(); r != nil {
+					mu.Lock()
+					result.Failed++
+					mu.Unlock()
+					slog.Error("Login agent panic", "agent_id", ag.ID, "panic", r)
+				}
+			}()
 
 			_, loginErr := s.LoginAgent(ctx, ag.ID, triggeredBy, ipAddress)
 
@@ -463,7 +464,7 @@ func (s *EE88LoginService) LoginAllAgents(ctx context.Context, triggeredBy, ipAd
 				result.Success++
 			}
 			mu.Unlock()
-		}(agent, i)
+		}(agent)
 	}
 
 	wg.Wait()
@@ -475,22 +476,33 @@ func (s *EE88LoginService) LoginAllAgents(ctx context.Context, triggeredBy, ipAd
 // ============================================================================
 
 func (s *EE88LoginService) CheckAgentSession(ctx context.Context, agentID int64) (bool, string, error) {
-	agent, err := s.agentRepo.FindByID(ctx, agentID)
-	if err != nil {
-		return false, "not_found", err
+	// Thử cache trước — 0ms latency
+	var cookie, encKey, baseURL, status string
+	if cached, ok := s.cache.Get(agentID); ok {
+		cookie = cached.Cookie
+		encKey = cached.EncryptPublicKey
+		baseURL = cached.BaseURL
+		status = cached.Status
+	} else {
+		// Fallback DB
+		agent, err := s.agentRepo.FindByID(ctx, agentID)
+		if err != nil {
+			return false, "not_found", err
+		}
+		cookie = agent.SessionCookie
+		encKey = agent.EncryptPublicKey
+		status = agent.Status
+		if agent.BaseURL.Valid {
+			baseURL = agent.BaseURL.String
+		}
+		s.cache.Set(agentID, agent)
 	}
-	if agent.SessionCookie == "" {
+
+	if cookie == "" {
 		return false, "no_cookie", nil
 	}
 
-	cookie := agent.SessionCookie
-
-	baseURL := ""
-	if agent.BaseURL.Valid && agent.BaseURL.String != "" {
-		baseURL = agent.BaseURL.String
-	}
-
-	_, fetchErr := utils.FetchUpstreamWithEncrypt(ctx, baseURL, "/agent/user.html", cookie, agent.EncryptPublicKey, map[string]string{
+	_, fetchErr := utils.FetchUpstreamWithEncrypt(ctx, baseURL, "/agent/user.html", cookie, encKey, map[string]string{
 		"page": "1", "limit": "1",
 	})
 	if fetchErr != nil {
@@ -501,11 +513,14 @@ func (s *EE88LoginService) CheckAgentSession(ctx context.Context, agentID int64)
 		return false, "expired", nil
 	}
 
-	if agent.Status != "active" {
-		_, _ = s.agentRepo.Update(ctx, agentID, map[string]interface{}{
+	if status != "active" {
+		updated, _ := s.agentRepo.Update(ctx, agentID, map[string]interface{}{
 			"status":      "active",
 			"login_error": sql.NullString{},
 		})
+		if updated != nil {
+			s.cache.Set(agentID, updated)
+		}
 	}
 	return true, "", nil
 }
@@ -547,7 +562,7 @@ func (s *EE88LoginService) SetCookieManual(ctx context.Context, agentID int64, c
 		return err
 	}
 
-	_, updateErr := s.agentRepo.Update(ctx, agentID, map[string]interface{}{
+	updated, updateErr := s.agentRepo.Update(ctx, agentID, map[string]interface{}{
 		"session_cookie": cookie,
 		"cookie_expires": time.Now().Add(cookieLifetime),
 		"status":         "active",
@@ -557,6 +572,9 @@ func (s *EE88LoginService) SetCookieManual(ctx context.Context, agentID int64, c
 	})
 	if updateErr != nil {
 		return updateErr
+	}
+	if updated != nil {
+		s.cache.Set(agentID, updated)
 	}
 
 	slog.Info("Đã set cookie thủ công", "agent_id", agentID)
@@ -588,6 +606,11 @@ func (s *EE88LoginService) AttemptAutoRelogin(ctx context.Context, agentID int64
 	}
 
 	if result != nil && result.Success {
+		// Đọc cookie từ cache trước (vừa được update trong LoginAgent)
+		if cached, ok := s.cache.Get(agentID); ok && cached.Cookie != "" {
+			return cached.Cookie, nil
+		}
+		// Fallback DB
 		agent, err := s.agentRepo.FindByID(ctx, agentID)
 		if err == nil && agent.SessionCookie != "" {
 			return agent.SessionCookie, nil
@@ -602,6 +625,7 @@ func (s *EE88LoginService) AttemptAutoRelogin(ctx context.Context, agentID int64
 // ============================================================================
 
 func (s *EE88LoginService) CheckCookieHealth(ctx context.Context) ([]*model.CookieHealthResult, error) {
+	// Lấy từ DB vì cần Name (cache không lưu name)
 	agents, err := s.agentRepo.ListActive(ctx)
 	if err != nil {
 		return nil, err
@@ -616,13 +640,24 @@ func (s *EE88LoginService) CheckCookieHealth(ctx context.Context) ([]*model.Cook
 		go func(idx int, ag *model.Agent) {
 			defer wg.Done()
 
-			alive := false
-			if ag.SessionCookie != "" {
-				agBaseURL := ""
-				if ag.BaseURL.Valid && ag.BaseURL.String != "" {
-					agBaseURL = ag.BaseURL.String
+			// Lấy cookie/key từ cache (fresh hơn DB nếu vừa login)
+			cookie := ag.SessionCookie
+			encKey := ag.EncryptPublicKey
+			agBaseURL := ""
+			if ag.BaseURL.Valid {
+				agBaseURL = ag.BaseURL.String
+			}
+			if cached, ok := s.cache.Get(ag.ID); ok {
+				cookie = cached.Cookie
+				encKey = cached.EncryptPublicKey
+				if cached.BaseURL != "" {
+					agBaseURL = cached.BaseURL
 				}
-				_, fetchErr := utils.FetchUpstreamWithEncrypt(ctx, agBaseURL, "/agent/user.html", ag.SessionCookie, ag.EncryptPublicKey, map[string]string{
+			}
+
+			alive := false
+			if cookie != "" {
+				_, fetchErr := utils.FetchUpstreamWithEncrypt(ctx, agBaseURL, "/agent/user.html", cookie, encKey, map[string]string{
 					"page": "1", "limit": "1",
 				})
 				alive = fetchErr == nil

@@ -332,6 +332,11 @@
     "msg_cookies_failed": "分配Cookies失败",
     "msg_update_failed": "更新失败"
   },
+  "sidebar": {
+    "navigation": "导航",
+    "reports": "报表",
+    "system": "系统"
+  },
   "deposit_history": {
     "title": "充值记录",
     "order_time_label": "创建时间：",

@@ -332,6 +332,11 @@
     "msg_cookies_failed": "Assign cookies failed",
     "msg_update_failed": "Update failed"
   },
+  "sidebar": {
+    "navigation": "Navigation",
+    "reports": "Reports",
+    "system": "System"
+  },
   "deposit_history": {
     "title": "DEPOSIT HISTORY",
     "order_time_label": "Order time:",

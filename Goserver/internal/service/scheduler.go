@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"goserver/internal/repository"
@@ -109,19 +110,48 @@ func (s *Scheduler) doAutoLogin() {
 		return
 	}
 
-	count := 0
+	// Lọc agents cần login
+	var needLogin []int64
 	for _, agent := range agents {
-		if !agent.AutoLogin {
-			continue
+		if agent.AutoLogin {
+			needLogin = append(needLogin, agent.ID)
 		}
-		count++
-		_, err := s.loginService.LoginAgent(ctx, agent.ID, "scheduler", "")
-		if err != nil {
-			slog.Warn("Auto-login thất bại", "agent_id", agent.ID, "error", err)
-		}
+	}
+	if len(needLogin) == 0 {
+		return
 	}
 
-	if count > 0 {
-		slog.Info("Auto-login scheduler hoàn tất", "processed", count)
+	slog.Info("Auto-login bắt đầu", "count", len(needLogin))
+
+	// N agents = N goroutines chạy đồng thời
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	success, failed := 0, 0
+
+	for _, agentID := range needLogin {
+		wg.Add(1)
+		go func(id int64) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					mu.Lock()
+					failed++
+					mu.Unlock()
+					slog.Error("Auto-login panic", "agent_id", id, "panic", r)
+				}
+			}()
+			_, loginErr := s.loginService.LoginAgent(ctx, id, "scheduler", "")
+			mu.Lock()
+			if loginErr != nil {
+				failed++
+				slog.Warn("Auto-login thất bại", "agent_id", id, "error", loginErr)
+			} else {
+				success++
+			}
+			mu.Unlock()
+		}(agentID)
 	}
+
+	wg.Wait()
+	slog.Info("Auto-login scheduler hoàn tất", "success", success, "failed", failed, "total", len(needLogin))
 }

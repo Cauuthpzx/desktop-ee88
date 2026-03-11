@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -46,16 +47,39 @@ var upstreamClient = &http.Client{
 	},
 }
 
-var upstreamBreaker = NewCircuitBreaker(CircuitBreakerConfig{
-	Name:             "upstream",
-	FailureThreshold: 5,
-	ResetTimeout:     30 * time.Second,
-	SuccessThreshold: 2,
-	ShouldCountFailure: func(err error) bool {
-		// Session expired = credential issue, KHÔNG phải infra failure
-		return !errors.Is(err, ErrSessionExpired)
-	},
-})
+// Per-agent circuit breaker — 1 agent fail không ảnh hưởng agent khác.
+var (
+	agentBreakers   = make(map[string]*CircuitBreaker)
+	agentBreakersMu sync.Mutex
+)
+
+func getAgentBreaker(cookie string) *CircuitBreaker {
+	// Dùng 8 ký tự đầu cookie làm key (đủ unique, tránh leak)
+	key := cookie
+	if len(key) > 8 {
+		key = key[:8]
+	}
+
+	agentBreakersMu.Lock()
+	defer agentBreakersMu.Unlock()
+
+	if cb, ok := agentBreakers[key]; ok {
+		return cb
+	}
+
+	cb := NewCircuitBreaker(CircuitBreakerConfig{
+		Name:             "upstream:" + key,
+		FailureThreshold: 5,
+		ResetTimeout:     30 * time.Second,
+		SuccessThreshold: 2,
+		ShouldCountFailure: func(err error) bool {
+			// Session expired / tham số sai = credential issue, KHÔNG phải infra failure
+			return !errors.Is(err, ErrSessionExpired)
+		},
+	})
+	agentBreakers[key] = cb
+	return cb
+}
 
 type UpstreamResponse struct {
 	Code      int                    `json:"code"`
@@ -84,7 +108,8 @@ func FetchUpstream(ctx context.Context, path, cookie string, params map[string]s
 // FetchUpstreamWithEncrypt gọi upstream với AES encrypt mode nếu có encryptPublicKey.
 func FetchUpstreamWithEncrypt(ctx context.Context, baseURL, path, cookie, encryptPublicKey string, params map[string]string) (*UpstreamResponse, error) {
 	var result *UpstreamResponse
-	err := upstreamBreaker.Execute(func() error {
+	breaker := getAgentBreaker(cookie)
+	err := breaker.Execute(func() error {
 		return WithRetry(func() error {
 			var fetchErr error
 			result, fetchErr = fetchUpstreamOnce2(ctx, baseURL, path, cookie, encryptPublicKey, params)

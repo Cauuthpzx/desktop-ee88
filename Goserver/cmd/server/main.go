@@ -79,6 +79,13 @@ func main() {
 
 	// Layers — Agent / EE88
 	agentRepo := repository.NewAgentRepository(db)
+
+	// Load agent cache từ DB → 0ms lookup thay vì 1-3ms query
+	agentCache := service.GetAgentCache()
+	if err := agentCache.LoadFromDB(context.Background(), agentRepo); err != nil {
+		slog.Warn("Failed to load agent cache", "error", err)
+	}
+
 	agentService := service.NewAgentService(agentRepo)
 	loginService := service.NewEE88LoginService(agentRepo)
 	agentHandler := handler.NewAgentHandler(agentService, loginService)

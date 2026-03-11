@@ -15,10 +15,14 @@ import (
 // AgentService xử lý CRUD cho agents.
 type AgentService struct {
 	agentRepo repository.AgentRepo
+	cache     *AgentCache
 }
 
 func NewAgentService(agentRepo repository.AgentRepo) *AgentService {
-	return &AgentService{agentRepo: agentRepo}
+	return &AgentService{
+		agentRepo: agentRepo,
+		cache:     GetAgentCache(),
+	}
 }
 
 func (s *AgentService) ListAgents(ctx context.Context) ([]*model.AgentSafe, error) {
@@ -83,6 +87,7 @@ func (s *AgentService) CreateAgent(ctx context.Context, req *model.CreateAgentRe
 		return nil, err
 	}
 
+	s.cache.Set(created.ID, created)
 	slog.Info("Agent đã được tạo", "agent_id", created.ID, "name", req.Name)
 	return created.ToSafe(), nil
 }
@@ -137,6 +142,7 @@ func (s *AgentService) UpdateAgent(ctx context.Context, id int64, req *model.Upd
 	if err != nil {
 		return nil, err
 	}
+	s.cache.Set(id, agent)
 
 	slog.Info("Agent đã được cập nhật", "agent_id", id)
 	return agent.ToSafe(), nil
@@ -150,12 +156,15 @@ func (s *AgentService) DeactivateAgent(ctx context.Context, id int64) error {
 		return err
 	}
 
-	_, err := s.agentRepo.Update(ctx, id, map[string]interface{}{
+	updated, err := s.agentRepo.Update(ctx, id, map[string]interface{}{
 		"is_active": false,
 		"status":    "offline",
 	})
 	if err != nil {
 		return err
+	}
+	if updated != nil {
+		s.cache.Set(id, updated)
 	}
 
 	slog.Info("Agent đã bị vô hiệu hoá", "agent_id", id)
@@ -169,6 +178,7 @@ func (s *AgentService) DeleteAgent(ctx context.Context, id int64) error {
 		}
 		return err
 	}
+	s.cache.Delete(id)
 	slog.Info("Agent đã bị xoá", "agent_id", id)
 	return nil
 }
