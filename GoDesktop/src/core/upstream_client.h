@@ -86,11 +86,12 @@ private:
     void fetch_from_agent(const AgentCredential& agent,
                           const QString& path,
                           const QMap<QString, QString>& params,
-                          SingleCallback callback);
+                          SingleCallback callback,
+                          int retry_count = 0);
 
     AgentFetchResult parse_response(int64_t agent_id, const QString& agent_name,
                                      const QByteArray& body, const QByteArray& aes_key,
-                                     bool encrypted);
+                                     bool encrypted) const;
 
     // ── Per-agent cache ──
     struct AgentCacheEntry {
@@ -117,7 +118,7 @@ private:
                                           const QMap<QString, QString>& params);
 
     // Paginate từ merged cache — O(limit), không merge lại.
-    MergedResult paginate_from_merged(const MergedCacheEntry& merged, int page, int limit);
+    MergedResult paginate_from_merged(const MergedCacheEntry& merged, int page, int limit) const;
 
     // Background revalidate — fetch lại data mới, cập nhật cache.
     void revalidate_background(const QString& path,
@@ -146,4 +147,6 @@ private:
     static constexpr int k_cache_ttl_ms = 30000;       // 30s — data còn fresh
     static constexpr int k_stale_ttl_ms = 120000;      // 2min — data stale nhưng vẫn serve
     static constexpr int k_max_cache_entries = 50;      // Giới hạn memory
+    static constexpr int k_max_retries = 2;             // Retry 2 lần cho network errors
+    static constexpr int k_retry_base_ms = 1000;        // Backoff: 1s, 2s
 };

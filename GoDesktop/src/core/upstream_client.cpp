@@ -114,7 +114,7 @@ QString UpstreamClient::make_merged_cache_key(const QString& path,
 // ── Paginate từ merged cache — O(limit) ──
 
 MergedResult UpstreamClient::paginate_from_merged(const MergedCacheEntry& merged,
-                                                    int page, int limit)
+                                                    int page, int limit) const
 {
     int fetched = merged.all_items.size();
     int total = qMax(merged.total_count, fetched);
@@ -177,7 +177,8 @@ void UpstreamClient::evict_expired_cache()
 void UpstreamClient::fetch_from_agent(const AgentCredential& agent,
                                        const QString& path,
                                        const QMap<QString, QString>& params,
-                                       SingleCallback callback)
+                                       SingleCallback callback,
+                                       int retry_count)
 {
     QString full_url = agent.base_url + path;
 
@@ -230,6 +231,7 @@ void UpstreamClient::fetch_from_agent(const AgentCredential& agent,
     auto* reply = m_nam.post(req, body_bytes);
     auto agent_id = agent.id;
     auto agent_name = agent.name;
+    auto agent_copy = agent;  // Copy cho retry
 
     connect(reply, &QNetworkReply::finished, this, [=]() {
         reply->deleteLater();
@@ -242,9 +244,22 @@ void UpstreamClient::fetch_from_agent(const AgentCredential& agent,
             int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             if (status == 301 || status == 302) {
                 result.error = "SESSION_EXPIRED";
-            } else {
-                result.error = reply->errorString();
+                callback(result);
+                return;
             }
+
+            // Retry cho network errors (timeout, connection refused, etc.)
+            if (retry_count < k_max_retries) {
+                int delay = k_retry_base_ms * (1 << retry_count);  // 1s, 2s
+                qDebug() << "[UpstreamClient] retry" << (retry_count + 1)
+                         << "for agent" << agent_name << "in" << delay << "ms";
+                QTimer::singleShot(delay, this, [this, agent_copy, path, params, callback, retry_count]() {
+                    fetch_from_agent(agent_copy, path, params, callback, retry_count + 1);
+                });
+                return;
+            }
+
+            result.error = reply->errorString();
             callback(result);
             return;
         }
@@ -264,7 +279,7 @@ void UpstreamClient::fetch_from_agent(const AgentCredential& agent,
 
 AgentFetchResult UpstreamClient::parse_response(int64_t agent_id, const QString& agent_name,
                                                   const QByteArray& body, const QByteArray& aes_key,
-                                                  bool encrypted)
+                                                  bool encrypted) const
 {
     AgentFetchResult result;
     result.agent_id = agent_id;
@@ -532,7 +547,7 @@ void UpstreamClient::fetch_all_internal(const QString& path,
                                     state->all_items.append(item);
                                     cache_entry->data.append(item);
                                 }
-                                cache_entry->count += extra.count;
+                                // Không cộng count — upstream trả cùng total cho mỗi page
                             }
 
                             --(*pages_remaining);

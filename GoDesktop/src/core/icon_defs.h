@@ -44,6 +44,10 @@ constexpr int k_dialog_spacing       = 14;   // Dialog form row spacing
 // ── Colors ──
 static constexpr const char* k_color_primary = "#16baaa";
 static constexpr const char* k_color_muted   = "#cccccc";
+static constexpr const char* k_color_success = "#16b777";
+static constexpr const char* k_color_warning = "#ffb800";
+static constexpr const char* k_color_danger  = "#ff5722";
+static constexpr const char* k_color_info    = "#1e9fff";
 
 // ── Font Sizes (px) ──
 constexpr int k_font_table_btn       = 11;   // Table row button text

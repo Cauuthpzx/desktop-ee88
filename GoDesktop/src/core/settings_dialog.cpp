@@ -179,16 +179,16 @@ void SettingsDialog::refresh_table()
         QString status_text, status_color;
         if (a.status == "active") {
             status_text = "Online";
-            status_color = "#16b777";
+            status_color = IconDefs::k_color_success;
         } else if (a.status == "logging_in") {
             status_text = QString::fromUtf8("Đang login...");
-            status_color = "#ffb800";
+            status_color = IconDefs::k_color_warning;
         } else if (a.status == "error") {
             status_text = QString::fromUtf8("Lỗi");
-            status_color = "#ff5722";
+            status_color = IconDefs::k_color_danger;
         } else {
             status_text = "Offline";
-            status_color = "#ff5722";
+            status_color = IconDefs::k_color_danger;
         }
         status_label->setText(status_text);
         status_label->setStyleSheet(QString(
@@ -243,11 +243,11 @@ QWidget* SettingsDialog::make_action_buttons(int row)
         return btn;
     };
 
-    auto* btn_edit = make_btn(QIcon(":/icons/edit"), m_tr->t("settings.edit"), "#1e9fff");
-    auto* btn_delete = make_btn(QIcon(":/icons/delete"), m_tr->t("settings.delete"), "#ff5722");
-    auto* btn_check = make_btn(QIcon(":/icons/check"), m_tr->t("settings.check"), "#16b777");
-    auto* btn_login = make_btn(QIcon(":/icons/login_agent"), m_tr->t("settings.login"), "#ffb800");
-    auto* btn_cookies = make_btn(QIcon(":/icons/cookies"), m_tr->t("settings.assign_cookies"), "#16baaa");
+    auto* btn_edit = make_btn(QIcon(":/icons/edit"), m_tr->t("settings.edit"), IconDefs::k_color_info);
+    auto* btn_delete = make_btn(QIcon(":/icons/delete"), m_tr->t("settings.delete"), IconDefs::k_color_danger);
+    auto* btn_check = make_btn(QIcon(":/icons/check"), m_tr->t("settings.check"), IconDefs::k_color_success);
+    auto* btn_login = make_btn(QIcon(":/icons/login_agent"), m_tr->t("settings.login"), IconDefs::k_color_warning);
+    auto* btn_cookies = make_btn(QIcon(":/icons/cookies"), m_tr->t("settings.assign_cookies"), IconDefs::k_color_primary);
 
     connect(btn_edit, &QPushButton::clicked, this, [this, row]() { on_edit_agent(row); });
     connect(btn_delete, &QPushButton::clicked, this, [this, row]() { on_delete_agent(row); });
@@ -275,18 +275,25 @@ void SettingsDialog::apply_theme()
         "  border-left: none; border-right: none; }"
     ).arg(fg, bg2, border_light));
 
-    m_btn_check_all->setStyleSheet(
-        "QPushButton { background: transparent; color: #16b777; border: 1px solid #16b777;"
+    auto success = QString(IconDefs::k_color_success);
+    auto warning = QString(IconDefs::k_color_warning);
+    auto danger = QString(IconDefs::k_color_danger);
+
+    m_btn_check_all->setStyleSheet(QString(
+        "QPushButton { background: transparent; color: %1; border: 1px solid %1;"
         "  padding: 0 12px; font-size: 12px; }"
-        "QPushButton:hover { background: #16b777; color: #fff; }");
-    m_btn_login_all->setStyleSheet(
-        "QPushButton { background: transparent; color: #ffb800; border: 1px solid #ffb800;"
+        "QPushButton:hover { background: %1; color: #fff; }"
+    ).arg(success));
+    m_btn_login_all->setStyleSheet(QString(
+        "QPushButton { background: transparent; color: %1; border: 1px solid %1;"
         "  padding: 0 12px; font-size: 12px; }"
-        "QPushButton:hover { background: #ffb800; color: #fff; }");
-    m_btn_delete_all->setStyleSheet(
-        "QPushButton { background: transparent; color: #ff5722; border: 1px solid #ff5722;"
+        "QPushButton:hover { background: %1; color: #fff; }"
+    ).arg(warning));
+    m_btn_delete_all->setStyleSheet(QString(
+        "QPushButton { background: transparent; color: %1; border: 1px solid %1;"
         "  padding: 0 12px; font-size: 12px; }"
-        "QPushButton:hover { background: #ff5722; color: #fff; }");
+        "QPushButton:hover { background: %1; color: #fff; }"
+    ).arg(danger));
     m_btn_add->setStyleSheet(QString(
         "QPushButton { background: %1; color: #fff; border: none;"
         "  padding: 0 12px; font-size: 12px; }"
