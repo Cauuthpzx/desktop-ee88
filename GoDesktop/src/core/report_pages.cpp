@@ -1,17 +1,21 @@
 #include "core/report_pages.h"
 #include "core/api_client.h"
+#include "core/upstream_client.h"
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/report_page_builder.h"
 #include "core/icon_defs.h"
+#include "utils/upstream_translate.h"
 
+#include <QLabel>
 #include <QLineEdit>
-#include <QUrlQuery>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QDate>
+#include <QIntValidator>
+#include <algorithm>
 
 static QPushButton* make_search_button(const QString& icon_path, const QString& text, const QString& obj_name)
 {
@@ -38,9 +42,10 @@ static QComboBox* make_quick_date_combo(Translator* tr, bool only_today_yesterda
     return combo;
 }
 
-ReportPages::ReportPages(ApiClient* api, ThemeManager* theme, Translator* tr, QObject* parent)
+ReportPages::ReportPages(ApiClient* api, UpstreamClient* upstream, ThemeManager* theme, Translator* tr, QObject* parent)
     : QObject(parent)
     , m_api(api)
+    , m_upstream(upstream)
     , m_theme(theme)
     , m_tr(tr)
 {
@@ -53,6 +58,19 @@ QString ReportPages::get_start_date(int picker_index) const
     if (!m_date_pickers[picker_index]) return {};
     auto d = m_date_pickers[picker_index]->start_date();
     return d.isValid() ? d.toString("yyyy-MM-dd") : QString();
+}
+
+int ReportPages::page_index_of(const ReportPageWidgets& w) const
+{
+    const std::array<const ReportPageWidgets*, k_page_count> pages = {
+        &m_lottery_report, &m_transaction_log, &m_provider_report,
+        &m_lottery_bets, &m_provider_bets, &m_withdrawal_history,
+        &m_deposit_history
+    };
+    for (int i = 0; i < k_page_count; ++i) {
+        if (pages[i]->page == w.page) return i;
+    }
+    return -1;
 }
 
 QString ReportPages::get_end_date(int picker_index) const
@@ -104,14 +122,89 @@ void ReportPages::update_pagination(ReportPageWidgets& w, int current_page,
 
     w.page_prev_btn->setEnabled(current_page > 1);
     w.page_next_btn->setEnabled(current_page < max_page);
-    w.page_number->setText(QString::number(current_page));
     w.page_info->setText(m_tr->t("common.total_rows").arg(total));
+
+    // Find page index to get fetch_fn
+    int idx = page_index_of(w);
+    auto fetch_fn = (idx >= 0 && idx < k_page_count) ? m_fetch_fns[idx] : nullptr;
+
+    // Rebuild page number buttons
+    rebuild_page_buttons(w, current_page, max_page, fetch_fn);
+}
+
+void ReportPages::rebuild_page_buttons(ReportPageWidgets& w, int current_page,
+                                        int max_page,
+                                        std::function<void()> fetch_fn)
+{
+    // Clear old buttons
+    QLayoutItem* child;
+    while ((child = w.page_btn_layout->takeAt(0)) != nullptr) {
+        delete child->widget();
+        delete child;
+    }
+
+    auto add_page_btn = [&](int page, bool active) {
+        auto* btn = new QPushButton(QString::number(page));
+        btn->setObjectName(active ? "pageNumberActive" : "pageBtn");
+        int digits = QString::number(page).length();
+        int width = (digits <= 1) ? 30 : (digits == 2) ? 35 : (digits == 3) ? 40 : 45;
+        btn->setFixedSize(width, 28);
+        btn->setCursor(Qt::PointingHandCursor);
+        int page_idx = page_index_of(w);
+        if (!active && fetch_fn) {
+            connect(btn, &QPushButton::clicked, this, [this, page, page_idx, fetch_fn]() {
+                if (page_idx >= 0 && page_idx < k_page_count)
+                    m_page_state[page_idx].current_page = page;
+                fetch_fn();
+            });
+        }
+        w.page_btn_layout->addWidget(btn);
+    };
+
+    auto add_ellipsis = [&]() {
+        auto* lbl = new QLabel("...");
+        lbl->setObjectName("pageInfo");
+        lbl->setFixedSize(20, 28);
+        lbl->setAlignment(Qt::AlignCenter);
+        w.page_btn_layout->addWidget(lbl);
+    };
+
+    if (max_page <= 7) {
+        for (int i = 1; i <= max_page; ++i)
+            add_page_btn(i, i == current_page);
+    } else {
+        add_page_btn(1, current_page == 1);
+
+        if (current_page > 4)
+            add_ellipsis();
+
+        int start = std::max(2, current_page - 2);
+        int end = std::min(max_page - 1, current_page + 2);
+
+        if (current_page <= 4)
+            end = std::min(max_page - 1, 6);
+        if (current_page >= max_page - 3)
+            start = std::max(2, max_page - 5);
+
+        for (int i = start; i <= end; ++i)
+            add_page_btn(i, i == current_page);
+
+        if (current_page < max_page - 3)
+            add_ellipsis();
+
+        add_page_btn(max_page, current_page == max_page);
+    }
 }
 
 void ReportPages::connect_pagination(ReportPageWidgets& w, int& current_page,
                                       int& page_size, int& total,
                                       std::function<void()> fetch_fn)
 {
+    // Store fetch_fn for page button rebuilds
+    int idx = page_index_of(w);
+    if (idx >= 0 && idx < k_page_count)
+        m_fetch_fns[idx] = fetch_fn;
+
     connect(w.page_prev_btn, &QPushButton::clicked, this, [&current_page, fetch_fn]() {
         if (current_page > 1) {
             --current_page;
@@ -133,6 +226,24 @@ void ReportPages::connect_pagination(ReportPageWidgets& w, int& current_page,
         current_page = 1;
         fetch_fn();
     });
+
+    connect(w.refresh_btn, &QPushButton::clicked, this, [this, fetch_fn]() {
+        m_upstream->invalidate_cache();
+        fetch_fn();
+    });
+
+    connect(w.skip_confirm, &QPushButton::clicked, this, [&current_page, &page_size, &total, &w, fetch_fn]() {
+        int page = w.skip_input->text().toInt();
+        int max_page = (total + page_size - 1) / page_size;
+        if (max_page < 1) max_page = 1;
+        if (page >= 1 && page <= max_page) {
+            current_page = page;
+            fetch_fn();
+        }
+        w.skip_input->clear();
+    });
+
+    connect(w.skip_input, &QLineEdit::returnPressed, w.skip_confirm, &QPushButton::click);
 }
 
 void ReportPages::connect_search_reset(ReportPageWidgets& w,
@@ -147,8 +258,14 @@ void ReportPages::connect_search_reset(ReportPageWidgets& w,
 
 // ─── Generic populate helpers ───
 
+// Các key chứa status/type cần hiển thị màu
+static bool is_status_key(const QString& key)
+{
+    return key == "status" || key == "status_text" || key == "status_format";
+}
+
 void ReportPages::populate_table(ReportPageWidgets& w, const QJsonArray& data,
-                                  const QStringList& keys, int total)
+                                  const QStringList& keys, int /*total*/)
 {
     w.table->setRowCount(0);
 
@@ -162,17 +279,41 @@ void ReportPages::populate_table(ReportPageWidgets& w, const QJsonArray& data,
             QString text;
             if (val.isDouble()) {
                 double d = val.toDouble();
-                // Integer check
                 if (d == static_cast<int>(d))
                     text = QString::number(static_cast<int>(d));
                 else
                     text = QString::number(d, 'f', 2);
             } else {
-                text = val.toString();
+                text = UpstreamTranslate::zh_to_vi(val.toString());
             }
-            auto* item = new QTableWidgetItem(text);
-            item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-            w.table->setItem(row, c, item);
+
+            // Status/type fields → colored label
+            if (is_status_key(keys[c])) {
+                auto* lbl = new QLabel(text);
+                lbl->setAlignment(Qt::AlignCenter);
+                QColor sc = UpstreamTranslate::status_color(text);
+                bool is_lose = UpstreamTranslate::is_lose_status(text);
+                if (sc.isValid()) {
+                    if (is_lose) {
+                        lbl->setStyleSheet(QString(
+                            "QLabel { color: %1; font-size: 12px; font-weight: 600;"
+                            "  background: transparent; border: none; padding: 2px 8px; }"
+                        ).arg(sc.name()));
+                    } else {
+                        lbl->setStyleSheet(QString(
+                            "QLabel { color: %1; font-size: 12px; font-weight: 600;"
+                            "  background: %2; border: none; padding: 2px 8px; }"
+                        ).arg(sc.name(), sc.name() + "1a"));
+                    }
+                } else {
+                    lbl->setStyleSheet("QLabel { font-size: 12px; border: none; padding: 2px 8px; }");
+                }
+                w.table->setCellWidget(row, c, lbl);
+            } else {
+                auto* item = new QTableWidgetItem(text);
+                item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+                w.table->setItem(row, c, item);
+            }
         }
         w.table->setRowHeight(row, 38);
     }
@@ -219,8 +360,8 @@ void ReportPages::load_page(int page_index)
 {
     // page_index: 2=lottery_report, 3=transaction, 4=provider_report,
     //             5=lottery_bets, 6=provider_bets, 7=withdrawal, 8=deposit
-    int idx = page_index - 2; // 0..6
-    if (idx < 0 || idx > 6) return;
+    int idx = page_index - 2;
+    if (idx < 0 || idx >= k_page_count) return;
     if (m_page_state[idx].loaded) return;
     m_page_state[idx].loaded = true;
 
@@ -252,8 +393,8 @@ QWidget* ReportPages::create_lottery_report_page()
             m_tr->t("lottery_report.col_bet_amount"),
             m_tr->t("lottery_report.col_valid_bet"),
             m_tr->t("lottery_report.col_rebate"),
-            m_tr->t("lottery_report.col_win_loss"),
             m_tr->t("lottery_report.col_result"),
+            m_tr->t("lottery_report.col_win_loss"),
             m_tr->t("lottery_report.col_prize"),
             m_tr->t("lottery_report.col_lottery_type"),
         },
@@ -297,8 +438,8 @@ QWidget* ReportPages::create_lottery_report_page()
             m_tr->t("lottery_report.col_bet_amount"),
             m_tr->t("lottery_report.col_valid_bet"),
             m_tr->t("lottery_report.col_rebate"),
-            m_tr->t("lottery_report.col_win_loss"),
             m_tr->t("lottery_report.col_result"),
+            m_tr->t("lottery_report.col_win_loss"),
             m_tr->t("lottery_report.col_prize"),
         },
         {"0", "0", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"}
@@ -674,13 +815,11 @@ QWidget* ReportPages::create_withdrawal_history_page()
         ":/icons/menu_withdraw_log",
         m_tr->t("withdrawal_history.title"),
         {
-            m_tr->t("withdrawal_history.col_serial"),
             m_tr->t("withdrawal_history.col_order_time"),
             m_tr->t("withdrawal_history.col_username"),
             m_tr->t("withdrawal_history.col_agent"),
             m_tr->t("withdrawal_history.col_amount"),
-            m_tr->t("withdrawal_history.col_member_fee"),
-            m_tr->t("withdrawal_history.col_actual_amount"),
+            m_tr->t("withdrawal_history.col_type"),
             m_tr->t("withdrawal_history.col_status"),
         },
         flow,
@@ -825,47 +964,38 @@ void ReportPages::fetch_lottery_report()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[0];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
     auto sd = get_start_date(0);
     auto ed = get_end_date(0);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["start_time"] = sd;
+    if (!ed.isEmpty()) params["end_time"] = ed;
     if (m_lr_lottery_select && !m_lr_lottery_select->currentData().isNull())
-        query.addQueryItem("lottery_id", m_lr_lottery_select->currentData().toString());
+        params["lottery_id"] = m_lr_lottery_select->currentData().toString();
     if (m_lr_username && !m_lr_username->text().trimmed().isEmpty())
-        query.addQueryItem("username", m_lr_username->text().trimmed());
+        params["username"] = m_lr_username->text().trimmed();
 
-    QString path = "/api/proxy/lottery-report?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/reportLottery.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[0];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_lottery_report.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[0];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_lottery_report, result.data, {
+                "username", "user_parent_format", "bet_count", "bet_amount",
+                "valid_amount", "rebate_amount", "result", "win_lose",
+                "prize", "lottery_name"
+            }, s.total);
 
-        populate_table(m_lottery_report, arr, {
-            "username", "user_parent_format", "bet_count", "bet_amount",
-            "valid_amount", "rebate_amount", "win_lose", "result",
-            "prize", "lottery_name"
-        }, s.total);
+            if (!result.total_data.isEmpty()) {
+                populate_summary(m_lottery_report, result.total_data, {
+                    "total_bet_number", "total_bet_count", "total_bet_amount",
+                    "total_valid_amount", "total_rebate_amount", "total_win_lose",
+                    "total_result", "total_prize"
+                });
+            }
 
-        if (data.contains("total_data")) {
-            populate_summary(m_lottery_report, data["total_data"].toObject(), {
-                "total_bet_number", "total_bet_count", "total_bet_amount",
-                "total_valid_amount", "total_rebate_amount", "total_win_lose",
-                "total_result", "total_prize"
-            });
-        }
-
-        update_pagination(m_lottery_report, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_lottery_report, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 void ReportPages::fetch_transaction_log()
@@ -873,45 +1003,36 @@ void ReportPages::fetch_transaction_log()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[1];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
     auto sd = get_start_date(1);
     auto ed = get_end_date(1);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["start_time"] = sd;
+    if (!ed.isEmpty()) params["end_time"] = ed;
     if (m_tl_username && !m_tl_username->text().trimmed().isEmpty())
-        query.addQueryItem("username", m_tl_username->text().trimmed());
+        params["username"] = m_tl_username->text().trimmed();
 
-    QString path = "/api/proxy/transaction-log?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/reportFunds.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[1];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_transaction_log.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[1];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_transaction_log, result.data, {
+                "username", "user_parent_format", "deposit_count", "deposit_amount",
+                "withdrawal_count", "withdrawal_amount", "charge_fee", "agent_commission",
+                "promotion", "third_rebate", "third_activity_amount", "date"
+            }, s.total);
 
-        populate_table(m_transaction_log, arr, {
-            "username", "user_parent_format", "deposit_count", "deposit_amount",
-            "withdrawal_count", "withdrawal_amount", "charge_fee", "agent_commission",
-            "promotion", "third_rebate", "third_activity_amount", "date"
-        }, s.total);
+            if (!result.total_data.isEmpty()) {
+                populate_summary(m_transaction_log, result.total_data, {
+                    "total_deposit_amount", "total_withdrawal_amount", "total_charge_fee",
+                    "total_agent_commission", "total_promotion", "total_third_rebate",
+                    "total_third_activity_amount"
+                });
+            }
 
-        if (data.contains("total_data")) {
-            populate_summary(m_transaction_log, data["total_data"].toObject(), {
-                "total_deposit_amount", "total_withdrawal_amount", "total_charge_fee",
-                "total_agent_commission", "total_promotion", "total_third_rebate",
-                "total_third_activity_amount"
-            });
-        }
-
-        update_pagination(m_transaction_log, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_transaction_log, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 void ReportPages::fetch_provider_report()
@@ -919,46 +1040,37 @@ void ReportPages::fetch_provider_report()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[2];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
     auto sd = get_start_date(2);
     auto ed = get_end_date(2);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["start_time"] = sd;
+    if (!ed.isEmpty()) params["end_time"] = ed;
     if (m_pr_username && !m_pr_username->text().trimmed().isEmpty())
-        query.addQueryItem("username", m_pr_username->text().trimmed());
+        params["username"] = m_pr_username->text().trimmed();
     if (m_pr_provider_select && !m_pr_provider_select->currentData().isNull()
         && !m_pr_provider_select->currentData().toString().isEmpty())
-        query.addQueryItem("platform_id", m_pr_provider_select->currentData().toString());
+        params["platform_id"] = m_pr_provider_select->currentData().toString();
 
-    QString path = "/api/proxy/provider-report?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/reportThirdGame.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[2];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_provider_report.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[2];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_provider_report, result.data, {
+                "username", "platform_id_name", "t_bet_times", "t_bet_amount",
+                "t_turnover", "t_prize", "t_win_lose"
+            }, s.total);
 
-        populate_table(m_provider_report, arr, {
-            "username", "platform_id_name", "t_bet_times", "t_bet_amount",
-            "t_turnover", "t_prize", "t_win_lose"
-        }, s.total);
+            if (!result.total_data.isEmpty()) {
+                populate_summary(m_provider_report, result.total_data, {
+                    "total_bet_times", "total_bet_number", "total_bet_amount",
+                    "total_turnover", "total_prize", "total_win_lose"
+                });
+            }
 
-        if (data.contains("total_data")) {
-            populate_summary(m_provider_report, data["total_data"].toObject(), {
-                "total_bet_times", "total_bet_number", "total_bet_amount",
-                "total_turnover", "total_prize", "total_win_lose"
-            });
-        }
-
-        update_pagination(m_provider_report, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_provider_report, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 void ReportPages::fetch_lottery_bets()
@@ -966,57 +1078,49 @@ void ReportPages::fetch_lottery_bets()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[3];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
+    params["es"] = "1";
     auto sd = get_start_date(3);
     auto ed = get_end_date(3);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["start_time"] = sd;
+    if (!ed.isEmpty()) params["end_time"] = ed;
     if (m_lb_username && !m_lb_username->text().trimmed().isEmpty())
-        query.addQueryItem("username", m_lb_username->text().trimmed());
+        params["username"] = m_lb_username->text().trimmed();
     if (m_lb_serial && !m_lb_serial->text().trimmed().isEmpty())
-        query.addQueryItem("serial_no", m_lb_serial->text().trimmed());
+        params["serial_no"] = m_lb_serial->text().trimmed();
     if (m_lb_game_select && !m_lb_game_select->currentData().isNull()
         && !m_lb_game_select->currentData().toString().isEmpty())
-        query.addQueryItem("lottery_id", m_lb_game_select->currentData().toString());
+        params["lottery_id"] = m_lb_game_select->currentData().toString();
     if (m_lb_play_type && !m_lb_play_type->currentData().isNull()
         && !m_lb_play_type->currentData().toString().isEmpty())
-        query.addQueryItem("play_type_id", m_lb_play_type->currentData().toString());
+        params["play_type"] = m_lb_play_type->currentData().toString();
     if (m_lb_play_method && !m_lb_play_method->currentData().isNull()
         && !m_lb_play_method->currentData().toString().isEmpty())
-        query.addQueryItem("play_id", m_lb_play_method->currentData().toString());
+        params["play_id"] = m_lb_play_method->currentData().toString();
     if (m_lb_status && !m_lb_status->currentData().isNull()
         && !m_lb_status->currentData().toString().isEmpty())
-        query.addQueryItem("status", m_lb_status->currentData().toString());
+        params["status"] = m_lb_status->currentData().toString();
 
-    QString path = "/api/proxy/lottery-bets?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/bet.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[3];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_lottery_bets.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[3];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_lottery_bets, result.data, {
+                "serial_no", "username", "create_time", "lottery_name",
+                "play_type_name", "play_name", "issue", "content",
+                "money", "rebate_amount", "result", "status_text"
+            }, s.total);
 
-        populate_table(m_lottery_bets, arr, {
-            "serial_no", "username", "create_time", "lottery_name",
-            "play_type_name", "play_name", "issue", "content",
-            "money", "rebate_amount", "result", "status_text"
-        }, s.total);
+            if (!result.total_data.isEmpty()) {
+                populate_summary(m_lottery_bets, result.total_data, {
+                    "total_money", "total_rebate_amount", "total_result"
+                });
+            }
 
-        if (data.contains("total_data")) {
-            populate_summary(m_lottery_bets, data["total_data"].toObject(), {
-                "total_money", "total_rebate_amount", "total_result"
-            });
-        }
-
-        update_pagination(m_lottery_bets, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_lottery_bets, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 void ReportPages::fetch_provider_bets()
@@ -1024,39 +1128,30 @@ void ReportPages::fetch_provider_bets()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[4];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
+    params["es"] = "1";
     auto sd = get_start_date(4);
     auto ed = get_end_date(4);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["bet_time"] = sd + " | " + (ed.isEmpty() ? sd : ed);
     if (m_pb_serial && !m_pb_serial->text().trimmed().isEmpty())
-        query.addQueryItem("serial_no", m_pb_serial->text().trimmed());
+        params["serial_no"] = m_pb_serial->text().trimmed();
     if (m_pb_platform_user && !m_pb_platform_user->text().trimmed().isEmpty())
-        query.addQueryItem("platform_username", m_pb_platform_user->text().trimmed());
+        params["platform_username"] = m_pb_platform_user->text().trimmed();
 
-    QString path = "/api/proxy/provider-bets?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/betOrder.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[4];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_provider_bets.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[4];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_provider_bets, result.data, {
+                "serial_no", "platform_id_name", "platform_username", "c_name",
+                "game_name", "bet_amount", "turnover", "prize",
+                "win_lose", "bet_time"
+            }, s.total);
 
-        populate_table(m_provider_bets, arr, {
-            "serial_no", "platform_id_name", "platform_username", "c_name",
-            "game_name", "bet_amount", "turnover", "prize",
-            "win_lose", "bet_time"
-        }, s.total);
-
-        update_pagination(m_provider_bets, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_provider_bets, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 void ReportPages::fetch_withdrawal_history()
@@ -1064,41 +1159,33 @@ void ReportPages::fetch_withdrawal_history()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[5];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
+    params["type"] = "2"; // withdrawal
     auto sd = get_start_date(5);
     auto ed = get_end_date(5);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["start_time"] = sd;
+    if (!ed.isEmpty()) params["end_time"] = ed;
     if (m_wh_username && !m_wh_username->text().trimmed().isEmpty())
-        query.addQueryItem("username", m_wh_username->text().trimmed());
+        params["username"] = m_wh_username->text().trimmed();
     if (m_wh_serial && !m_wh_serial->text().trimmed().isEmpty())
-        query.addQueryItem("serial_no", m_wh_serial->text().trimmed());
+        params["serial_no"] = m_wh_serial->text().trimmed();
     if (m_wh_status && !m_wh_status->currentData().isNull()
         && !m_wh_status->currentData().toString().isEmpty())
-        query.addQueryItem("status", m_wh_status->currentData().toString());
+        params["status"] = m_wh_status->currentData().toString();
 
-    QString path = "/api/proxy/withdrawal-history?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/depositAndWithdrawal.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[5];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_withdrawal_history.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[5];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_withdrawal_history, result.data, {
+                "create_time", "username", "user_parent_format",
+                "amount", "type", "status"
+            }, s.total);
 
-        populate_table(m_withdrawal_history, arr, {
-            "serial_no", "create_time", "username", "user_parent_format",
-            "amount", "member_fee", "actual_amount", "status"
-        }, s.total);
-
-        update_pagination(m_withdrawal_history, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_withdrawal_history, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 void ReportPages::fetch_deposit_history()
@@ -1106,42 +1193,34 @@ void ReportPages::fetch_deposit_history()
     if (m_api->token().isEmpty()) return;
     auto& s = m_page_state[6];
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(s.current_page));
-    query.addQueryItem("limit", QString::number(s.page_size));
-
+    QMap<QString, QString> params;
+    params["type"] = "1"; // deposit
     auto sd = get_start_date(6);
     auto ed = get_end_date(6);
-    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
-    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (!sd.isEmpty()) params["start_time"] = sd;
+    if (!ed.isEmpty()) params["end_time"] = ed;
     if (m_dh_username && !m_dh_username->text().trimmed().isEmpty())
-        query.addQueryItem("username", m_dh_username->text().trimmed());
+        params["username"] = m_dh_username->text().trimmed();
     if (m_dh_type && !m_dh_type->currentData().isNull()
         && !m_dh_type->currentData().toString().isEmpty())
-        query.addQueryItem("type", m_dh_type->currentData().toString());
+        params["type"] = m_dh_type->currentData().toString();
     if (m_dh_status && !m_dh_status->currentData().isNull()
         && !m_dh_status->currentData().toString().isEmpty())
-        query.addQueryItem("status", m_dh_status->currentData().toString());
+        params["status"] = m_dh_status->currentData().toString();
 
-    QString path = "/api/proxy/deposit-history?" + query.toString(QUrl::FullyEncoded);
+    m_upstream->fetch_all("/agent/depositAndWithdrawal.html", params, s.current_page, s.page_size,
+        [this](const MergedResult& result) {
+            auto& s = m_page_state[6];
+            s.total = result.total;
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        if (err.kind != ApiErrorKind::None) {
-            m_deposit_history.page_info->setText(err.message);
-            return;
-        }
-        auto& s = m_page_state[6];
-        auto arr = data["data"].toArray();
-        s.total = data["total"].toInt();
+            populate_table(m_deposit_history, result.data, {
+                "username", "user_parent_format", "amount", "type",
+                "status", "create_time"
+            }, s.total);
 
-        populate_table(m_deposit_history, arr, {
-            "username", "user_parent_format", "amount", "type",
-            "status", "create_time"
-        }, s.total);
-
-        update_pagination(m_deposit_history, s.current_page, s.page_size, s.total);
-        apply_theme();
-    });
+            update_pagination(m_deposit_history, s.current_page, s.page_size, s.total);
+            apply_theme();
+        });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1170,7 +1249,7 @@ void ReportPages::apply_theme()
         "QPushButton:hover { border-color: %4; }"
     ).arg(bg, text1, border, primary);
     bool is_dark = m_theme->theme() == "dark";
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < k_page_count; ++i) {
         if (m_date_pickers[i]) {
             m_date_pickers[i]->set_button_style(date_btn_style);
             m_date_pickers[i]->apply_popup_theme(is_dark);
@@ -1203,13 +1282,16 @@ void ReportPages::retranslate()
         if (w.page_info)
             w.page_info->setText(m_tr->t("common.total_rows").arg(0));
         if (w.page_size_combo) {
-            const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-            for (int i = 0; i < 9 && i < w.page_size_combo->count(); ++i)
+            const int page_sizes[] = {10, 20, 30, 50, 100};
+            for (int i = 0; i < 5 && i < w.page_size_combo->count(); ++i)
                 w.page_size_combo->setItemText(i, m_tr->t("common.rows_per_page").arg(page_sizes[i]));
         }
         if (w.filter_btn) w.filter_btn->setToolTip(m_tr->t("common.filter_columns"));
         if (w.export_btn) w.export_btn->setToolTip(m_tr->t("common.export_file"));
         if (w.print_btn) w.print_btn->setToolTip(m_tr->t("common.print"));
+        if (w.refresh_btn) w.refresh_btn->setToolTip(m_tr->t("common.refresh"));
+        if (w.skip_label) w.skip_label->setText(m_tr->t("common.goto_page"));
+        if (w.skip_confirm) w.skip_confirm->setText(m_tr->t("common.confirm"));
     };
 
     // === Lottery Report ===
@@ -1354,10 +1436,10 @@ void ReportPages::retranslate()
         m_withdrawal_history.title_label->setText(m_tr->t("withdrawal_history.title"));
     if (m_withdrawal_history.table)
         m_withdrawal_history.table->setHorizontalHeaderLabels({
-            m_tr->t("withdrawal_history.col_serial"), m_tr->t("withdrawal_history.col_order_time"),
+            m_tr->t("withdrawal_history.col_order_time"),
             m_tr->t("withdrawal_history.col_username"), m_tr->t("withdrawal_history.col_agent"),
-            m_tr->t("withdrawal_history.col_amount"), m_tr->t("withdrawal_history.col_member_fee"),
-            m_tr->t("withdrawal_history.col_actual_amount"), m_tr->t("withdrawal_history.col_status"),
+            m_tr->t("withdrawal_history.col_amount"), m_tr->t("withdrawal_history.col_type"),
+            m_tr->t("withdrawal_history.col_status"),
         });
     update_pagination(m_withdrawal_history);
     update_search_buttons(m_withdrawal_history.search_form);
@@ -1391,7 +1473,7 @@ void ReportPages::retranslate()
     }
 
     // Date picker popup buttons
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < k_page_count; ++i) {
         if (m_date_pickers[i])
             m_date_pickers[i]->set_translator(m_tr);
     }
