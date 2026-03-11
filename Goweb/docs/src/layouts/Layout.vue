@@ -460,12 +460,16 @@
           </lay-form>
         </div>
       </lay-layer>
-      <router-view></router-view>
+      <router-view v-slot="{ Component }">
+        <transition :name="transitionReady ? 'page-fade' : ''" mode="out-in">
+          <component :is="Component" :key="$route.path" />
+        </transition>
+      </router-view>
     </lay-layout>
   </lay-config-provider>
 </template>
 <script>
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onMounted, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAppStore } from "../store/app";
 import { useAuthStore } from "../store/auth";
@@ -577,6 +581,12 @@ export default {
         "--global-neutral-color-8": "#c2c2c2",
       };
     };
+
+    // Skip page transition lần đầu load — tránh nhấp nháy opacity 0→1
+    const transitionReady = ref(false);
+    onMounted(() => {
+      nextTick(() => { transitionReady.value = true; });
+    });
 
     const shadeStyle = computed(() => feedback.getShadeStyle());
     const shadeOpacity = "1";
@@ -847,6 +857,7 @@ export default {
       editingAgentId,
       submitAddAgent,
       agentLoading,
+      transitionReady,
       shadeStyle,
       shadeOpacity,
     };
@@ -1200,6 +1211,26 @@ body {
 
 .add-agent-actions .layui-btn {
   flex: 1;
+}
+
+/* ── Page transition (upbit style) ── */
+.page-fade-enter-active {
+  animation: page-upbit-anim 0.25s ease-out;
+}
+
+.page-fade-leave-active {
+  animation: page-upbit-anim 0.15s ease-in reverse;
+}
+
+@keyframes page-upbit-anim {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /* Layer shade overlay: 70% đen (light), DarkReader tự đảo sang trắng (dark) */

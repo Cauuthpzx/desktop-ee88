@@ -261,16 +261,17 @@ void MainWidget::apply_theme()
     const auto header_bg = m_theme->color("header_bg");
     const auto bg = m_theme->color("bg");
 
-    // Toolbar
+    // Toolbar — SPA-style nav bar
     m_toolbar->setStyleSheet(QString(
-        "QToolBar { spacing: 0px; padding: 2px 0px; border-bottom: 1px solid %1;"
+        "QToolBar { spacing: 0px; padding: 0px; border-bottom: 1px solid %1;"
         "  background: %2; }"
         "QToolBar > QWidget { background: transparent; }"
-        "QToolButton { padding: 3px 6px; border: 1px solid %3; border-right: none;"
-        "  border-radius: 0px; background-color: %4; font-size: 12px; color: %5; }"
-        "QToolButton:hover { background-color: %6; border-color: %7; }"
+        "QToolButton { padding: 6px 12px; border: none; border-bottom: 2px solid transparent;"
+        "  background-color: transparent; font-size: 13px; color: %3; }"
+        "QToolButton:hover { color: %4; background-color: %5; }"
+        "QToolButton:pressed { background-color: %6; }"
         "QToolButton::menu-indicator { image: none; }"
-    ).arg(border_light, header_bg, border, bg2, text_nav, bg_hover, text2));
+    ).arg(border_light, header_bg, text_nav, primary, bg_hover, border_light));
 
     // Theme toggle icon + text
     m_theme_action->setIcon(QIcon(m_theme->theme() == "dark"
@@ -282,13 +283,14 @@ void MainWidget::apply_theme()
     m_lang_button->setIcon(lang_flag_icon(m_tr->locale()));
     m_lang_button->setText(m_tr->locale_label(m_tr->locale()));
 
-    // Menu styling
+    // Menu styling — clean dropdown
     auto menu_style = QString(
-        "QMenu { background: %1; border: 1px solid %2; padding: 4px; font-size: 14px; }"
-        "QMenu::item { padding: 6px 12px; color: %3; }"
+        "QMenu { background: %1; border: 1px solid %2; padding: 4px 0px;"
+        "  font-size: 13px; }"
+        "QMenu::item { padding: 8px 20px; color: %3; }"
         "QMenu::item:selected { background: %4; color: %5; }"
-        "QMenu::separator { height: 1px; background: %2; margin: 4px 8px; }"
-    ).arg(bg, border, text1, bg_hover, primary);
+        "QMenu::separator { height: 1px; background: %2; margin: 4px 12px; }"
+    ).arg(bg, border_light, text1, bg_hover, primary);
 
     m_lang_menu->setStyleSheet(menu_style);
     m_account_menu->setStyleSheet(menu_style);
@@ -300,6 +302,11 @@ void MainWidget::apply_theme()
     // Active nav highlight
     update_active_nav();
 
+    // Content stack background
+    m_content_stack->setStyleSheet(QString(
+        "QStackedWidget { background: %1; }"
+    ).arg(bg2));
+
     // Delegate to sub-widgets
     m_home_page->apply_theme();
     m_customers_page->apply_theme();
@@ -309,28 +316,27 @@ void MainWidget::apply_theme()
 void MainWidget::update_active_nav()
 {
     const auto primary = m_theme->color("primary");
-    const auto bg2 = m_theme->color("bg_secondary");
     const auto text_nav = m_theme->color("text_nav");
-    const auto border = m_theme->color("border");
     const auto bg_hover = m_theme->color("bg_hover");
-    const auto text2 = m_theme->color("text_secondary");
+    const auto border_light = m_theme->color("border_light");
 
-    // Style for active nav button: primary bottom border + primary text
+    // Active nav: primary color bottom border + bold text
     auto active_style = QString(
-        "QToolButton { padding: 3px 6px; border: 1px solid %1; border-right: none;"
-        "  border-bottom: 2px solid %2; border-radius: 0px;"
-        "  background-color: %3; font-size: 12px; color: %2; font-weight: bold; }"
-        "QToolButton:hover { background-color: %4; border-color: %1; border-bottom: 2px solid %2; }"
+        "QToolButton { padding: 6px 12px; border: none; border-bottom: 2px solid %1;"
+        "  background-color: transparent; font-size: 13px; color: %1; font-weight: 600; }"
+        "QToolButton:hover { background-color: %2; }"
+        "QToolButton:pressed { background-color: %3; }"
         "QToolButton::menu-indicator { image: none; }"
-    ).arg(border, primary, bg2, bg_hover);
+    ).arg(primary, bg_hover, border_light);
 
-    // Style for inactive nav button (default)
+    // Inactive nav: transparent bottom border
     auto inactive_style = QString(
-        "QToolButton { padding: 3px 6px; border: 1px solid %1; border-right: none;"
-        "  border-radius: 0px; background-color: %2; font-size: 12px; color: %3; }"
-        "QToolButton:hover { background-color: %4; border-color: %5; }"
+        "QToolButton { padding: 6px 12px; border: none; border-bottom: 2px solid transparent;"
+        "  background-color: transparent; font-size: 13px; color: %1; }"
+        "QToolButton:hover { color: %2; background-color: %3; }"
+        "QToolButton:pressed { background-color: %4; }"
         "QToolButton::menu-indicator { image: none; }"
-    ).arg(border, bg2, text_nav, bg_hover, text2);
+    ).arg(text_nav, primary, bg_hover, border_light);
 
     // Map page index to nav group: 0=home, 1=customers, 2-4=reports, 5-6=bets, 7-8=deposit
     int active_group = -1;

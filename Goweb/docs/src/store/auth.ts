@@ -7,7 +7,7 @@ interface User {
   created_at: string;
 }
 
-interface AuthState {
+export interface AuthState {
   user: User | null;
   token: string | null;
 }

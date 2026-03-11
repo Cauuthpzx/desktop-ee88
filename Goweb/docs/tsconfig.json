@@ -12,7 +12,11 @@
       "esModuleInterop": true,
       "declarationDir": "types",
       "jsx": "preserve",
-      "lib": ["ESNext","DOM"]
+      "lib": ["ESNext","DOM"],
+      "paths": {
+        "layui-component/*": ["../packages/component/*"],
+        "json-schema-form/*": ["../packages/json-schema-form/*"]
+      }
     },
     "include": ["src/**/*","shims-vue.d.ts"],
     "exclude": ["node_modules"]

@@ -13,6 +13,7 @@ declare module "*.md" {
 declare module "prismjs";
 declare module "prismjs/components/index";
 declare module "escape-html";
+declare module "markdown-it-container";
 
 interface ImportMeta {
   env: {
@@ -21,5 +22,6 @@ interface ImportMeta {
     PROD: boolean;
     DEV: boolean;
     SSR: boolean;
+    VITE_API_URL?: string;
   };
 }
