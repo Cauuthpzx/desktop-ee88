@@ -1,5 +1,5 @@
 """
-MaxHub Manager v1.0.0
+MaxHub Manager v1.1.0
 Quản lý Goserver, GoWeb, GoDesktop — console log realtime, kill port, system monitor.
 """
 import os
@@ -13,17 +13,32 @@ from tkinter import ttk, scrolledtext, messagebox, simpledialog
 from datetime import datetime
 import time
 import webbrowser
+import json
 import psutil
 
 # ── Cấu hình ──────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 MSYS_BIN = "C:/msys64/mingw64/bin"
 
+GOSERVER_ENV = {
+    "DB_PASSWORD": "hiepmun2021",
+    "DB_HOST": "localhost",
+    "DB_PORT": "5432",
+    "DB_USER": "postgres",
+    "DB_NAME": "goserver",
+    "JWT_SECRET": "maxhub-dev-jwt-secret-2026",
+    "SERVER_PORT": "8080",
+    "FRONTEND_URL": "http://localhost:5173",
+    "ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:5173",
+    "UPSTREAM_BASE_URL": "https://a2u4k.ee88dly.com",
+    "ENCRYPTION_KEY": "0000000000000000000000000000000000000000000000000000000000000000",
+}
+
 SERVICES = {
     "Goserver": {
         "cwd": os.path.join(PROJECT_ROOT, "Goserver"),
         "cmd": ["go", "run", "cmd/server/main.go"],
-        "env": {"DB_PASSWORD": "hiepmun2021", "JWT_SECRET": "maxhub-dev-jwt-secret-2026"},
+        "env": GOSERVER_ENV,
         "color": "#2ecc71",
         "port": 8080,
     },
@@ -201,7 +216,7 @@ class ConsolePanel(ttk.LabelFrame):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("MaxHub Manager v1.0.0")
+        self.title("MaxHub Manager v1.1.0")
         self.geometry("1200x750")
         self.minsize(950, 550)
         self.configure(bg="#f0f0f0")
@@ -263,12 +278,13 @@ class App(tk.Tk):
 
         ttk.Separator(ctrl_inner, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=10)
 
-        # Nhóm 2: Port
+        # Nhóm 2: Port & Health
         grp2 = ttk.Frame(ctrl_inner)
         grp2.pack(side=tk.LEFT, padx=(0, 6))
 
         ttk.Button(grp2, text="Kill Port...", command=self.kill_port_dialog).pack(side=tk.LEFT, padx=2)
         ttk.Button(grp2, text="Quét Port", command=self.scan_ports).pack(side=tk.LEFT, padx=2)
+        ttk.Button(grp2, text="Health Check", command=self.health_check).pack(side=tk.LEFT, padx=2)
 
         ttk.Separator(ctrl_inner, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=10)
 
@@ -277,7 +293,8 @@ class App(tk.Tk):
         grp3.pack(side=tk.LEFT, padx=(0, 6))
 
         ttk.Button(grp3, text="Xóa tất cả log", command=self.clear_all_logs).pack(side=tk.LEFT, padx=2)
-        ttk.Button(grp3, text="Mở thư mục dự án", command=lambda: os.startfile(PROJECT_ROOT)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(grp3, text="DB Status", command=self.check_db_status).pack(side=tk.LEFT, padx=2)
+        ttk.Button(grp3, text="Mở thư mục", command=lambda: os.startfile(PROJECT_ROOT)).pack(side=tk.LEFT, padx=2)
 
         # ════════════════════════════════════════════════════════
         # 3 CONSOLE PANELS
@@ -356,6 +373,9 @@ class App(tk.Tk):
         ttk.Button(row1, text="go test", width=8,
                    command=lambda: self.run_in_panel("Goserver", ["go", "test", "./..."], SERVICES["Goserver"]["cwd"]),
                    style="Small.TButton").pack(side=tk.LEFT, padx=1)
+        ttk.Button(row1, text="Health", width=7,
+                   command=lambda: self.api_health_check("Goserver"),
+                   style="Small.TButton").pack(side=tk.LEFT, padx=1)
         ttk.Button(row1, text="Mở :8080", width=8,
                    command=lambda: webbrowser.open("http://localhost:8080"),
                    style="Small.TButton").pack(side=tk.LEFT, padx=1)
@@ -413,6 +433,9 @@ class App(tk.Tk):
 
         ttk.Separator(row1, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=4)
 
+        ttk.Button(row1, text="Kill EXE", width=8,
+                   command=self.desktop_kill_exe,
+                   style="Small.TButton").pack(side=tk.LEFT, padx=1)
         ttk.Button(row1, text="Mở thư mục", width=10,
                    command=lambda: os.startfile(SERVICES["GoDesktop"]["cwd"]),
                    style="Small.TButton").pack(side=tk.LEFT, padx=1)
@@ -472,20 +495,16 @@ class App(tk.Tk):
         try:
             parent = psutil.Process(pid)
             children = parent.children(recursive=True)
-            # Kill children trước
             for child in children:
                 try:
                     child.kill()
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
-            # Kill parent
             try:
                 parent.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
-            # Đợi tất cả chết
             gone, alive = psutil.wait_procs(children + [parent], timeout=3)
-            # Force kill nếu vẫn còn sống
             for p in alive:
                 try:
                     p.kill()
@@ -494,7 +513,6 @@ class App(tk.Tk):
         except psutil.NoSuchProcess:
             pass
         except Exception:
-            # Fallback: dùng taskkill
             try:
                 subprocess.run(
                     ["taskkill", "/F", "/T", "/PID", str(pid)],
@@ -539,6 +557,130 @@ class App(tk.Tk):
         self.after(800, self.start_all)
 
     # ════════════════════════════════════════════════════════════
+    # HEALTH CHECK — API endpoints
+    # ════════════════════════════════════════════════════════════
+    def api_health_check(self, panel_name):
+        """Check Goserver health endpoints."""
+        panel = self.panels[panel_name]
+        panel.log("═══ Health Check ═══", "system")
+
+        def check():
+            import urllib.request
+            import urllib.error
+
+            endpoints = [
+                ("GET", "/health/live", "Liveness"),
+                ("GET", "/health/ready", "Readiness"),
+            ]
+            for method, path, label in endpoints:
+                url = f"http://localhost:8080{path}"
+                try:
+                    req = urllib.request.Request(url, method=method)
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        status = resp.status
+                        body = resp.read().decode("utf-8", errors="replace")[:200]
+                        self.after(0, panel.log,
+                                   f"  {label}: {status} OK — {body}", "success")
+                except urllib.error.URLError as e:
+                    self.after(0, panel.log,
+                               f"  {label}: FAIL — {e.reason}", "error")
+                except Exception as e:
+                    self.after(0, panel.log,
+                               f"  {label}: FAIL — {e}", "error")
+
+            # Test API agents endpoint
+            try:
+                req = urllib.request.Request(
+                    "http://localhost:8080/api/agents",
+                    headers={"Authorization": "Bearer test"},
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    self.after(0, panel.log,
+                               f"  Agents API: {resp.status} OK", "success")
+            except urllib.error.HTTPError as e:
+                if e.code == 401:
+                    self.after(0, panel.log,
+                               f"  Agents API: 401 (auth required — server đang chạy)", "success")
+                else:
+                    self.after(0, panel.log,
+                               f"  Agents API: {e.code} — {e.reason}", "warn")
+            except Exception as e:
+                self.after(0, panel.log,
+                           f"  Agents API: FAIL — {e}", "error")
+
+        threading.Thread(target=check, daemon=True).start()
+
+    def health_check(self):
+        """Check tất cả services."""
+        panel = self.panels["Goserver"]
+        self.api_health_check("Goserver")
+
+        # Check GoWeb
+        def check_web():
+            import urllib.request
+            import urllib.error
+            web_panel = self.panels["GoWeb"]
+            try:
+                req = urllib.request.Request("http://localhost:5173", method="HEAD")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    self.after(0, web_panel.log,
+                               f"GoWeb: {resp.status} OK", "success")
+            except urllib.error.URLError as e:
+                self.after(0, web_panel.log,
+                           f"GoWeb: FAIL — {e.reason}", "error")
+            except Exception as e:
+                self.after(0, web_panel.log,
+                           f"GoWeb: FAIL — {e}", "error")
+
+        threading.Thread(target=check_web, daemon=True).start()
+
+    # ════════════════════════════════════════════════════════════
+    # DATABASE STATUS
+    # ════════════════════════════════════════════════════════════
+    def check_db_status(self):
+        """Check PostgreSQL connection via Goserver health/ready."""
+        panel = self.panels["Goserver"]
+        panel.log("═══ Database Status ═══", "system")
+
+        # Check if PostgreSQL port 5432 is listening
+        info = get_port_info(5432)
+        if info:
+            panel.log(f"  PostgreSQL :5432 — {info['name']} (PID {info['pid']}) [{info['status']}]", "success")
+        else:
+            panel.log("  PostgreSQL :5432 — KHÔNG CHẠY", "error")
+            panel.log("  Hãy khởi động PostgreSQL trước.", "system")
+            return
+
+        # Test via Goserver health/ready (includes DB check)
+        def check():
+            import urllib.request
+            import urllib.error
+            try:
+                req = urllib.request.Request("http://localhost:8080/health/ready")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    body = resp.read().decode("utf-8", errors="replace")
+                    try:
+                        data = json.loads(body)
+                        db_ok = data.get("database") == "ok" or data.get("status") == "ok"
+                        if db_ok:
+                            self.after(0, panel.log,
+                                       f"  DB connection: OK — {body[:150]}", "success")
+                        else:
+                            self.after(0, panel.log,
+                                       f"  DB connection: {body[:150]}", "warn")
+                    except json.JSONDecodeError:
+                        self.after(0, panel.log,
+                                   f"  Goserver ready: {body[:150]}", "success")
+            except urllib.error.URLError:
+                self.after(0, panel.log,
+                           "  Goserver chưa chạy — không thể kiểm tra DB qua API", "warn")
+            except Exception as e:
+                self.after(0, panel.log,
+                           f"  Lỗi: {e}", "error")
+
+        threading.Thread(target=check, daemon=True).start()
+
+    # ════════════════════════════════════════════════════════════
     # KILL PORT
     # ════════════════════════════════════════════════════════════
     def kill_port_action(self, port, panel_name):
@@ -574,7 +716,6 @@ class App(tk.Tk):
         )
         if confirm:
             ok, msg = kill_port(port)
-            # Tìm panel phù hợp để log
             target_panel = "Goserver"
             for name, cfg in SERVICES.items():
                 if cfg.get("port") == port:
@@ -583,8 +724,7 @@ class App(tk.Tk):
             self.panels[target_panel].log(msg, "success" if ok else "error")
 
     def scan_ports(self):
-        """Quét các port quan trọng, log vào từng panel tương ứng."""
-        # Log tổng hợp vào Goserver panel
+        """Quét các port quan trọng, log vào Goserver panel."""
         panel = self.panels["Goserver"]
         panel.log("═══ Quét port ═══", "system")
         for port in [8080, 5173, 5432, 3000, 3001, 4173]:
@@ -612,12 +752,10 @@ class App(tk.Tk):
     def _desktop_env(self):
         """Build env for GoDesktop with MSYS_BIN prepended to PATH."""
         env = os.environ.copy()
-        # Ensure mingw64/bin is FIRST in PATH so cmake/MOC can find DLLs
         current_path = env.get("PATH", "")
         if MSYS_BIN.replace("/", "\\") not in current_path and MSYS_BIN not in current_path:
             env["PATH"] = MSYS_BIN + os.pathsep + current_path
         else:
-            # Move it to front if already present but not first
             parts = current_path.split(os.pathsep)
             parts = [p for p in parts if p.replace("\\", "/") != MSYS_BIN.replace("\\", "/")
                      and p != MSYS_BIN]
@@ -626,12 +764,10 @@ class App(tk.Tk):
 
     def _find_tool(self, name):
         """Find tool in MSYS_BIN or system PATH, return full path or None."""
-        # Check MSYS_BIN first
         for ext in [".exe", ""]:
             full = os.path.join(MSYS_BIN, name + ext)
             if os.path.isfile(full):
                 return full
-        # Fallback: check system PATH
         import shutil
         found = shutil.which(name)
         return found
@@ -641,8 +777,7 @@ class App(tk.Tk):
         for tool in ["cmake", "mingw32-make"]:
             path = self._find_tool(tool)
             if path is None:
-                panel.log(f"⚠ Không tìm thấy {tool}.", "error")
-                panel.log(f"  Kiểm tra MSYS2/MinGW64 đã cài chưa.", "error")
+                panel.log(f"Không tìm thấy {tool}.", "error")
                 panel.log(f"  PATH cần có: {MSYS_BIN}", "error")
                 return False
             try:
@@ -652,10 +787,10 @@ class App(tk.Tk):
                     capture_output=True, text=True, timeout=5,
                 )
                 if result.returncode != 0:
-                    panel.log(f"⚠ {tool} không hoạt động (exit {result.returncode})", "error")
+                    panel.log(f"{tool} không hoạt động (exit {result.returncode})", "error")
                     return False
             except Exception as e:
-                panel.log(f"⚠ Lỗi kiểm tra {tool}: {e}", "error")
+                panel.log(f"Lỗi kiểm tra {tool}: {e}", "error")
                 return False
         return True
 
@@ -677,7 +812,6 @@ class App(tk.Tk):
     def _resolve_cmd(self, cmd):
         """Resolve the first element of cmd to full path if it's a known tool."""
         exe = cmd[0]
-        # Skip if already absolute path
         if os.path.isabs(exe):
             return cmd
         resolved = self._find_tool(exe)
@@ -697,12 +831,10 @@ class App(tk.Tk):
 
         env = self._desktop_env()
 
-        # Pre-flight checks for build commands
         if cmd_key in ("Build", "Compile", "Clean"):
             if not self._desktop_check_tools(panel):
                 return
 
-        # For Build: auto-clean stale cmake cache to prevent MOC errors
         if cmd_key == "Build":
             cache_file = os.path.join(cwd, "build", "CMakeCache.txt")
             if os.path.isfile(cache_file):
@@ -715,7 +847,6 @@ class App(tk.Tk):
                 except Exception:
                     pass
 
-        # For Run: check exe exists
         if cmd_key == "Run":
             exe = cmd[0]
             if not os.path.isfile(exe):
@@ -739,7 +870,6 @@ class App(tk.Tk):
         if not self._desktop_check_tools(panel):
             return
 
-        # Auto-clean stale cache
         cache_file = os.path.join(cwd, "build", "CMakeCache.txt")
         if os.path.isfile(cache_file):
             try:
@@ -755,6 +885,9 @@ class App(tk.Tk):
         if existing and existing.poll() is None:
             panel.log("Đang có lệnh khác chạy, vui lòng đợi...", "warn")
             return
+
+        # Auto kill GoDesktop.exe trước khi compile
+        self._kill_desktop_exe(silent=True)
 
         def run():
             build_cmd = self._resolve_cmd(DESKTOP_COMMANDS["Build"])
@@ -805,13 +938,34 @@ class App(tk.Tk):
 
         threading.Thread(target=run, daemon=True).start()
 
+    def _kill_desktop_exe(self, silent=False):
+        """Kill GoDesktop.exe nếu đang chạy."""
+        panel = self.panels["GoDesktop"]
+        try:
+            for proc in psutil.process_iter(["pid", "name"]):
+                if proc.info["name"] and proc.info["name"].lower() == "godesktop.exe":
+                    proc.kill()
+                    proc.wait(timeout=3)
+                    if not silent:
+                        panel.log(f"Đã kill GoDesktop.exe (PID {proc.info['pid']})", "success")
+                    return True
+        except Exception as e:
+            if not silent:
+                panel.log(f"Lỗi kill GoDesktop.exe: {e}", "error")
+        if not silent:
+            panel.log("GoDesktop.exe không đang chạy.", "system")
+        return False
+
+    def desktop_kill_exe(self):
+        """Nút Kill EXE."""
+        self._kill_desktop_exe()
+
     # ════════════════════════════════════════════════════════════
     # GENERIC COMMAND RUNNER
     # ════════════════════════════════════════════════════════════
     def run_in_panel(self, panel_name, cmd, cwd, env=None):
         panel = self.panels[panel_name]
 
-        # Kiểm tra nếu đang có lệnh chạy (không phải service)
         existing = self._cmd_procs.get(panel_name)
         if existing and existing.poll() is None:
             panel.log("Đang có lệnh khác chạy, vui lòng đợi...", "warn")
@@ -910,7 +1064,7 @@ class App(tk.Tk):
             panel.clear()
 
     # ════════════════════════════════════════════════════════════
-    # CLEANUP — đảm bảo kill sạch bất kể cách thoát nào
+    # CLEANUP
     # ════════════════════════════════════════════════════════════
     def _force_cleanup(self):
         """Kill tất cả child processes — gọi bởi atexit, signal, on_close."""
@@ -918,19 +1072,16 @@ class App(tk.Tk):
             return
         self._shutting_down = True
 
-        # Kill service processes
         for name, proc in list(self.processes.items()):
             if proc is not None:
                 self._kill_proc_tree(proc.pid)
                 self.processes[name] = None
 
-        # Kill command processes (go mod tidy, pnpm install, etc.)
         for name, proc in list(self._cmd_procs.items()):
             if proc is not None and proc.poll() is None:
                 self._kill_proc_tree(proc.pid)
         self._cmd_procs.clear()
 
-        # Double-check: kill theo port nếu vẫn còn sót
         for cfg in SERVICES.values():
             port = cfg.get("port")
             if port:

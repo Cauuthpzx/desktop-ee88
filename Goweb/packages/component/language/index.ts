@@ -2,6 +2,7 @@ import { getCurrentInstance } from "vue";
 import { createI18n, useI18n as __useI18n__ } from "vue-i18n";
 import zh_CN from "./locales/zh_CN";
 import en_US from "./locales/en_US";
+import vi_VN from "./locales/vi_VN";
 
 const i18n = createI18n({
   legacy: false,
@@ -9,6 +10,7 @@ const i18n = createI18n({
   messages: {
     zh_CN: zh_CN,
     en_US: en_US,
+    vi_VN: vi_VN,
   },
 });
 
