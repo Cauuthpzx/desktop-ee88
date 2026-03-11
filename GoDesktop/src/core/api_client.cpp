@@ -188,11 +188,12 @@ void ApiClient::handle_api_reply(
                     err.kind = ApiErrorKind::ValidationError;
                     err.message = root["error"].toString();
                     cb(err, root);
-                } else if (root.contains("data")) {
+                } else if (root.contains("status") && root.contains("data")
+                           && root["data"].isObject()) {
                     // Wrapped format: {"status":"success","data":{...}}
                     cb(ApiError::none(), root.value("data").toObject());
                 } else {
-                    // Direct format: {"agents":[...]} or {"valid":true,...}
+                    // Direct format: {"data":[...],"total":N} or {"agents":[...]}
                     cb(ApiError::none(), root);
                 }
             } else {

@@ -55,5 +55,7 @@
         <file alias="toast_warning">icons/toast_warning.png</file>
         <file alias="toast_info">icons/toast_info.png</file>
         <file alias="toast_loading">icons/toast_loading.png</file>
+        <file alias="chevron_left">icons/chevron_left.png</file>
+        <file alias="chevron_right">icons/chevron_right.png</file>
     </qresource>
 </RCC>

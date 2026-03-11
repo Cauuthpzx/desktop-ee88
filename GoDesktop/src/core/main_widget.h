@@ -45,6 +45,8 @@ private:
     void update_sidebar_selection();
     void retranslate_sidebar();
     void toggle_sidebar();
+    void reposition_toggle();
+    void resizeEvent(QResizeEvent* event) override;
     QIcon lang_flag_icon(const QString& locale) const;
 
     ApiClient* m_api;
@@ -92,7 +94,7 @@ private:
     QWidget* m_sidebar;
     QListWidget* m_sidebar_list;
     QPushButton* m_sidebar_toggle;
-    bool m_sidebar_collapsed = false;
+    bool m_sidebar_collapsed = true;
     QLabel* m_sidebar_nav_label;
     QLabel* m_sidebar_reports_label;
     QLabel* m_sidebar_system_label;

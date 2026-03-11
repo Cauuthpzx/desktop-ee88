@@ -1,4 +1,5 @@
 #include "core/customers_page.h"
+#include "core/api_client.h"
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
@@ -17,9 +18,13 @@
 #include <QDialogButtonBox>
 #include <QDialog>
 #include <QMessageBox>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QUrlQuery>
 
-CustomersPage::CustomersPage(ThemeManager* theme, Translator* tr, QWidget* parent)
+CustomersPage::CustomersPage(ApiClient* api, ThemeManager* theme, Translator* tr, QWidget* parent)
     : QWidget(parent)
+    , m_api(api)
     , m_theme(theme)
     , m_tr(tr)
 {
@@ -144,12 +149,19 @@ void CustomersPage::setup_ui()
     m_reset_btn->setIconSize(IconDefs::search_icon());
     flow->addWidget(m_reset_btn);
 
+    connect(m_search_btn, &QPushButton::clicked, this, [this]() {
+        m_current_page = 1;
+        fetch_customers();
+    });
+
     connect(m_reset_btn, &QPushButton::clicked, this, [this]() {
         m_search_username->clear();
         m_date_range_picker->clear_dates();
         m_search_status->setCurrentIndex(0);
         m_search_sort_field->setCurrentIndex(0);
         m_search_sort_dir->setCurrentIndex(0);
+        m_current_page = 1;
+        fetch_customers();
     });
 
     card_layout->addWidget(form_widget);
@@ -218,11 +230,12 @@ void CustomersPage::setup_ui()
     tg_layout->addWidget(m_table_toolbar);
 
     // ── Table ──
-    m_table = new QTableWidget(0, 12);
+    m_table = new QTableWidget(0, 13);
     m_table->setObjectName("customersTable");
 
     const QStringList headers = {
         m_tr->t("customers.col_member"),
+        m_tr->t("customers.col_agent_name"),
         m_tr->t("customers.col_member_type"),
         m_tr->t("customers.col_agent_account"),
         m_tr->t("customers.col_balance"),
@@ -246,80 +259,304 @@ void CustomersPage::setup_ui()
     m_table->setShowGrid(true);
     m_table->horizontalHeader()->setHighlightSections(false);
 
-    // Sample data
-    m_table->insertRow(0);
-    const QStringList sample = {
-        "an10tynghichoi",
-        m_tr->t("customers.type_official"),
-        "vozer123",
-        "0.0000", "0", "0", "0.0000", "0.0000",
-        "",
-        "2026-03-09 16:20:58",
-        m_tr->t("customers.status_normal"),
-        ""
-    };
-    for (int c = 0; c < 11; ++c) {
-        auto* item = new QTableWidgetItem(sample[c]);
-        item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        m_table->setItem(0, c, item);
-    }
-    auto* rebate_btn = new QPushButton(m_tr->t("customers.rebate_settings"));
-    rebate_btn->setObjectName("rebateBtn");
-    rebate_btn->setCursor(Qt::PointingHandCursor);
-    rebate_btn->setFixedHeight(IconDefs::k_table_btn_height + 2);
-    m_table->setCellWidget(0, 11, rebate_btn);
-    m_table->setRowHeight(0, 38);
-
     tg_layout->addWidget(m_table, 1);
 
-    // ── Pagination ──
+    // ── Pagination — layout: count | prev | page | next | limits | refresh | skip ──
     m_pagination_bar = new QWidget;
     m_pagination_bar->setObjectName("paginationBar");
     auto* pg_layout = new QHBoxLayout(m_pagination_bar);
     pg_layout->setContentsMargins(8, 6, 8, 6);
-    pg_layout->setSpacing(8);
+    pg_layout->setSpacing(4);
 
+    // [count]
+    m_page_info = new QLabel(m_tr->t("common.total_rows").arg(0));
+    m_page_info->setObjectName("pageInfo");
+    pg_layout->addWidget(m_page_info);
+
+    pg_layout->addSpacing(8);
+
+    // [prev]
     m_page_prev_btn = new QPushButton("<");
     m_page_prev_btn->setObjectName("pageBtn");
     m_page_prev_btn->setFixedSize(30, 28);
     m_page_prev_btn->setEnabled(false);
     pg_layout->addWidget(m_page_prev_btn);
 
-    m_page_number = new QLabel("1");
-    m_page_number->setObjectName("pageNumber");
-    m_page_number->setFixedSize(30, 28);
-    m_page_number->setAlignment(Qt::AlignCenter);
-    pg_layout->addWidget(m_page_number);
+    // [page] — page number buttons
+    m_page_btn_container = new QWidget;
+    m_page_btn_container->setStyleSheet("border: none;");
+    m_page_btn_layout = new QHBoxLayout(m_page_btn_container);
+    m_page_btn_layout->setContentsMargins(0, 0, 0, 0);
+    m_page_btn_layout->setSpacing(2);
+    pg_layout->addWidget(m_page_btn_container);
 
+    // [next]
     m_page_next_btn = new QPushButton(">");
     m_page_next_btn->setObjectName("pageBtn");
     m_page_next_btn->setFixedSize(30, 28);
     m_page_next_btn->setEnabled(false);
     pg_layout->addWidget(m_page_next_btn);
 
-    pg_layout->addSpacing(12);
-
-    m_page_info = new QLabel(m_tr->t("common.total_rows").arg(1));
-    m_page_info->setObjectName("pageInfo");
-    pg_layout->addWidget(m_page_info);
-
     pg_layout->addSpacing(8);
 
+    // [limits] — page size combo
     m_page_size_combo = new QComboBox;
     m_page_size_combo->setObjectName("pageSizeCombo");
-    const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
+    const int page_sizes[] = {10, 20, 30, 50, 100};
     for (int ps : page_sizes) {
         m_page_size_combo->addItem(
             m_tr->t("common.rows_per_page").arg(ps), ps);
     }
     m_page_size_combo->setFixedHeight(IconDefs::k_page_combo_height);
+    m_page_size_combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_page_size_combo->setMinimumWidth(120);
     pg_layout->addWidget(m_page_size_combo);
+
+    pg_layout->addSpacing(4);
+
+    // [refresh]
+    m_refresh_btn = new QPushButton(QIcon(":/icons/refresh"), "");
+    m_refresh_btn->setObjectName("pageBtn");
+    m_refresh_btn->setFixedSize(30, 28);
+    m_refresh_btn->setIconSize(QSize(14, 14));
+    m_refresh_btn->setCursor(Qt::PointingHandCursor);
+    m_refresh_btn->setToolTip(m_tr->t("common.refresh"));
+    pg_layout->addWidget(m_refresh_btn);
+
+    pg_layout->addSpacing(4);
+
+    // [skip] — go to page input
+    m_skip_label = new QLabel(m_tr->t("common.goto_page"));
+    m_skip_label->setObjectName("pageInfo");
+    pg_layout->addWidget(m_skip_label);
+
+    m_skip_input = new QLineEdit;
+    m_skip_input->setObjectName("skipInput");
+    m_skip_input->setFixedSize(50, 28);
+    m_skip_input->setAlignment(Qt::AlignCenter);
+    m_skip_input->setValidator(new QIntValidator(1, 99999, this));
+    pg_layout->addWidget(m_skip_input);
+
+    m_skip_confirm = new QPushButton(m_tr->t("common.confirm"));
+    m_skip_confirm->setObjectName("pageBtn");
+    m_skip_confirm->setFixedHeight(28);
+    pg_layout->addWidget(m_skip_confirm);
 
     pg_layout->addStretch();
     tg_layout->addWidget(m_pagination_bar);
 
+    // Pagination signals
+    connect(m_page_prev_btn, &QPushButton::clicked, this, [this]() {
+        if (m_current_page > 1) {
+            --m_current_page;
+            fetch_customers();
+        }
+    });
+
+    connect(m_page_next_btn, &QPushButton::clicked, this, [this]() {
+        int max_page = (m_total + m_page_size - 1) / m_page_size;
+        if (m_current_page < max_page) {
+            ++m_current_page;
+            fetch_customers();
+        }
+    });
+
+    connect(m_refresh_btn, &QPushButton::clicked, this, [this]() {
+        fetch_customers();
+    });
+
+    connect(m_page_size_combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int idx) {
+        m_page_size = m_page_size_combo->itemData(idx).toInt();
+        m_current_page = 1;
+        fetch_customers();
+    });
+
+    connect(m_skip_confirm, &QPushButton::clicked, this, [this]() {
+        int page = m_skip_input->text().toInt();
+        int max_page = (m_total + m_page_size - 1) / m_page_size;
+        if (max_page < 1) max_page = 1;
+        if (page >= 1 && page <= max_page) {
+            m_current_page = page;
+            fetch_customers();
+        }
+        m_skip_input->clear();
+    });
+
+    connect(m_skip_input, &QLineEdit::returnPressed, m_skip_confirm, &QPushButton::click);
+
     card_layout->addWidget(table_group, 1);
     page_layout->addWidget(m_card, 1);
+}
+
+void CustomersPage::load_data()
+{
+    m_ready = true;
+    if (m_table->rowCount() == 0 && m_total == 0)
+        fetch_customers();
+}
+
+void CustomersPage::fetch_customers()
+{
+    if (!m_ready || m_api->token().isEmpty())
+        return;
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(m_current_page));
+    query.addQueryItem("limit", QString::number(m_page_size));
+
+    auto username = m_search_username->text().trimmed();
+    if (!username.isEmpty())
+        query.addQueryItem("username", username);
+
+    auto status_data = m_search_status->currentData().toString();
+    if (!status_data.isEmpty())
+        query.addQueryItem("status", status_data);
+
+    auto sort_field = m_search_sort_field->currentData().toString();
+    if (!sort_field.isEmpty())
+        query.addQueryItem("sort_field", sort_field);
+
+    auto sort_dir = m_search_sort_dir->currentData().toString();
+    if (!sort_dir.isEmpty())
+        query.addQueryItem("sort_dir", sort_dir);
+
+    QString path = "/api/customers?" + query.toString(QUrl::FullyEncoded);
+
+    m_search_btn->setEnabled(false);
+    m_search_btn->setText(m_tr->t("common.loading"));
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        m_search_btn->setEnabled(true);
+        m_search_btn->setText(m_tr->t("common.search"));
+
+        if (err.kind != ApiErrorKind::None) {
+            m_page_info->setText(err.message);
+            return;
+        }
+
+        auto arr = data["data"].toArray();
+        int total = data["total"].toInt();
+        populate_table(arr, total);
+    });
+}
+
+void CustomersPage::populate_table(const QJsonArray& data, int total)
+{
+    m_total = total;
+    m_table->setRowCount(0);
+
+    for (int i = 0; i < data.size(); ++i) {
+        auto obj = data[i].toObject();
+        int row = m_table->rowCount();
+        m_table->insertRow(row);
+
+        const QStringList cells = {
+            obj["username"].toString(),
+            obj["agent_name"].toString(),
+            obj["type_format"].toString(),
+            obj["parent_user"].toString(),
+            obj["money"].toString(),
+            QString::number(obj["deposit_count"].toInt()),
+            QString::number(obj["withdrawal_count"].toInt()),
+            obj["deposit_amount"].toString(),
+            obj["withdrawal_amount"].toString(),
+            obj["login_time"].toString(),
+            obj["register_time"].toString(),
+            obj["status_format"].toString(),
+        };
+
+        for (int c = 0; c < cells.size(); ++c) {
+            auto* item = new QTableWidgetItem(cells[c]);
+            item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            m_table->setItem(row, c, item);
+        }
+
+        // Action column (index 12) — rebate settings button
+        auto* rebate_btn = new QPushButton(m_tr->t("customers.rebate_settings"));
+        rebate_btn->setObjectName("rebateBtn");
+        rebate_btn->setCursor(Qt::PointingHandCursor);
+        rebate_btn->setFixedHeight(IconDefs::k_table_btn_height + 2);
+        m_table->setCellWidget(row, 12, rebate_btn);
+        m_table->setRowHeight(row, 38);
+    }
+
+    // Update pagination UI
+    int max_page = (m_total + m_page_size - 1) / m_page_size;
+    if (max_page < 1) max_page = 1;
+
+    m_page_prev_btn->setEnabled(m_current_page > 1);
+    m_page_next_btn->setEnabled(m_current_page < max_page);
+    m_page_info->setText(m_tr->t("common.total_rows").arg(m_total));
+
+    // Rebuild page number buttons
+    rebuild_page_buttons(max_page);
+
+    // Re-apply theme for new rows
+    apply_theme();
+}
+
+void CustomersPage::rebuild_page_buttons(int max_page)
+{
+    // Clear old buttons
+    QLayoutItem* child;
+    while ((child = m_page_btn_layout->takeAt(0)) != nullptr) {
+        delete child->widget();
+        delete child;
+    }
+
+    // Show max 7 page buttons with ellipsis
+    auto add_page_btn = [this](int page, bool active) {
+        auto* btn = new QPushButton(QString::number(page));
+        btn->setObjectName(active ? "pageNumberActive" : "pageBtn");
+        btn->setFixedSize(30, 28);
+        btn->setCursor(Qt::PointingHandCursor);
+        if (!active) {
+            connect(btn, &QPushButton::clicked, this, [this, page]() {
+                m_current_page = page;
+                fetch_customers();
+            });
+        }
+        m_page_btn_layout->addWidget(btn);
+    };
+
+    auto add_ellipsis = [this]() {
+        auto* lbl = new QLabel("...");
+        lbl->setObjectName("pageInfo");
+        lbl->setFixedSize(20, 28);
+        lbl->setAlignment(Qt::AlignCenter);
+        m_page_btn_layout->addWidget(lbl);
+    };
+
+    if (max_page <= 7) {
+        for (int i = 1; i <= max_page; ++i)
+            add_page_btn(i, i == m_current_page);
+    } else {
+        // Always show first page
+        add_page_btn(1, m_current_page == 1);
+
+        if (m_current_page > 4)
+            add_ellipsis();
+
+        int start = std::max(2, m_current_page - 2);
+        int end = std::min(max_page - 1, m_current_page + 2);
+
+        // Adjust range to show at least 5 middle pages
+        if (m_current_page <= 4)
+            end = std::min(max_page - 1, 6);
+        if (m_current_page >= max_page - 3)
+            start = std::max(2, max_page - 5);
+
+        for (int i = start; i <= end; ++i)
+            add_page_btn(i, i == m_current_page);
+
+        if (m_current_page < max_page - 3)
+            add_ellipsis();
+
+        // Always show last page
+        add_page_btn(max_page, m_current_page == max_page);
+    }
+
+    apply_theme();
 }
 
 void CustomersPage::apply_theme()
@@ -437,7 +674,7 @@ void CustomersPage::apply_theme()
     ).arg(bg, text1, border, bg_hover, bg2));
 
     for (int r = 0; r < m_table->rowCount(); ++r) {
-        if (auto* w = m_table->cellWidget(r, 11)) {
+        if (auto* w = m_table->cellWidget(r, 12)) {
             w->setStyleSheet(QString(
                 "QPushButton { background: %1; color: #fff; border: none;"
                 "  padding: 2px 8px; font-size: 11px; }"
@@ -459,15 +696,34 @@ void CustomersPage::apply_theme()
     ).arg(bg, text1, border, bg_hover, text2);
     m_page_prev_btn->setStyleSheet(page_btn_style);
     m_page_next_btn->setStyleSheet(page_btn_style);
+    m_refresh_btn->setStyleSheet(page_btn_style);
+    m_skip_confirm->setStyleSheet(page_btn_style);
 
-    m_page_number->setStyleSheet(QString(
-        "QLabel#pageNumber { background: %1; color: #fff; border: 1px solid %1;"
-        "  font-size: 13px; padding: 0; qproperty-alignment: 'AlignCenter'; }"
-    ).arg(primary));
+    // Active page button
+    auto active_page_style = QString(
+        "QPushButton#pageNumberActive { background: %1; color: #fff; border: 1px solid %1;"
+        "  font-size: 13px; padding: 0; }"
+    ).arg(primary);
+    for (auto* btn : m_page_btn_container->findChildren<QPushButton*>("pageNumberActive")) {
+        btn->setStyleSheet(active_page_style);
+    }
+    for (auto* btn : m_page_btn_container->findChildren<QPushButton*>("pageBtn")) {
+        btn->setStyleSheet(page_btn_style);
+    }
 
     m_page_info->setStyleSheet(QString(
         "font-size: 13px; color: %1; border: none;"
     ).arg(text2));
+
+    m_skip_label->setStyleSheet(QString(
+        "font-size: 13px; color: %1; border: none;"
+    ).arg(text2));
+
+    m_skip_input->setStyleSheet(QString(
+        "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
+        "  padding: 2px 4px; font-size: 13px; }"
+        "QLineEdit:focus { border-color: %4; }"
+    ).arg(bg, text1, border, primary));
 
     m_page_size_combo->setStyleSheet(input_style);
 }
@@ -641,18 +897,22 @@ void CustomersPage::retranslate()
 
     // Table headers
     m_table->setHorizontalHeaderLabels({
-        m_tr->t("customers.col_member"), m_tr->t("customers.col_member_type"),
-        m_tr->t("customers.col_agent_account"), m_tr->t("customers.col_balance"),
-        m_tr->t("customers.col_deposit_count"), m_tr->t("customers.col_withdraw_count"),
-        m_tr->t("customers.col_total_deposit"), m_tr->t("customers.col_total_withdraw"),
-        m_tr->t("customers.col_last_login"), m_tr->t("customers.col_register_time"),
-        m_tr->t("customers.col_status"), m_tr->t("customers.col_action"),
+        m_tr->t("customers.col_member"), m_tr->t("customers.col_agent_name"),
+        m_tr->t("customers.col_member_type"), m_tr->t("customers.col_agent_account"),
+        m_tr->t("customers.col_balance"), m_tr->t("customers.col_deposit_count"),
+        m_tr->t("customers.col_withdraw_count"), m_tr->t("customers.col_total_deposit"),
+        m_tr->t("customers.col_total_withdraw"), m_tr->t("customers.col_last_login"),
+        m_tr->t("customers.col_register_time"), m_tr->t("customers.col_status"),
+        m_tr->t("customers.col_action"),
     });
 
     // Pagination
-    m_page_info->setText(m_tr->t("common.total_rows").arg(m_table->rowCount()));
-    const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-    for (int i = 0; i < 9 && i < m_page_size_combo->count(); ++i)
+    m_page_info->setText(m_tr->t("common.total_rows").arg(m_total));
+    m_refresh_btn->setToolTip(m_tr->t("common.refresh"));
+    m_skip_label->setText(m_tr->t("common.goto_page"));
+    m_skip_confirm->setText(m_tr->t("common.confirm"));
+    const int page_sizes[] = {10, 20, 30, 50, 100};
+    for (int i = 0; i < 5 && i < m_page_size_combo->count(); ++i)
         m_page_size_combo->setItemText(i, m_tr->t("common.rows_per_page").arg(page_sizes[i]));
 
     // Date picker popup

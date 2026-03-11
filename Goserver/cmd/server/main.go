@@ -90,6 +90,10 @@ func main() {
 	loginService := service.NewEE88LoginService(agentRepo)
 	agentHandler := handler.NewAgentHandler(agentService, loginService)
 
+	// Layers — Customer (upstream proxy)
+	customerService := service.NewCustomerService()
+	customerHandler := handler.NewCustomerHandler(customerService)
+
 	// Router
 	mux := http.NewServeMux()
 
@@ -136,6 +140,9 @@ func main() {
 	mux.Handle("GET /api/ee88-auth/{id}/session", authMw(http.HandlerFunc(agentHandler.GetSessionInfo)))
 	mux.Handle("PATCH /api/ee88-auth/{id}/cookie", authMw(http.HandlerFunc(agentHandler.SetCookieManual)))
 	mux.Handle("GET /api/ee88-auth/{id}/login-history", authMw(http.HandlerFunc(agentHandler.GetLoginHistory)))
+
+	// Customer upstream proxy (protected)
+	mux.Handle("GET /api/customers", authMw(http.HandlerFunc(customerHandler.ListCustomers)))
 
 	// Scheduler — health check + auto-login
 	scheduler := service.NewScheduler(loginService, agentRepo)

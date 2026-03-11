@@ -22,7 +22,7 @@ import (
 // ============================================================================
 
 const (
-	UpstreamTimeout = 2 * time.Minute
+	UpstreamTimeout = 15 * time.Second
 	DefaultUA       = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
@@ -115,7 +115,7 @@ func FetchUpstreamWithEncrypt(ctx context.Context, baseURL, path, cookie, encryp
 			result, fetchErr = fetchUpstreamOnce2(ctx, baseURL, path, cookie, encryptPublicKey, params)
 			return fetchErr
 		}, RetryConfig{
-			MaxRetries: 2,
+			MaxRetries: 1,
 			ShouldRetry: func(err error) bool {
 				return !errors.Is(err, ErrSessionExpired)
 			},

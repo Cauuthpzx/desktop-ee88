@@ -18,11 +18,21 @@ import (
 // ============================================================================
 
 type CachedAgent struct {
+	Name             string
 	Cookie           string
 	EncryptPublicKey string
 	BaseURL          string // empty = dùng default
 	CookieExpires    time.Time
 	Status           string
+}
+
+// ActiveAgentInfo chứa thông tin cần thiết để gọi upstream cho 1 agent.
+type ActiveAgentInfo struct {
+	ID               int64
+	Name             string
+	Cookie           string
+	EncryptPublicKey string
+	BaseURL          string
 }
 
 type AgentCache struct {
@@ -160,8 +170,29 @@ func (c *AgentCache) ListActive() []int64 {
 	return ids
 }
 
+// ListActiveWithInfo trả danh sách agent active kèm info để gọi upstream.
+func (c *AgentCache) ListActiveWithInfo() []ActiveAgentInfo {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var agents []ActiveAgentInfo
+	for id, item := range c.items {
+		if item.Cookie != "" && item.Status == "active" {
+			agents = append(agents, ActiveAgentInfo{
+				ID:               id,
+				Name:             item.Name,
+				Cookie:           item.Cookie,
+				EncryptPublicKey: item.EncryptPublicKey,
+				BaseURL:          item.BaseURL,
+			})
+		}
+	}
+	return agents
+}
+
 func agentToCached(ag *model.Agent) *CachedAgent {
 	cached := &CachedAgent{
+		Name:             ag.Name,
 		Cookie:           ag.SessionCookie,
 		EncryptPublicKey: ag.EncryptPublicKey,
 		Status:           ag.Status,

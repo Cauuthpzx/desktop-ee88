@@ -1,268 +1,156 @@
 <template>
-  <div class="index-wrapper">
-    <div class="index-side" :class="{ collapsed: sideCollapsed }">
-      <ul class="layui-menu layui-menu-lg layui-menu-docs">
-        <li class="layui-menu-item-group">
-          <div class="layui-menu-body-title">{{ t("sidebar.navigation") }}</div>
-          <hr />
-          <ul>
-            <li
-              v-for="item in sideMenus"
-              :key="item.path"
-              :class="[currentPath === item.path ? 'layui-menu-item-checked2' : '']"
-              @click="router.push(item.path)"
-            >
-              <div class="layui-menu-body-title">
-                <router-link :to="item.path">
-                  <lay-icon :type="item.icon" size="14px" style="margin-right: 6px" />
-                  <span>{{ t(item.label) }}</span>
-                </router-link>
-              </div>
-            </li>
-          </ul>
-        </li>
-        <li class="layui-menu-item-group">
-          <div class="layui-menu-body-title">{{ t("sidebar.reports") }}</div>
-          <hr />
-          <ul>
-            <li
-              v-for="item in reportMenus"
-              :key="item.path"
-              :class="[currentPath === item.path ? 'layui-menu-item-checked2' : '']"
-              @click="router.push(item.path)"
-            >
-              <div class="layui-menu-body-title">
-                <router-link :to="item.path">
-                  <lay-icon :type="item.icon" size="14px" style="margin-right: 6px" />
-                  <span>{{ t(item.label) }}</span>
-                </router-link>
-              </div>
-            </li>
-          </ul>
-        </li>
-        <li class="layui-menu-item-group">
-          <div class="layui-menu-body-title">{{ t("sidebar.system") }}</div>
-          <hr />
-          <ul>
-            <li
-              v-for="item in systemMenus"
-              :key="item.path"
-              :class="[currentPath === item.path ? 'layui-menu-item-checked2' : '']"
-              @click="router.push(item.path)"
-            >
-              <div class="layui-menu-body-title">
-                <router-link :to="item.path">
-                  <lay-icon :type="item.icon" size="14px" style="margin-right: 6px" />
-                  <span>{{ t(item.label) }}</span>
-                </router-link>
-              </div>
-            </li>
-          </ul>
-        </li>
-      </ul>
-    </div>
-    <div class="sidebar-toggle" :class="{ 'toggle-collapsed': sideCollapsed }" @click="sideCollapsed = !sideCollapsed">
-      <lay-icon :type="sideCollapsed ? 'layui-icon-right' : 'layui-icon-left'" size="12px" />
-    </div>
-    <div class="index-body">
-      <div class="site-container">
-        <div class="site-layui-main">
-          <div class="site-zfj">
-            <img src="/icons/duango_logo.png" alt="MaxHub" style="width: 360px; height: auto;" />
-          </div>
-          <div class="site-desc">
-            <cite>{{ t("home.tagline") }}</cite>
-          </div>
-          <div class="site-download">
-            <router-link class="layui-inline site-down site-down-primary" to="/zh-CN/components">
-              {{ t("home.explore") }}
-            </router-link>
-            <a
-              class="layui-inline site-down"
-              href="javascript:void(0);"
-              @click="changeTheme"
-            >
-              {{ appStore.theme === "dark" ? t("home.lightMode") : t("home.darkMode") }}
-            </a>
-          </div>
-          <div class="site-welcome" v-if="authStore.user">
-            <lay-icon type="layui-icon-username" size="14px" color="#16baaa" />
-            <span>{{ t("home.welcome") }}, <strong>{{ authStore.user.username }}</strong></span>
-          </div>
-        </div>
-        <div class="box-list">
-          <lay-row :space="16">
-            <lay-col :md="8" :sm="12" :xs="12">
-              <div class="box">
-                <div class="icon">
-                  <lay-icon type="layui-icon-engine" size="24px" color="#16baaa" />
-                </div>
-                <h2 class="title">Go Backend</h2>
-                <p class="details">{{ t("home.features.goDesc") }}</p>
-              </div>
-            </lay-col>
-            <lay-col :md="8" :sm="12" :xs="12">
-              <div class="box">
-                <div class="icon">
-                  <lay-icon type="layui-icon-website" size="24px" color="#1e9fff" />
-                </div>
-                <h2 class="title">Vue 3 Web</h2>
-                <p class="details">{{ t("home.features.vueDesc") }}</p>
-              </div>
-            </lay-col>
-            <lay-col :md="8" :sm="12" :xs="12">
-              <div class="box">
-                <div class="icon">
-                  <lay-icon type="layui-icon-app" size="24px" color="#e67e22" />
-                </div>
-                <h2 class="title">Qt6 Desktop</h2>
-                <p class="details">{{ t("home.features.qtDesc") }}</p>
-              </div>
-            </lay-col>
-            <lay-col :md="8" :sm="12" :xs="12">
-              <div class="box">
-                <div class="icon">
-                  <lay-icon type="layui-icon-template-1" size="24px" color="#16b777" />
-                </div>
-                <h2 class="title">77+ Components</h2>
-                <p class="details">{{ t("home.features.compDesc") }}</p>
-              </div>
-            </lay-col>
-            <lay-col :md="8" :sm="12" :xs="12">
-              <div class="box">
-                <div class="icon">
-                  <lay-icon type="layui-icon-moon" size="24px" color="#9b59b6" />
-                </div>
-                <h2 class="title">Dark Theme</h2>
-                <p class="details">{{ t("home.features.themeDesc") }}</p>
-              </div>
-            </lay-col>
-            <lay-col :md="8" :sm="12" :xs="12">
-              <div class="box">
-                <div class="icon">
-                  <lay-icon type="layui-icon-log" size="24px" color="#ff5722" />
-                </div>
-                <h2 class="title">Logging</h2>
-                <p class="details">{{ t("home.features.logDesc") }}</p>
-              </div>
-            </lay-col>
-          </lay-row>
-        </div>
-        <div class="footer footer-index">
-          <p>MaxHub &copy; {{ new Date().getFullYear() }}</p>
-        </div>
+  <div class="site-container">
+    <!-- Right Sidebar -->
+    <aside :class="classAside" style="display: flex; flex-direction: column;">
+      <div class="lay-aside-top">
+        <lay-button type="primary" size="xs" :class="classAsideBtn" @click="toggleSidebar()">
+          <lay-icon :type="sidebarIcon" size="40"></lay-icon>
+        </lay-button>
       </div>
+      <div style="flex: 1;"></div>
+    </aside>
+    <div class="site-layui-main">
+      <div class="site-zfj">
+        <img src="/icons/duango_logo.png" alt="MaxHub" style="width: 360px; height: auto;" />
+      </div>
+      <div class="site-desc">
+        <cite>{{ t("home.tagline") }}</cite>
+      </div>
+      <div class="site-download">
+        <router-link class="layui-inline site-down site-down-primary" to="/zh-CN/components">
+          {{ t("home.explore") }}
+        </router-link>
+        <a
+          class="layui-inline site-down"
+          href="javascript:void(0);"
+          @click="changeTheme"
+        >
+          {{ appStore.theme === "dark" ? t("home.lightMode") : t("home.darkMode") }}
+        </a>
+      </div>
+      <div class="site-welcome" v-if="authStore.user">
+        <lay-icon type="layui-icon-username" size="14px" color="#16baaa" />
+        <span>{{ t("home.welcome") }}, <strong>{{ authStore.user.username }}</strong></span>
+      </div>
+    </div>
+    <div class="box-list">
+      <lay-row :space="16">
+        <lay-col :md="8" :sm="12" :xs="12">
+          <div class="box">
+            <div class="icon">
+              <lay-icon type="layui-icon-engine" size="24px" color="#16baaa" />
+            </div>
+            <h2 class="title">Go Backend</h2>
+            <p class="details">{{ t("home.features.goDesc") }}</p>
+          </div>
+        </lay-col>
+        <lay-col :md="8" :sm="12" :xs="12">
+          <div class="box">
+            <div class="icon">
+              <lay-icon type="layui-icon-website" size="24px" color="#1e9fff" />
+            </div>
+            <h2 class="title">Vue 3 Web</h2>
+            <p class="details">{{ t("home.features.vueDesc") }}</p>
+          </div>
+        </lay-col>
+        <lay-col :md="8" :sm="12" :xs="12">
+          <div class="box">
+            <div class="icon">
+              <lay-icon type="layui-icon-app" size="24px" color="#e67e22" />
+            </div>
+            <h2 class="title">Qt6 Desktop</h2>
+            <p class="details">{{ t("home.features.qtDesc") }}</p>
+          </div>
+        </lay-col>
+        <lay-col :md="8" :sm="12" :xs="12">
+          <div class="box">
+            <div class="icon">
+              <lay-icon type="layui-icon-template-1" size="24px" color="#16b777" />
+            </div>
+            <h2 class="title">77+ Components</h2>
+            <p class="details">{{ t("home.features.compDesc") }}</p>
+          </div>
+        </lay-col>
+        <lay-col :md="8" :sm="12" :xs="12">
+          <div class="box">
+            <div class="icon">
+              <lay-icon type="layui-icon-moon" size="24px" color="#9b59b6" />
+            </div>
+            <h2 class="title">Dark Theme</h2>
+            <p class="details">{{ t("home.features.themeDesc") }}</p>
+          </div>
+        </lay-col>
+        <lay-col :md="8" :sm="12" :xs="12">
+          <div class="box">
+            <div class="icon">
+              <lay-icon type="layui-icon-log" size="24px" color="#ff5722" />
+            </div>
+            <h2 class="title">Logging</h2>
+            <p class="details">{{ t("home.features.logDesc") }}</p>
+          </div>
+        </lay-col>
+      </lay-row>
+    </div>
+    <div class="footer footer-index">
+      <p>MaxHub &copy; {{ new Date().getFullYear() }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { ref, computed } from "vue";
 import { useAppStore } from "../store/app";
 import { useAuthStore } from "../store/auth";
 import { useI18n } from "layui-component/index";
 
 const { t } = useI18n();
-const route = useRoute();
-const router = useRouter();
 const appStore = useAppStore();
 const authStore = useAuthStore();
-
-const sideCollapsed = ref(false);
-const currentPath = ref(route.path);
-watch(() => route.path, (val) => { currentPath.value = val; }, { immediate: true });
 
 const changeTheme = () => {
   appStore.theme = appStore.theme === "dark" ? "light" : "dark";
 };
 
-const sideMenus = [
-  { path: "/zh-CN/index", icon: "layui-icon-home", label: "nav.home" },
-  { path: "/zh-CN/customers", icon: "layui-icon-group", label: "nav.customers" },
-  { path: "/zh-CN/components", icon: "layui-icon-template-1", label: "nav.components" },
-  { path: "/zh-CN/guide", icon: "layui-icon-read", label: "nav.guide" },
-  { path: "/zh-CN/resources", icon: "layui-icon-link", label: "nav.resources" },
-];
+// Right sidebar
+const sidebarShow = ref(false);
+let enableAnimation = false;
+const sidebarIcon = ref("layui-icon-right");
 
-const reportMenus = [
-  { path: "/zh-CN/reports/lottery", icon: "layui-icon-chart-screen", label: "nav.report_lottery" },
-  { path: "/zh-CN/reports/transaction", icon: "layui-icon-log", label: "nav.report_transaction" },
-  { path: "/zh-CN/reports/provider", icon: "layui-icon-survey", label: "nav.report_provider" },
-];
+const classAside = computed(() => [
+  "lay-aside",
+  { "lay-aside-animation": enableAnimation },
+  { "lay-aside-collapse": !sidebarShow.value },
+]);
 
-const systemMenus = [
-  { path: "/zh-CN/bets/lottery", icon: "layui-icon-form", label: "nav.bets_lottery" },
-  { path: "/zh-CN/bets/provider", icon: "layui-icon-form", label: "nav.bets_provider" },
-  { path: "/zh-CN/commission/withdrawal", icon: "layui-icon-diamond", label: "nav.commission_withdrawal" },
-  { path: "/zh-CN/commission/deposit", icon: "layui-icon-diamond", label: "nav.commission_deposit" },
-];
+const classAsideBtn = computed(() => {
+  let classBtn: any[];
+  if (enableAnimation) {
+    classBtn = [
+      "lay-aside-collapse-btn",
+      "lay-aside-animation",
+      { "lay-aside-collapse-btn-collapse": !sidebarShow.value },
+    ];
+  } else {
+    classBtn = [
+      "lay-aside-collapse-btn",
+      { "lay-aside-collapse-btn-collapse": !sidebarShow.value },
+    ];
+    enableAnimation = true;
+  }
+  return classBtn;
+});
+
+const toggleSidebar = () => {
+  sidebarShow.value = !sidebarShow.value;
+  sidebarIcon.value = sidebarShow.value ? "layui-icon-left" : "layui-icon-right";
+};
 </script>
 
 <style scoped>
-.index-wrapper {
-  display: flex;
-  height: 100%;
-  position: relative;
-}
-
-.index-side {
-  width: 200px;
-  min-width: 200px;
-  height: 100%;
-  overflow-y: auto;
-  border-right: 1px solid #eeeeee;
-  background: #fff;
-  transition: width 0.25s ease, min-width 0.25s ease, opacity 0.25s ease;
-  padding-top: 10px;
-}
-
-.index-side.collapsed {
-  width: 0;
-  min-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  border-right: none;
-}
-
-.sidebar-toggle {
-  position: absolute;
-  left: 200px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 16px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-left: none;
-  border-radius: 0 4px 4px 0;
-  cursor: pointer;
-  transition: left 0.25s ease, background 0.15s;
-  color: #999;
-}
-
-.sidebar-toggle:hover {
-  background: #e8e8e8;
-  color: #666;
-}
-
-.sidebar-toggle.toggle-collapsed {
-  left: 0;
-}
-
-.index-body {
-  flex: 1;
-  height: 100%;
-  overflow-y: auto;
-}
-
 .site-container {
   background: #fff;
-  min-height: 100%;
+  margin-top: 60px;
+  min-height: calc(100vh - 60px);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -333,7 +221,7 @@ const systemMenus = [
 }
 
 .box-list {
-  padding: 16px 60px 10px;
+  padding: 16px 200px 10px;
   flex: 1;
 }
 
@@ -386,12 +274,78 @@ const systemMenus = [
   margin-top: auto;
 }
 
+/* Left Sidebar */
+.lay-aside {
+  position: fixed;
+  top: 65px;
+  left: 0px;
+  box-sizing: border-box;
+  width: 180px;
+  padding: 0 25px;
+  border-right: 1px solid rgb(229 230 235);
+  transition: none;
+  -webkit-transition: none;
+  height: calc(100% - 60px);
+  z-index: 100;
+  background: #fff;
+}
+
+.lay-aside-collapse {
+  left: -180px;
+  opacity: 0.7;
+}
+
+.lay-aside-top {
+  height: 29px;
+}
+
+.lay-aside-collapse-btn {
+  position: fixed;
+  left: 180px;
+  top: calc(50% - 20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 40px;
+  background-color: #16baaa;
+  border-radius: 0px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border: #16baaa 1px solid;
+  border-left: none;
+  box-shadow: 2px 0 8px 0 rgb(29 35 41 / 10%);
+  transition: none;
+  -webkit-transition: none;
+  color: #fff;
+  font-weight: bold;
+}
+
+.lay-aside-collapse-btn:hover {
+  background-color: #13a89a;
+}
+
+.lay-aside-collapse-btn-collapse {
+  left: 0px;
+}
+
+.lay-aside-animation {
+  transition: left 200ms;
+  -webkit-transition: left 200ms;
+}
+
 @media screen and (max-width: 768px) {
-  .index-side {
-    display: none;
+  .lay-aside {
+    width: 100px;
   }
-  .sidebar-toggle {
-    display: none;
+  .lay-aside-collapse {
+    left: -100px;
+  }
+  .lay-aside-collapse-btn {
+    left: 100px;
+  }
+  .lay-aside-collapse-btn-collapse {
+    left: 0px;
   }
 }
 </style>

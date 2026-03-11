@@ -12,6 +12,9 @@
 #include <QVBoxLayout>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QScrollArea>
+#include <QResizeEvent>
+#include <QPropertyAnimation>
 
 MainWidget::MainWidget(ApiClient* api, ThemeManager* theme, Translator* tr, QWidget* parent)
     : QWidget(parent)
@@ -44,7 +47,7 @@ void MainWidget::setup_ui()
 
     // Sub-widgets
     m_home_page = new HomePage(m_theme, m_tr, this);
-    m_customers_page = new CustomersPage(m_theme, m_tr, this);
+    m_customers_page = new CustomersPage(m_api, m_theme, m_tr, this);
     m_report_pages = new ReportPages(m_theme, m_tr, this);
 
     m_content_stack = new QStackedWidget;
@@ -57,7 +60,15 @@ void MainWidget::setup_ui()
     m_content_stack->addWidget(m_report_pages->create_provider_bets_page());   // 6
     m_content_stack->addWidget(m_report_pages->create_withdrawal_history_page()); // 7
     m_content_stack->addWidget(m_report_pages->create_deposit_history_page());    // 8
-    root->addWidget(m_content_stack, 1);
+
+    // Sidebar + Content in HBoxLayout
+    setup_sidebar();
+    auto* body = new QHBoxLayout;
+    body->setContentsMargins(0, 0, 0, 0);
+    body->setSpacing(0);
+    body->addWidget(m_sidebar);
+    body->addWidget(m_content_stack, 1);
+    root->addLayout(body, 1);
 
     apply_theme();
 }
@@ -229,6 +240,151 @@ void MainWidget::setup_toolbar()
     m_username_label->setVisible(false);
 }
 
+// ════════════════════════════════════════
+// SIDEBAR
+// ════════════════════════════════════════
+void MainWidget::setup_sidebar()
+{
+    m_sidebar = new QWidget(this);
+    m_sidebar->setFixedWidth(18);
+
+    auto* sidebar_layout = new QVBoxLayout(m_sidebar);
+    sidebar_layout->setContentsMargins(0, 0, 0, 0);
+    sidebar_layout->setSpacing(0);
+
+    // Scrollable list area (empty for now)
+    auto* scroll = new QScrollArea;
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setFrameShape(QFrame::NoFrame);
+
+    auto* list_container = new QWidget;
+    auto* list_layout = new QVBoxLayout(list_container);
+    list_layout->setContentsMargins(8, 4, 8, 8);
+    list_layout->setSpacing(0);
+
+    // Placeholder labels (hidden, kept for theme/retranslate compatibility)
+    m_sidebar_nav_label = new QLabel;
+    m_sidebar_nav_label->setVisible(false);
+    m_sidebar_reports_label = new QLabel;
+    m_sidebar_reports_label->setVisible(false);
+    m_sidebar_system_label = new QLabel;
+    m_sidebar_system_label->setVisible(false);
+    m_sidebar_list = new QListWidget;
+    m_sidebar_list->setVisible(false);
+
+    list_layout->addStretch(1);
+
+    scroll->setWidget(list_container);
+    sidebar_layout->addWidget(scroll, 1);
+
+    // Toggle button — floats on the right edge of sidebar, vertically centered
+    m_sidebar_toggle = new QPushButton(m_sidebar);
+    m_sidebar_toggle->setFixedSize(18, 40);
+    m_sidebar_toggle->setCursor(Qt::PointingHandCursor);
+    m_sidebar_toggle->setIcon(QIcon(":/icons/chevron_right"));
+    m_sidebar_toggle->setIconSize(QSize(14, 14));
+    connect(m_sidebar_toggle, &QPushButton::clicked, this, &MainWidget::toggle_sidebar);
+
+    // Default collapsed — hide scroll area
+    for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
+        scroll->setVisible(false);
+    }
+}
+
+void MainWidget::toggle_sidebar()
+{
+    m_sidebar_collapsed = !m_sidebar_collapsed;
+
+    int target_w = m_sidebar_collapsed ? 18 : 200;
+
+    if (m_sidebar_collapsed) {
+        m_sidebar_toggle->setIcon(QIcon(":/icons/chevron_right"));
+        for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
+            scroll->setVisible(false);
+        }
+    } else {
+        for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
+            scroll->setVisible(true);
+        }
+        m_sidebar_toggle->setIcon(QIcon(":/icons/chevron_left"));
+    }
+
+    // Animate sidebar width
+    auto* anim = new QPropertyAnimation(m_sidebar, "maximumWidth", this);
+    anim->setDuration(200);
+    anim->setStartValue(m_sidebar->width());
+    anim->setEndValue(target_w);
+    anim->setEasingCurve(QEasingCurve::OutCubic);
+
+    connect(anim, &QPropertyAnimation::valueChanged, this, [this](const QVariant& val) {
+        m_sidebar->setMinimumWidth(val.toInt());
+        reposition_toggle();
+    });
+    connect(anim, &QPropertyAnimation::finished, this, [this, target_w]() {
+        m_sidebar->setFixedWidth(target_w);
+        reposition_toggle();
+    });
+
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void MainWidget::reposition_toggle()
+{
+    int sidebar_w = m_sidebar->width();
+    int sidebar_h = m_sidebar->height();
+    int toggle_x = sidebar_w - 18;
+    int toggle_y = (sidebar_h - 40) / 2;
+    m_sidebar_toggle->move(toggle_x, toggle_y);
+    m_sidebar_toggle->raise();
+}
+
+void MainWidget::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    reposition_toggle();
+}
+
+void MainWidget::apply_sidebar_theme()
+{
+    const auto bg = m_theme->color("bg");
+    const auto text2 = m_theme->color("text_secondary");
+    const auto border = m_theme->color("border_light");
+    const auto bg_hover = m_theme->color("bg_hover");
+
+    m_sidebar->setStyleSheet(QString(
+        "QWidget#sidebar_container { background: %1; border-right: 1px solid %2; }"
+    ).arg(bg, border));
+    m_sidebar->setObjectName("sidebar_container");
+
+    // Toggle button — positioned at right edge, vertically centered
+    reposition_toggle();
+
+    m_sidebar_toggle->setStyleSheet(QString(
+        "QPushButton { background: #16baaa; border: 1px solid #16baaa; border-left: none;"
+        "  border-radius: 0px 4px 4px 0px;"
+        "  color: #fff; font-size: 16px; font-weight: bold; padding: 0; }"
+        "QPushButton:hover { background: #13a89a; }"
+    ));
+
+    // Scroll area
+    for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
+        scroll->setStyleSheet(QString(
+            "QScrollArea { background: %1; border: none; }"
+        ).arg(bg));
+    }
+}
+
+void MainWidget::update_sidebar_selection()
+{
+    // Sidebar is empty for now — no selection to update
+}
+
+void MainWidget::retranslate_sidebar()
+{
+    // Sidebar is empty for now — no items to retranslate
+}
+
 QIcon MainWidget::lang_flag_icon(const QString& locale) const
 {
     if (locale == "vi_VN") return QIcon(":/icons/flag_vn");
@@ -242,6 +398,11 @@ void MainWidget::navigate_to(int index)
         m_content_stack->setCurrentIndex(index);
     }
     m_active_nav_index = index;
+
+    // Lazy load data khi chuyển trang
+    if (index == 1)
+        m_customers_page->load_data();
+
     apply_theme();
 }
 
@@ -307,6 +468,10 @@ void MainWidget::apply_theme()
     m_content_stack->setStyleSheet(QString(
         "QStackedWidget { background: %1; }"
     ).arg(bg2));
+
+    // Sidebar
+    apply_sidebar_theme();
+    update_sidebar_selection();
 
     // Delegate to sub-widgets
     m_home_page->apply_theme();
@@ -405,6 +570,9 @@ void MainWidget::on_locale_changed()
     // Theme toggle text
     m_theme_action->setText(m_theme->theme() == "dark"
         ? m_tr->t("home.light_mode") : m_tr->t("home.dark_mode"));
+
+    // Sidebar
+    retranslate_sidebar();
 
     // Sub-widgets
     m_home_page->retranslate();

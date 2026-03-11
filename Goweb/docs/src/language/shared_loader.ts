@@ -17,6 +17,7 @@ function map_shared(shared: Record<string, any>, locale: string) {
     sidebar: shared.sidebar,
     common: shared.common,
     customers: shared.customers,
+    settings: shared.settings,
     lottery_report: shared.lottery_report,
     transaction_log: shared.transaction_log,
     provider_report: shared.provider_report,

@@ -60,7 +60,7 @@
           </lay-field>
 
           <!-- Table với toolbar tích hợp -->
-          <lay-table :columns="columns" :data-source="tableData" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
+          <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']">
             <template #toolbar>
               <lay-button-group>
                 <lay-button type="primary" size="xs" @click="handleAddMember">
@@ -78,6 +78,15 @@
               <lay-button type="primary" size="xs" @click="handleRebate(row)">{{ t("customers.rebate_settings") }}</lay-button>
             </template>
           </lay-table>
+          <lay-page
+            v-model="currentPage"
+            v-model:limit="pageLimit"
+            :total="pageTotal"
+            :pages="7"
+            :limits="[10, 20, 30, 50, 100]"
+            :layout="['count', 'prev', 'page', 'next', 'limits', 'refresh', 'skip']"
+            @change="handlePageChange"
+          ></lay-page>
         </template>
       </lay-card>
     </div>
@@ -85,8 +94,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from "vue";
+import { reactive, ref, computed, onMounted } from "vue";
 import { useI18n } from "layui-component/index";
+import api from "../utils/api";
+import feedback from "../utils/feedback";
 
 const { t } = useI18n();
 
@@ -113,39 +124,45 @@ const columns = computed(() => [
   { title: t("customers.col_action"), key: "operator", width: "130px", customSlot: "operator", fixed: "right" },
 ]);
 
-const tableData = ref([
-  {
-    username: "an10tynghichoi",
-    type_format: t("customers.type_official"),
-    parent_user: "vozer123",
-    money: "0.0000",
-    deposit_count: 0,
-    withdrawal_count: 0,
-    deposit_amount: "0.0000",
-    withdrawal_amount: "0.0000",
-    login_time: "",
-    register_time: "2026-03-09 16:20:58",
-    status_format: t("customers.status_normal"),
-  },
-]);
+const tableData = ref<any[]>([]);
+const loading = ref(false);
 
-const pagination = reactive({
-  current: 1,
-  limit: 10,
-  total: 1,
-  limits: [10, 20, 30, 40, 50, 60, 70, 80, 90],
-  layout: ["prev", "page", "next", "skip", "count", "limit"],
-});
+const currentPage = ref(1);
+const pageLimit = ref(10);
+const pageTotal = ref(0);
+
+async function fetchCustomers() {
+  loading.value = true;
+  try {
+    const params: Record<string, any> = {
+      page: currentPage.value,
+      limit: pageLimit.value,
+    };
+    if (searchForm.username) params.username = searchForm.username;
+    if (searchForm.status) params.status = searchForm.status;
+    if (searchForm.sortField) params.sort_field = searchForm.sortField;
+    if (searchForm.sortDir) params.sort_dir = searchForm.sortDir;
+
+    const res = await api.get("/api/customers", { params });
+    tableData.value = res.data.data || [];
+    pageTotal.value = res.data.total || 0;
+  } catch (err: any) {
+    feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");
+  } finally {
+    loading.value = false;
+  }
+}
 
 function statusTagType(status: string) {
-  if (status === t("customers.status_normal")) return "normal";
-  if (status === t("customers.status_frozen")) return "warm";
-  if (status === t("customers.status_locked")) return "danger";
+  if (status === t("customers.status_normal") || status === "正常") return "normal";
+  if (status === t("customers.status_frozen") || status === "冻结") return "warm";
+  if (status === t("customers.status_locked") || status === "锁定") return "danger";
   return "";
 }
 
 function handleSearch() {
-  console.log("search", searchForm);
+  currentPage.value = 1;
+  fetchCustomers();
 }
 
 function handleReset() {
@@ -154,11 +171,14 @@ function handleReset() {
   searchForm.status = null;
   searchForm.sortField = "";
   searchForm.sortDir = "desc";
+  currentPage.value = 1;
+  fetchCustomers();
 }
 
-function handlePageChange(page: any) {
-  pagination.current = page.current;
-  pagination.limit = page.limit;
+function handlePageChange({ current, limit }: { current: number; limit: number }) {
+  currentPage.value = current;
+  pageLimit.value = limit;
+  fetchCustomers();
 }
 
 function handleAddMember() {
@@ -172,6 +192,10 @@ function handleAddAgent() {
 function handleRebate(row: any) {
   console.log("rebate", row);
 }
+
+onMounted(() => {
+  fetchCustomers();
+});
 </script>
 
 <style scoped>
