@@ -10,15 +10,19 @@
 #include <QHeaderView>
 #include <QTextEdit>
 #include <QComboBox>
+#include <cstdint>
 
 class ThemeManager;
 class Translator;
+class ApiClient;
+class Feedback;
 
 struct AgentInfo {
-    QString code;
+    int64_t id = 0;
     QString name;
     QString username;
     QString status;
+    QString base_url;
     QString created_at;
     bool auto_login = false;
 };
@@ -36,6 +40,9 @@ public:
     QString agent_username() const;
     QString agent_password() const;
     QString agent_base_url() const;
+
+    /// Chế độ edit: pre-fill data, disable username
+    void set_edit_mode(const QString& name, const QString& username, const QString& base_url);
 
 private:
     ThemeManager* m_theme;
@@ -81,7 +88,8 @@ class SettingsDialog : public QDialog {
     Q_OBJECT
 
 public:
-    explicit SettingsDialog(ThemeManager* theme, Translator* tr, QWidget* parent = nullptr);
+    explicit SettingsDialog(ThemeManager* theme, Translator* tr,
+                            ApiClient* api, QWidget* parent = nullptr);
     void apply_theme();
     void retranslate();
 
@@ -99,12 +107,14 @@ private slots:
 
 private:
     void setup_ui();
-    void populate_sample_data();
+    void load_agents();
     void refresh_table();
     QWidget* make_action_buttons(int row);
 
     ThemeManager* m_theme;
     Translator* m_tr;
+    ApiClient* m_api;
+    Feedback* m_feedback;
     QLabel* m_title_label;
     QTableWidget* m_table;
     QPushButton* m_btn_check_all;

@@ -35,6 +35,39 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expiry TIMESTAMP NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS agents (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    ext_username TEXT NOT NULL UNIQUE,
+    ext_password TEXT NOT NULL DEFAULT '',
+    base_url TEXT,
+    session_cookie TEXT NOT NULL DEFAULT '',
+    cookie_expires TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'offline',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    login_error TEXT,
+    login_attempts INTEGER NOT NULL DEFAULT 0,
+    last_login_at TIMESTAMP,
+    auto_login BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agent_login_history (
+    id BIGSERIAL PRIMARY KEY,
+    agent_id BIGINT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    success BOOLEAN NOT NULL DEFAULT false,
+    captcha_attempts INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    ip_address TEXT,
+    triggered_by TEXT NOT NULL DEFAULT 'manual',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_login_history_agent_id ON agent_login_history(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+CREATE INDEX IF NOT EXISTS idx_agents_is_active ON agents(is_active);
 `
 
 const migrateEmailToUsername = `

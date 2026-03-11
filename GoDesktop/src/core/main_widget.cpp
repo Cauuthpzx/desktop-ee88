@@ -206,7 +206,7 @@ void MainWidget::setup_toolbar()
     m_act_ee88_settings = m_settings_menu->addAction(
         QIcon(":/icons/user"), m_tr->t("settings.ee88_account_settings"));
     connect(m_act_ee88_settings, &QAction::triggered, this, [this]() {
-        SettingsDialog dlg(m_theme, m_tr, this);
+        SettingsDialog dlg(m_theme, m_tr, m_api, this);
         dlg.exec();
     });
 

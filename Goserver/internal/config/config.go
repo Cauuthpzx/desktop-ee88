@@ -41,7 +41,7 @@ func Load() *Config {
 	return &Config{
 		ServerPort:   getEnv("SERVER_PORT", "8080"),
 		ReadTimeout:  parseDuration(getEnv("READ_TIMEOUT", "5s")),
-		WriteTimeout: parseDuration(getEnv("WRITE_TIMEOUT", "10s")),
+		WriteTimeout: parseDuration(getEnv("WRITE_TIMEOUT", "120s")),
 		IdleTimeout:  parseDuration(getEnv("IDLE_TIMEOUT", "60s")),
 
 		DBHost:     getEnv("DB_HOST", "localhost"),
@@ -63,7 +63,7 @@ func Load() *Config {
 		FacebookRedirectURL:  getEnv("FACEBOOK_REDIRECT_URL", "http://localhost:8080/api/auth/facebook/callback"),
 
 		FrontendURL:    getEnv("FRONTEND_URL", "http://localhost:3000"),
-		AllowedOrigins: parseOrigins(getEnv("ALLOWED_ORIGINS", "http://localhost:3000")),
+		AllowedOrigins: parseOrigins(getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")),
 	}
 }
 

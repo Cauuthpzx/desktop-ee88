@@ -28,6 +28,7 @@ public:
     void get(const QString& path, ApiCallback callback);
     void post(const QString& path, const QJsonObject& body, ApiCallback callback);
     void put(const QString& path, const QJsonObject& body, ApiCallback callback);
+    void patch(const QString& path, const QJsonObject& body, ApiCallback callback);
     void del(const QString& path, ApiCallback callback);
 
     void set_token(const QString& token);

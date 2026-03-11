@@ -27,9 +27,12 @@ set(SOURCES
     src/core/main_widget.cpp
     src/core/report_page_builder.cpp
     src/core/report_pages.cpp
+    src/core/confirm_dialog.cpp
     src/core/settings_dialog.cpp
     src/core/theme_manager.cpp
+    src/core/toast_widget.cpp
     src/core/translator.cpp
+    src/utils/feedback.cpp
 )
 
 set(HEADERS
@@ -46,10 +49,13 @@ set(HEADERS
     src/core/main_widget.h
     src/core/report_page_builder.h
     src/core/report_pages.h
+    src/core/confirm_dialog.h
     src/core/settings_dialog.h
+    src/core/toast_widget.h
     src/core/toggle_switch.h
     src/core/theme_manager.h
     src/core/translator.h
+    src/utils/feedback.h
 )
 
 # Resources

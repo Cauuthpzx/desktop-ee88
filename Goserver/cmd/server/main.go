@@ -17,6 +17,9 @@ import (
 	"goserver/internal/middleware"
 	"goserver/internal/repository"
 	"goserver/internal/service"
+	"goserver/pkg/utils"
+
+	"github.com/joho/godotenv"
 )
 
 func setupLogger() *os.File {
@@ -37,6 +40,9 @@ func setupLogger() *os.File {
 }
 
 func main() {
+	// Load .env file (nếu có)
+	_ = godotenv.Load()
+
 	logFile := setupLogger()
 	if logFile != nil {
 		defer logFile.Close()
@@ -62,7 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Layers
+	// Layers — Auth
 	userRepo := repository.NewUserRepository(db)
 	authService := service.NewAuthService(userRepo, cfg)
 	oauthService := service.NewOAuthService(userRepo, authService, cfg)
@@ -70,6 +76,12 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 	oauthHandler := handler.NewOAuthHandler(oauthService, cfg)
 	healthHandler := handler.NewHealthHandler(db)
+
+	// Layers — Agent / EE88
+	agentRepo := repository.NewAgentRepository(db)
+	agentService := service.NewAgentService(agentRepo)
+	loginService := service.NewEE88LoginService(agentRepo)
+	agentHandler := handler.NewAgentHandler(agentService, loginService)
 
 	// Router
 	mux := http.NewServeMux()
@@ -101,10 +113,35 @@ func main() {
 	mux.Handle("POST /api/auth/logout",
 		authMw(http.HandlerFunc(authHandler.Logout)))
 
+	// Agent CRUD routes (protected)
+	mux.Handle("GET /api/agents", authMw(http.HandlerFunc(agentHandler.ListAgents)))
+	mux.Handle("GET /api/agents/cookie-health", authMw(http.HandlerFunc(agentHandler.CookieHealth)))
+	mux.Handle("GET /api/agents/{id}", authMw(http.HandlerFunc(agentHandler.GetAgent)))
+	mux.Handle("POST /api/agents", authMw(http.HandlerFunc(agentHandler.CreateAgent)))
+	mux.Handle("PATCH /api/agents/{id}", authMw(http.HandlerFunc(agentHandler.UpdateAgent)))
+	mux.Handle("DELETE /api/agents/{id}", authMw(http.HandlerFunc(agentHandler.DeleteAgent)))
+
+	// EE88 Auth routes (protected)
+	mux.Handle("POST /api/ee88-auth/{id}/login", authMw(http.HandlerFunc(agentHandler.LoginAgent)))
+	mux.Handle("POST /api/ee88-auth/{id}/logout", authMw(http.HandlerFunc(agentHandler.LogoutAgent)))
+	mux.Handle("POST /api/ee88-auth/login-all", authMw(http.HandlerFunc(agentHandler.LoginAllAgents)))
+	mux.Handle("POST /api/ee88-auth/{id}/check", authMw(http.HandlerFunc(agentHandler.CheckAgentSession)))
+	mux.Handle("GET /api/ee88-auth/{id}/session", authMw(http.HandlerFunc(agentHandler.GetSessionInfo)))
+	mux.Handle("PATCH /api/ee88-auth/{id}/cookie", authMw(http.HandlerFunc(agentHandler.SetCookieManual)))
+	mux.Handle("GET /api/ee88-auth/{id}/login-history", authMw(http.HandlerFunc(agentHandler.GetLoginHistory)))
+
+	// Scheduler — health check + auto-login
+	scheduler := service.NewScheduler(loginService, agentRepo)
+	scheduler.Start()
+	defer scheduler.Stop()
+
+	// Shutdown captcha solver khi exit
+	defer utils.GetCaptchaSolver().Shutdown()
+
 	// Middleware stack (thứ tự: outermost → innermost)
 	// Recovery → SecurityHeaders → RequestLogger → CORS → BodyLimit → Timeout → Router
 	var h http.Handler = mux
-	h = middleware.Timeout(10 * time.Second)(h)
+	h = middleware.Timeout(120 * time.Second)(h) // 2 min cho login flows
 	h = middleware.BodyLimit(1 << 20)(h) // 1MB
 	h = middleware.CORS(cfg.AllowedOrigins)(h)
 	h = middleware.RequestLogger(h)

@@ -100,6 +100,11 @@ void ApiClient::put(const QString& path, const QJsonObject& body, ApiCallback ca
     execute_with_retry("PUT", path, body, std::move(callback));
 }
 
+void ApiClient::patch(const QString& path, const QJsonObject& body, ApiCallback callback)
+{
+    execute_with_retry("PATCH", path, body, std::move(callback));
+}
+
 void ApiClient::del(const QString& path, ApiCallback callback)
 {
     execute_with_retry("DELETE", path, QJsonObject{}, std::move(callback));
@@ -136,6 +141,8 @@ void ApiClient::execute_with_retry(
         reply = m_manager.post(request, QJsonDocument(body).toJson());
     } else if (method == "PUT") {
         reply = m_manager.put(request, QJsonDocument(body).toJson());
+    } else if (method == "PATCH") {
+        reply = m_manager.sendCustomRequest(request, "PATCH", QJsonDocument(body).toJson());
     } else if (method == "DELETE") {
         reply = m_manager.deleteResource(request);
     }
@@ -176,14 +183,17 @@ void ApiClient::handle_api_reply(
             }
 
             if (err.is_ok()) {
-                // Success: check server response format
-                const bool status_ok = (root.value("status").toString() == "success");
-                if (!status_ok && root.contains("error")) {
+                // Check error response
+                if (root.contains("error")) {
                     err.kind = ApiErrorKind::ValidationError;
                     err.message = root["error"].toString();
                     cb(err, root);
-                } else {
+                } else if (root.contains("data")) {
+                    // Wrapped format: {"status":"success","data":{...}}
                     cb(ApiError::none(), root.value("data").toObject());
+                } else {
+                    // Direct format: {"agents":[...]} or {"valid":true,...}
+                    cb(ApiError::none(), root);
                 }
             } else {
                 cb(err, root);

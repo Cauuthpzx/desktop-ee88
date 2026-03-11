@@ -306,16 +306,166 @@
             </a>
           </li>
           <li class="layui-nav-item">
-            <a href="javascript:void(0)"> {{ version }} </a>
+            <a href="javascript:void(0);">
+              <lay-icon type="layui-icon-set" size="17px" style="margin-right: 4px" />
+              {{ t("nav.settings") }}
+            </a>
+            <dl class="layui-nav-child">
+              <dd>
+                <a href="javascript:void(0)" @click="showSettings = true">
+                  <lay-icon type="layui-icon-username" size="14px" style="margin-right: 6px" />
+                  Cài đặt tài khoản EE88
+                </a>
+              </dd>
+            </dl>
           </li>
         </ul>
       </lay-header>
+      <lay-layer
+        v-model="showSettings"
+        title="DANH SÁCH ĐẠI LÝ"
+        :area="['1150px', '620px']"
+        :shade="true"
+        :shadeClose="true"
+        :shadeStyle="shadeStyle"
+        :shadeOpacity="shadeOpacity"
+        :move="false"
+      >
+        <div class="settings-subpage">
+          <div class="ee88-header">
+            <div class="ee88-header-right">
+              <lay-button size="sm" border="green" @click="checkAllAgents">
+                <lay-icon type="layui-icon-ok-circle" size="14px" style="margin-right: 4px" />
+                Kiểm tra tất cả
+              </lay-button>
+              <lay-button size="sm" border="orange" @click="loginAllAgents">
+                <lay-icon type="layui-icon-group" size="14px" style="margin-right: 4px" />
+                Đăng nhập tất cả
+              </lay-button>
+              <lay-button size="sm" border="red" @click="deleteAllAgents">
+                <lay-icon type="layui-icon-delete" size="14px" style="margin-right: 4px" />
+                Xoá tất cả
+              </lay-button>
+              <lay-button size="sm" type="primary" @click="showAddAgent = true">
+                <lay-icon type="layui-icon-addition" size="14px" style="margin-right: 4px" />
+                Thêm Đại Lý
+              </lay-button>
+            </div>
+          </div>
+          <div class="ee88-table-wrap">
+            <lay-table :columns="agentColumns" :data-source="agentList" size="sm" :max-height="'100%'">
+              <template #status="{ row }">
+                <lay-tag :color="row.status === 'active' ? 'green' : row.status === 'logging_in' ? 'orange' : 'red'" size="sm">
+                  {{ row.status === 'active' ? 'Online' : row.status === 'logging_in' ? 'Đang login...' : row.status === 'error' ? 'Lỗi' : 'Offline' }}
+                </lay-tag>
+              </template>
+              <template #action="{ row }">
+                <lay-button size="xs" border="blue" @click="editAgent(row)">
+                  <lay-icon type="layui-icon-edit" size="12px" style="margin-right: 3px" />
+                  Sửa
+                </lay-button>
+                <lay-button size="xs" border="red" @click="deleteAgent(row)">
+                  <lay-icon type="layui-icon-delete" size="12px" style="margin-right: 3px" />
+                  Xoá
+                </lay-button>
+                <lay-button size="xs" border="green" @click="checkAgent(row)">
+                  <lay-icon type="layui-icon-ok-circle" size="12px" style="margin-right: 3px" />
+                  Kiểm tra
+                </lay-button>
+                <lay-button size="xs" border="orange" @click="loginAgent(row)">
+                  <lay-icon type="layui-icon-login-wechat" size="12px" style="margin-right: 3px" />
+                  Đăng nhập
+                </lay-button>
+                <lay-button size="xs" border="warm" @click="assignCookies(row)">
+                  <lay-icon type="layui-icon-key" size="12px" style="margin-right: 3px" />
+                  Gán Cookies
+                </lay-button>
+              </template>
+              <template #autoLogin="{ row }">
+                <lay-switch v-model="row.auto_login" size="xs" onswitch-text="Auto" unswitch-text="Off" @change="toggleAutoLogin(row)" />
+              </template>
+            </lay-table>
+          </div>
+        </div>
+      </lay-layer>
+      <lay-layer
+        v-model="showAddAgent"
+        :title="editingAgentId ? 'CẬP NHẬT ĐẠI LÝ' : 'ĐĂNG NHẬP ĐẠI LÝ EE88'"
+        :area="['420px', '400px']"
+        :shade="true"
+        :shadeClose="true"
+        :shadeStyle="shadeStyle"
+        :shadeOpacity="shadeOpacity"
+        :move="false"
+      >
+        <div class="add-agent-form">
+          <lay-form :model="addAgentForm">
+            <lay-form-item label="TÊN HIỂN THỊ :">
+              <lay-input v-model="addAgentForm.name" placeholder="Nhập tên hiển thị..."></lay-input>
+            </lay-form-item>
+            <lay-form-item label="TÀI KHOẢN :">
+              <lay-input v-model="addAgentForm.username" placeholder="Nhập tài khoản..." :disabled="!!editingAgentId"></lay-input>
+            </lay-form-item>
+            <lay-form-item label="MẬT KHẨU :">
+              <lay-input v-model="addAgentForm.password" type="password" placeholder="Nhập mật khẩu..."></lay-input>
+            </lay-form-item>
+            <lay-form-item label="URL BASE :">
+              <lay-input v-model="addAgentForm.baseUrl" placeholder="https://..."></lay-input>
+            </lay-form-item>
+            <lay-form-item>
+              <div class="add-agent-actions">
+                <lay-button border="orange" @click="showAddAgent = false">
+                  <lay-icon type="layui-icon-close" size="14px" style="margin-right: 4px" />
+                  Huỷ
+                </lay-button>
+                <lay-button type="primary" @click="submitAddAgent">
+                  <lay-icon :type="editingAgentId ? 'layui-icon-ok-circle' : 'layui-icon-addition'" size="14px" style="margin-right: 4px" />
+                  {{ editingAgentId ? 'Cập Nhật' : 'Thêm Đại Lý' }}
+                </lay-button>
+              </div>
+            </lay-form-item>
+          </lay-form>
+        </div>
+      </lay-layer>
+      <lay-layer
+        v-model="showCookies"
+        title="GÁN COOKIES ĐẠI LÝ"
+        :area="['500px', '350px']"
+        :shade="true"
+        :shadeClose="true"
+        :shadeStyle="shadeStyle"
+        :shadeOpacity="shadeOpacity"
+        :move="false"
+      >
+        <div class="add-agent-form">
+          <lay-form>
+            <lay-form-item label="ĐẠI LÝ :">
+              <lay-input :modelValue="cookiesAgent?.name + ' (' + cookiesAgent?.ext_username + ')'" disabled></lay-input>
+            </lay-form-item>
+            <lay-form-item label="COOKIES :">
+              <lay-textarea v-model="cookiesValue" placeholder="Dán cookies vào đây..." :rows="5"></lay-textarea>
+            </lay-form-item>
+            <lay-form-item>
+              <div class="add-agent-actions">
+                <lay-button border="orange" @click="showCookies = false">
+                  <lay-icon type="layui-icon-close" size="14px" style="margin-right: 4px" />
+                  Huỷ
+                </lay-button>
+                <lay-button type="primary" @click="submitCookies">
+                  <lay-icon type="layui-icon-ok-circle" size="14px" style="margin-right: 4px" />
+                  Lưu
+                </lay-button>
+              </div>
+            </lay-form-item>
+          </lay-form>
+        </div>
+      </lay-layer>
       <router-view></router-view>
     </lay-layout>
   </lay-config-provider>
 </template>
 <script>
-import { provide, ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAppStore } from "../store/app";
 import { useAuthStore } from "../store/auth";
@@ -324,6 +474,8 @@ import menu from "../view/utils/menus";
 import zh_CN from "../language/zh_CN.ts";
 import en_US from "../language/en_US.ts";
 import vi_VN from "../language/vi_VN.ts";
+import api from "../utils/api";
+import feedback from "../utils/feedback";
 
 export default {
   setup() {
@@ -426,13 +578,232 @@ export default {
       };
     };
 
-    const version = "v1.0.0";
+    const shadeStyle = computed(() => feedback.getShadeStyle());
+    const shadeOpacity = "1";
 
-    provide("version", version);
+    const showSettings = ref(false);
+    const showAddAgent = ref(false);
+    const editingAgentId = ref(null);
+    const addAgentForm = ref({ name: "", username: "", password: "", baseUrl: "" });
+
+    const submitAddAgent = async () => {
+      const isEdit = !!editingAgentId.value;
+      const result = await feedback.run(async () => {
+        if (isEdit) {
+          const f = addAgentForm.value;
+          const updates = Object.assign({ name: f.name },
+            f.password ? { ext_password: f.password } : {},
+            f.baseUrl ? { base_url: f.baseUrl } : {}
+          );
+          return api.patch(`/api/agents/${editingAgentId.value}`, updates);
+        } else {
+          return api.post("/api/agents", {
+            name: addAgentForm.value.name,
+            ext_username: addAgentForm.value.username,
+            ext_password: addAgentForm.value.password,
+            base_url: addAgentForm.value.baseUrl,
+          });
+        }
+      }, { successMsg: isEdit ? "Cập nhật đại lý thành công" : "Thêm đại lý thành công" });
+      if (result) {
+        addAgentForm.value = { name: "", username: "", password: "", baseUrl: "" };
+        editingAgentId.value = null;
+        showAddAgent.value = false;
+        await loadAgents();
+      }
+    };
+
+    // EE88 Agent management
+    const agentColumns = [
+      { title: "Mã ĐL", key: "id", width: "6%", align: "center" },
+      { title: "Tên đại lý", key: "name", width: "7%", align: "center" },
+      { title: "Tài khoản", key: "ext_username", width: "10%", align: "center" },
+      { title: "Trạng thái", key: "status", width: "8%", align: "center", customSlot: "status" },
+      { title: "Ngày tạo", key: "created_at", width: "15%", align: "center" },
+      { title: "Thao tác", key: "action", width: "44%", align: "center", customSlot: "action" },
+      { title: "Auto Login", key: "auto_login", width: "10%", align: "center", customSlot: "autoLogin" },
+    ];
+
+    const agentList = ref([]);
+    const agentLoading = ref(false);
+
+    const loadAgents = async () => {
+      try {
+        agentLoading.value = true;
+        const res = await api.get("/api/agents");
+        agentList.value = (res.data.agents || []).map(a => ({
+          ...a,
+          created_at: a.created_at ? new Date(a.created_at).toLocaleDateString("vi-VN") : "",
+        }));
+      } catch (e) {
+        console.error("Load agents failed:", e);
+      } finally {
+        agentLoading.value = false;
+      }
+    };
+
+    const checkAllAgents = async () => {
+      const loading = feedback.showLoading();
+      try {
+        const res = await api.get("/api/agents/cookie-health");
+        const results = res.data.results || [];
+        let alive = 0, dead = 0;
+        for (const r of results) {
+          const agent = agentList.value.find(a => a.id === r.id);
+          if (agent) agent.status = r.alive ? "active" : "offline";
+          r.alive ? alive++ : dead++;
+        }
+        (alive > 0 ? feedback.msgSuccess : feedback.msgError)(`Kiểm tra xong: ${alive} online, ${dead} offline`);
+      } catch {
+        feedback.msgError("Kiểm tra thất bại");
+      } finally {
+        feedback.closeLoading(loading);
+      }
+    };
+
+    const loginAllAgents = async () => {
+      const loading = feedback.showLoading();
+      try {
+        const res = await api.post("/api/ee88-auth/login-all");
+        const d = res.data;
+        await loadAgents();
+        const msg = `Đăng nhập xong: ${d.success || 0} thành công, ${d.failed || 0} thất bại`;
+        d.failed ? feedback.msgError(msg) : feedback.msgSuccess(msg);
+      } catch {
+        feedback.msgError("Đăng nhập tất cả thất bại");
+      } finally {
+        feedback.closeLoading(loading);
+      }
+    };
+
+    const loginAgent = async (row) => {
+      const loading = feedback.showLoading();
+      try {
+        row.status = "logging_in";
+        const res = await api.post(`/api/ee88-auth/${row.id}/login`);
+        row.status = res.data.success ? "active" : "error";
+        if (res.data.success) {
+          feedback.msgSuccess(`${row.name}: Đăng nhập thành công`);
+        } else {
+          feedback.msgError(`${row.name}: ${res.data.error_message || "Đăng nhập thất bại"}`);
+        }
+      } catch (e) {
+        row.status = "error";
+        feedback.msgError(`${row.name}: ${e?.response?.data?.message || "Đăng nhập thất bại"}`);
+      } finally {
+        feedback.closeLoading(loading);
+      }
+    };
+
+    const editAgent = (row) => {
+      addAgentForm.value = {
+        name: row.name,
+        username: row.ext_username,
+        password: "",
+        baseUrl: row.base_url || "",
+      };
+      editingAgentId.value = row.id;
+      showAddAgent.value = true;
+    };
+
+    const deleteAgent = async (row) => {
+      const result = await feedback.confirmRun({
+        confirmMsg: `Xác nhận xoá đại lý "${row.name}"?`,
+        yesText: "Xoá",
+        successMsg: "Đã xoá đại lý",
+        errorMsg: "Xoá thất bại",
+      }, () => api.delete(`/api/agents/${row.id}?mode=destroy`));
+      if (result) {
+        agentList.value = agentList.value.filter(a => a.id !== row.id);
+      }
+    };
+
+    const checkAgent = async (row) => {
+      const loading = feedback.showLoading();
+      try {
+        const res = await api.post(`/api/ee88-auth/${row.id}/check`);
+        row.status = res.data.valid ? "active" : "offline";
+        const msg = `${row.name}: ${res.data.valid ? "Session còn hoạt động" : "Session hết hạn"}`;
+        res.data.valid ? feedback.msgSuccess(msg) : feedback.msgError(msg);
+      } catch {
+        feedback.msgError(`${row.name}: Kiểm tra thất bại`);
+      } finally {
+        feedback.closeLoading(loading);
+      }
+    };
+
+    const deleteAllAgents = async () => {
+      if (!agentList.value.length) {
+        feedback.msgInfo("Không có đại lý nào để xoá");
+        return;
+      }
+      const result = await feedback.confirmRun({
+        confirmMsg: `Xác nhận xoá tất cả ${agentList.value.length} đại lý?`,
+        yesText: "Xoá tất cả",
+        successMsg: "Đã xoá tất cả đại lý",
+        errorMsg: "Xoá thất bại",
+      }, async () => {
+        for (const agent of [...agentList.value]) {
+          await api.delete(`/api/agents/${agent.id}?mode=destroy`);
+        }
+      });
+      if (result !== null) {
+        agentList.value = [];
+      } else {
+        await loadAgents();
+      }
+    };
+
+    const showCookies = ref(false);
+    const cookiesAgent = ref(null);
+    const cookiesValue = ref("");
+
+    const assignCookies = (row) => {
+      cookiesAgent.value = row;
+      cookiesValue.value = "";
+      showCookies.value = true;
+    };
+
+    const submitCookies = async () => {
+      if (!cookiesValue.value.trim()) {
+        feedback.msgInfo("Cookies không được trống");
+        return;
+      }
+      const result = await feedback.run(
+        () => api.patch(`/api/ee88-auth/${cookiesAgent.value.id}/cookie`, { cookie: cookiesValue.value }),
+        { successMsg: "Gán cookies thành công", errorMsg: "Gán cookies thất bại" }
+      );
+      if (result) {
+        showCookies.value = false;
+        await loadAgents();
+      }
+    };
+
+    const toggleAutoLogin = async (row) => {
+      try {
+        await api.patch(`/api/agents/${row.id}`, { auto_login: row.auto_login });
+        feedback.msgSuccess(`${row.name}: Auto login ${row.auto_login ? "bật" : "tắt"}`);
+      } catch {
+        row.auto_login = !row.auto_login;
+        feedback.msgError("Cập nhật thất bại");
+      }
+    };
+
+    watch(showSettings, (val) => {
+      if (val) loadAgents();
+    });
+
+    watch(showAddAgent, (val) => {
+      if (!val) editingAgentId.value = null;
+    });
 
     const handleLogout = async () => {
-      await authStore.logout();
-      router.push("/login");
+      const confirmed = await feedback.confirm("Xác nhận đăng xuất?", { yesText: "Đăng xuất" });
+      if (confirmed) {
+        await authStore.logout();
+        feedback.msgSuccess("Đã đăng xuất");
+        router.push("/login");
+      }
     };
 
     const goChangePassword = () => {
@@ -443,7 +814,6 @@ export default {
       t,
       menus,
       locale,
-      version,
       locales,
       localeLabels,
       localeFlags,
@@ -456,6 +826,29 @@ export default {
       handleLogout,
       goChangePassword,
       resetThemeVariable,
+      showSettings,
+      showAddAgent,
+      agentColumns,
+      agentList,
+      checkAllAgents,
+      loginAllAgents,
+      loginAgent,
+      deleteAllAgents,
+      editAgent,
+      deleteAgent,
+      checkAgent,
+      assignCookies,
+      toggleAutoLogin,
+      showCookies,
+      cookiesAgent,
+      cookiesValue,
+      submitCookies,
+      addAgentForm,
+      editingAgentId,
+      submitAddAgent,
+      agentLoading,
+      shadeStyle,
+      shadeOpacity,
     };
   },
 };
@@ -605,7 +998,8 @@ export default {
 }
 
 /* Nav dropdown on hover */
-.layui-layout-left .layui-nav-item:hover > .layui-nav-child {
+.layui-layout-left .layui-nav-item:hover > .layui-nav-child,
+.layui-layout-right .layui-nav-item:hover > .layui-nav-child {
   display: block;
 }
 
@@ -613,7 +1007,14 @@ export default {
   top: 60px;
 }
 
-.layui-layout-left .layui-nav-child dd a {
+.layui-layout-right .layui-nav-child {
+  top: 60px;
+  left: auto;
+  right: 0;
+}
+
+.layui-layout-left .layui-nav-child dd a,
+.layui-layout-right .layui-nav-child dd a {
   display: block;
   padding: 0 20px;
   color: rgba(0, 0, 0, 0.8);
@@ -734,5 +1135,76 @@ body {
 .layui-laypage a,
 .layui-laypage span {
   color: #333;
+}
+
+/* Settings / EE88 dialog */
+.settings-subpage {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ee88-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.ee88-header-right {
+  display: flex;
+  gap: 8px;
+}
+
+.ee88-table-wrap {
+  flex: 1;
+  padding: 12px 20px;
+  overflow: visible;
+}
+.ee88-table-wrap .layui-table-body {
+  overflow: visible;
+}
+.ee88-table-wrap .layui-table-box {
+  overflow: visible;
+}
+.ee88-table-wrap .layui-table th:last-child,
+.ee88-table-wrap .layui-table td:last-child {
+  border-right: none;
+}
+.ee88-table-wrap .layui-table-view {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+.ee88-table-wrap .layui-table-header,
+.ee88-table-wrap .layui-table-body {
+  width: 100%;
+}
+.ee88-table-wrap .layui-table-header table,
+.ee88-table-wrap .layui-table-body table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Add agent form */
+.add-agent-form {
+  padding: 20px 30px;
+}
+
+.add-agent-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.add-agent-actions .layui-btn {
+  flex: 1;
+}
+
+/* Layer shade overlay: 70% đen (light), DarkReader tự đảo sang trắng (dark) */
+.layui-layer-shade {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  opacity: 1 !important;
 }
 </style>

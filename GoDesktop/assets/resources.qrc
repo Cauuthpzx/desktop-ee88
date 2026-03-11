@@ -50,5 +50,10 @@
         <file alias="cookies">icons/cookies.png</file>
         <file alias="check_all">icons/check_all.png</file>
         <file alias="add_agent">icons/add_agent.png</file>
+        <file alias="toast_success">icons/toast_success.png</file>
+        <file alias="toast_error">icons/toast_error.png</file>
+        <file alias="toast_warning">icons/toast_warning.png</file>
+        <file alias="toast_info">icons/toast_info.png</file>
+        <file alias="toast_loading">icons/toast_loading.png</file>
     </qresource>
 </RCC>

@@ -14,7 +14,7 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 			if origin != "" {
 				if len(allowedOrigins) == 0 || slices.Contains(allowedOrigins, origin) {
 					w.Header().Set("Access-Control-Allow-Origin", origin)
-					w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+					w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, PATCH, DELETE")
 					w.Header().Set("Access-Control-Allow-Credentials", "true")
 					w.Header().Set("Access-Control-Allow-Headers",
 						"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
