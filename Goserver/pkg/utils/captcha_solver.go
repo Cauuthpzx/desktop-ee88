@@ -8,10 +8,12 @@ import (
 	"io"
 	"log/slog"
 	"os/exec"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -60,6 +62,17 @@ func (cs *CaptchaSolver) ensureWorker() error {
 	}
 
 	cmd := exec.Command(pythonCmd, scriptPath)
+	// Redirect stderr → discard để child process không inherit parent stdout handle.
+	// Fix: manager.py đọc Go stdout pipe, Python worker kế thừa handle →
+	// khi worker exit → pipe EOF → manager báo "kết thúc" dù Go server vẫn sống.
+	// Chặn child inherit parent stdout handle — tránh pipe leak khi worker exit.
+	devnull, _ := os.Open(os.DevNull)
+	cmd.Stderr = devnull
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+		}
+	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("stdin pipe: %w", err)
@@ -72,7 +85,14 @@ func (cs *CaptchaSolver) ensureWorker() error {
 
 	if err := cmd.Start(); err != nil {
 		stdin.Close()
+		if devnull != nil {
+			devnull.Close()
+		}
 		return fmt.Errorf("start python worker: %w", err)
+	}
+	// Close devnull — child process đã kế thừa handle
+	if devnull != nil {
+		devnull.Close()
 	}
 
 	cs.cmd = cmd

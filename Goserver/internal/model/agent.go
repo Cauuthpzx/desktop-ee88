@@ -130,3 +130,25 @@ type CookieHealthResult struct {
 	Name  string `json:"name"`
 	Alive bool   `json:"alive"`
 }
+
+// AgentUpstreamInfo — thông tin cần để Desktop fetch trực tiếp upstream.
+type AgentUpstreamInfo struct {
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	BaseURL          string `json:"base_url"`
+	Cookie           string `json:"cookie"`
+	EncryptPublicKey string `json:"encrypt_public_key"`
+}
+
+func (a *Agent) ToUpstreamInfo() *AgentUpstreamInfo {
+	info := &AgentUpstreamInfo{
+		ID:               a.ID,
+		Name:             a.Name,
+		Cookie:           a.SessionCookie,
+		EncryptPublicKey: a.EncryptPublicKey,
+	}
+	if a.BaseURL.Valid {
+		info.BaseURL = a.BaseURL.String
+	}
+	return info
+}

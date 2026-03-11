@@ -13,6 +13,7 @@
 
 class ApiClient;
 class DateRangePicker;
+class LoadingOverlay;
 class ThemeManager;
 class Translator;
 class UpstreamClient;
@@ -65,6 +66,7 @@ private:
     QPushButton* m_export_btn;
     QPushButton* m_print_btn;
     QTableWidget* m_table;
+    LoadingOverlay* m_loading_overlay;
     QWidget* m_pagination_bar;
     QWidget* m_page_btn_container;
     QHBoxLayout* m_page_btn_layout;

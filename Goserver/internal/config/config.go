@@ -35,6 +35,9 @@ type Config struct {
 
 	FrontendURL    string
 	AllowedOrigins []string
+
+	RedisURL string
+	RedisTTL time.Duration
 }
 
 func Load() *Config {
@@ -64,6 +67,9 @@ func Load() *Config {
 
 		FrontendURL:    getEnv("FRONTEND_URL", "http://localhost:3000"),
 		AllowedOrigins: parseOrigins(getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")),
+
+		RedisURL: getEnv("REDIS_URL", "redis://localhost:6379/0"),
+		RedisTTL: parseDuration(getEnv("REDIS_TTL", "5m")),
 	}
 }
 

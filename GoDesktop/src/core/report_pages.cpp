@@ -3,6 +3,7 @@
 #include "core/upstream_client.h"
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
+#include "core/loading_overlay.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/report_page_builder.h"
@@ -974,8 +975,10 @@ void ReportPages::fetch_lottery_report()
     if (m_lr_username && !m_lr_username->text().trimmed().isEmpty())
         params["username"] = m_lr_username->text().trimmed();
 
+    m_lottery_report.loading_overlay->start();
     m_upstream->fetch_all("/agent/reportLottery.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_lottery_report.loading_overlay->stop();
             auto& s = m_page_state[0];
             s.total = result.total;
 
@@ -1011,8 +1014,10 @@ void ReportPages::fetch_transaction_log()
     if (m_tl_username && !m_tl_username->text().trimmed().isEmpty())
         params["username"] = m_tl_username->text().trimmed();
 
+    m_transaction_log.loading_overlay->start();
     m_upstream->fetch_all("/agent/reportFunds.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_transaction_log.loading_overlay->stop();
             auto& s = m_page_state[1];
             s.total = result.total;
 
@@ -1051,8 +1056,10 @@ void ReportPages::fetch_provider_report()
         && !m_pr_provider_select->currentData().toString().isEmpty())
         params["platform_id"] = m_pr_provider_select->currentData().toString();
 
+    m_provider_report.loading_overlay->start();
     m_upstream->fetch_all("/agent/reportThirdGame.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_provider_report.loading_overlay->stop();
             auto& s = m_page_state[2];
             s.total = result.total;
 
@@ -1101,8 +1108,10 @@ void ReportPages::fetch_lottery_bets()
         && !m_lb_status->currentData().toString().isEmpty())
         params["status"] = m_lb_status->currentData().toString();
 
+    m_lottery_bets.loading_overlay->start();
     m_upstream->fetch_all("/agent/bet.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_lottery_bets.loading_overlay->stop();
             auto& s = m_page_state[3];
             s.total = result.total;
 
@@ -1138,8 +1147,10 @@ void ReportPages::fetch_provider_bets()
     if (m_pb_platform_user && !m_pb_platform_user->text().trimmed().isEmpty())
         params["platform_username"] = m_pb_platform_user->text().trimmed();
 
+    m_provider_bets.loading_overlay->start();
     m_upstream->fetch_all("/agent/betOrder.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_provider_bets.loading_overlay->stop();
             auto& s = m_page_state[4];
             s.total = result.total;
 
@@ -1173,8 +1184,10 @@ void ReportPages::fetch_withdrawal_history()
         && !m_wh_status->currentData().toString().isEmpty())
         params["status"] = m_wh_status->currentData().toString();
 
+    m_withdrawal_history.loading_overlay->start();
     m_upstream->fetch_all("/agent/depositAndWithdrawal.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_withdrawal_history.loading_overlay->stop();
             auto& s = m_page_state[5];
             s.total = result.total;
 
@@ -1208,8 +1221,10 @@ void ReportPages::fetch_deposit_history()
         && !m_dh_status->currentData().toString().isEmpty())
         params["status"] = m_dh_status->currentData().toString();
 
+    m_deposit_history.loading_overlay->start();
     m_upstream->fetch_all("/agent/depositAndWithdrawal.html", params, s.current_page, s.page_size,
         [this](const MergedResult& result) {
+            m_deposit_history.loading_overlay->stop();
             auto& s = m_page_state[6];
             s.total = result.total;
 

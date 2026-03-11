@@ -1,5 +1,6 @@
 #include "core/report_page_builder.h"
 #include "core/flow_layout.h"
+#include "core/loading_overlay.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/icon_defs.h"
@@ -134,6 +135,9 @@ ReportPageWidgets ReportPageBuilder::build_page(
     w.table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     tg_layout->addWidget(w.table, 0);
+
+    // Loading overlay — covers table area
+    w.loading_overlay = new LoadingOverlay(w.table);
 
     // Pagination — layout: count | prev | page buttons | next | limits | refresh | skip
     w.pagination_bar = new QWidget;

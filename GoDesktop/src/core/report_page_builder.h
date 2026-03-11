@@ -15,6 +15,7 @@
 
 class DateRangePicker;
 class FlowLayout;
+class LoadingOverlay;
 class ThemeManager;
 class Translator;
 
@@ -33,6 +34,7 @@ struct ReportPageWidgets {
     QPushButton* export_btn = nullptr;
     QPushButton* print_btn = nullptr;
     QTableWidget* table = nullptr;
+    LoadingOverlay* loading_overlay = nullptr;
 
     // Pagination (giống customers_page)
     QWidget* pagination_bar = nullptr;

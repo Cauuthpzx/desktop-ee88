@@ -25,6 +25,22 @@ func NewAgentService(agentRepo repository.AgentRepo) *AgentService {
 	}
 }
 
+// ListUpstreamInfo trả cookie + encrypt_public_key cho Desktop direct fetch.
+func (s *AgentService) ListUpstreamInfo(ctx context.Context) ([]*model.AgentUpstreamInfo, error) {
+	agents, err := s.agentRepo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var result []*model.AgentUpstreamInfo
+	for _, a := range agents {
+		if !a.IsActive || a.SessionCookie == "" {
+			continue
+		}
+		result = append(result, a.ToUpstreamInfo())
+	}
+	return result, nil
+}
+
 func (s *AgentService) ListAgents(ctx context.Context) ([]*model.AgentSafe, error) {
 	agents, err := s.agentRepo.ListAll(ctx)
 	if err != nil {

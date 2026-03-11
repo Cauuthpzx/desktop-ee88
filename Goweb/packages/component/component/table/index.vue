@@ -348,9 +348,7 @@ provide(LAY_TABLE_CONTEXT, {
         <template v-if="loading">
           <!-- 根据 table 实际高度，设置 loading 位置 -->
           <div class="layui-table-loading">
-            <i
-              class="layui-icon-loading layui-icon layui-anim layui-anim-rotate layui-anim-loop"
-            />
+            <img src="../loading/loading-1.svg" class="layui-table-loading-icon" />
           </div>
         </template>
       </div>

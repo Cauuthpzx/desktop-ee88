@@ -33,10 +33,9 @@ func buildDateParams(r *http.Request) (string, string) {
 // GET /api/proxy/lottery-bets
 func (h *ProxyHandler) LotteryBets(w http.ResponseWriter, r *http.Request) {
 	startDate, endDate := buildDateParams(r)
+	// Upstream params — fetch ALL data (page=1, limit=10000), paginate phía server
 	params := map[string]string{
 		"es":         "1",
-		"page":       queryStr(r, "page", "1"),
-		"limit":      queryStr(r, "limit", "10"),
 		"start_time": startDate,
 		"end_time":   endDate,
 		"username":   r.URL.Query().Get("username"),
@@ -71,8 +70,6 @@ func (h *ProxyHandler) ProviderBets(w http.ResponseWriter, r *http.Request) {
 	}
 	params := map[string]string{
 		"es":                "1",
-		"page":              queryStr(r, "page", "1"),
-		"limit":             queryStr(r, "limit", "10"),
 		"bet_time":          startDate + " | " + endDate,
 		"serial_no":         r.URL.Query().Get("serial_no"),
 		"platform_username": r.URL.Query().Get("platform_username"),
@@ -96,9 +93,6 @@ func (h *ProxyHandler) ProviderBets(w http.ResponseWriter, r *http.Request) {
 func (h *ProxyHandler) LotteryReport(w http.ResponseWriter, r *http.Request) {
 	startDate, endDate := buildDateParams(r)
 	params := map[string]string{
-		"es":         "1",
-		"page":       queryStr(r, "page", "1"),
-		"limit":      queryStr(r, "limit", "10"),
 		"start_time": startDate,
 		"end_time":   endDate,
 		"lottery_id": r.URL.Query().Get("lottery_id"),
@@ -123,9 +117,6 @@ func (h *ProxyHandler) LotteryReport(w http.ResponseWriter, r *http.Request) {
 func (h *ProxyHandler) ProviderReport(w http.ResponseWriter, r *http.Request) {
 	startDate, endDate := buildDateParams(r)
 	params := map[string]string{
-		"es":          "1",
-		"page":        queryStr(r, "page", "1"),
-		"limit":       queryStr(r, "limit", "10"),
 		"start_time":  startDate,
 		"end_time":    endDate,
 		"username":    r.URL.Query().Get("username"),
@@ -150,9 +141,6 @@ func (h *ProxyHandler) ProviderReport(w http.ResponseWriter, r *http.Request) {
 func (h *ProxyHandler) TransactionLog(w http.ResponseWriter, r *http.Request) {
 	startDate, endDate := buildDateParams(r)
 	params := map[string]string{
-		"es":         "1",
-		"page":       queryStr(r, "page", "1"),
-		"limit":      queryStr(r, "limit", "10"),
 		"start_time": startDate,
 		"end_time":   endDate,
 		"username":   r.URL.Query().Get("username"),
@@ -176,9 +164,6 @@ func (h *ProxyHandler) TransactionLog(w http.ResponseWriter, r *http.Request) {
 func (h *ProxyHandler) DepositHistory(w http.ResponseWriter, r *http.Request) {
 	startDate, endDate := buildDateParams(r)
 	params := map[string]string{
-		"es":         "1",
-		"page":       queryStr(r, "page", "1"),
-		"limit":      queryStr(r, "limit", "10"),
 		"start_time": startDate,
 		"end_time":   endDate,
 		"username":   r.URL.Query().Get("username"),
@@ -204,9 +189,6 @@ func (h *ProxyHandler) DepositHistory(w http.ResponseWriter, r *http.Request) {
 func (h *ProxyHandler) WithdrawalHistory(w http.ResponseWriter, r *http.Request) {
 	startDate, endDate := buildDateParams(r)
 	params := map[string]string{
-		"es":         "1",
-		"page":       queryStr(r, "page", "1"),
-		"limit":      queryStr(r, "limit", "10"),
 		"start_time": startDate,
 		"end_time":   endDate,
 		"username":   r.URL.Query().Get("username"),

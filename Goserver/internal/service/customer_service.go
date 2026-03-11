@@ -3,35 +3,42 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log/slog"
 	"sort"
-	"sync"
-	"time"
 
 	"goserver/internal/model"
-	"goserver/pkg/utils"
 )
 
-// CustomerService xử lý upstream proxy cho customer/user data.
+// CustomerService — customer list sử dụng ProxyService để fetch parallel all agents.
 type CustomerService struct {
-	cache *AgentCache
+	proxy *ProxyService
 }
 
-func NewCustomerService() *CustomerService {
+func NewCustomerService(proxy *ProxyService) *CustomerService {
 	return &CustomerService{
-		cache: GetAgentCache(),
+		proxy: proxy,
 	}
 }
 
-// ListCustomers fetch từ tất cả active agents, merge, sort, paginate.
+// ListCustomers fetch từ ALL agents song song (qua ProxyService), decode → sort → paginate.
 func (s *CustomerService) ListCustomers(ctx context.Context, params *model.CustomerListParams) (*model.CustomerListResponse, error) {
-	// Timeout tổng 20s — không chờ agent chậm quá lâu
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
+	// Fetch ALL data qua proxy (parallel all agents, cached, multi-page)
+	proxyResp, err := s.proxy.FetchAll(ctx, &ProxyParams{
+		Path: "/agent/user.html",
+		Params: map[string]string{
+			"username":  params.Username,
+			"user_type": "",
+			"status":    params.Status,
+		},
+		Page:  1,
+		Limit: 999999, // Lấy hết để sort local
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	agents := s.cache.ListActiveWithInfo()
-	if len(agents) == 0 {
+	// Decode raw items → UpstreamUser
+	var users []model.UpstreamUser
+	if err := json.Unmarshal(proxyResp.Data, &users); err != nil {
 		return &model.CustomerListResponse{
 			Data:  []model.UpstreamUser{},
 			Total: 0,
@@ -40,51 +47,11 @@ func (s *CustomerService) ListCustomers(ctx context.Context, params *model.Custo
 		}, nil
 	}
 
-	// Fetch song song từ tất cả agents
-	type agentResult struct {
-		users []model.UpstreamUser
-		err   error
-	}
-
-	results := make([]agentResult, len(agents))
-	var wg sync.WaitGroup
-
-	for i, ag := range agents {
-		wg.Add(1)
-		go func(idx int, agent ActiveAgentInfo) {
-			defer wg.Done()
-			users, err := s.fetchFromAgent(ctx, agent, params)
-			results[idx] = agentResult{users: users, err: err}
-		}(i, ag)
-	}
-
-	wg.Wait()
-
-	// Merge tất cả kết quả + dedup theo username
-	seen := make(map[string]bool)
-	var allUsers []model.UpstreamUser
-	for i, r := range results {
-		if r.err != nil {
-			slog.Warn("Fetch agent failed, skipping",
-				"agent_id", agents[i].ID,
-				"agent_name", agents[i].Name,
-				"error", r.err,
-			)
-			continue
-		}
-		for _, u := range r.users {
-			if !seen[u.Username] {
-				seen[u.Username] = true
-				allUsers = append(allUsers, u)
-			}
-		}
-	}
-
 	// Sort
-	sortUsers(allUsers, params.SortField, params.SortDir)
+	sortUsers(users, params.SortField, params.SortDir)
 
-	// Paginate
-	total := len(allUsers)
+	// Paginate local
+	total := len(users)
 	start := (params.Page - 1) * params.Limit
 	if start > total {
 		start = total
@@ -94,7 +61,7 @@ func (s *CustomerService) ListCustomers(ctx context.Context, params *model.Custo
 		end = total
 	}
 
-	page := allUsers[start:end]
+	page := users[start:end]
 	if page == nil {
 		page = []model.UpstreamUser{}
 	}
@@ -105,42 +72,6 @@ func (s *CustomerService) ListCustomers(ctx context.Context, params *model.Custo
 		Page:  params.Page,
 		Limit: params.Limit,
 	}, nil
-}
-
-// fetchFromAgent gọi upstream /agent/user.html cho 1 agent.
-func (s *CustomerService) fetchFromAgent(ctx context.Context, agent ActiveAgentInfo, params *model.CustomerListParams) ([]model.UpstreamUser, error) {
-	upstreamParams := map[string]string{
-		"es":        "1",
-		"page":      "1",
-		"limit":     "9999",
-		"username":  params.Username,
-		"user_type": "",
-		"status":    params.Status,
-	}
-
-	resp, err := utils.FetchUpstreamWithEncrypt(
-		ctx,
-		agent.BaseURL,
-		"/agent/user.html",
-		agent.Cookie,
-		agent.EncryptPublicKey,
-		upstreamParams,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("agent %s: %w", agent.Name, err)
-	}
-
-	var users []model.UpstreamUser
-	if err := json.Unmarshal(resp.Data, &users); err != nil {
-		return nil, fmt.Errorf("agent %s: unmarshal: %w", agent.Name, err)
-	}
-
-	// Gắn agent_name
-	for i := range users {
-		users[i].AgentName = agent.Name
-	}
-
-	return users, nil
 }
 
 // sortUsers sort in-place theo field + direction.

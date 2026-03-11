@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"goserver/internal/cache"
 	"goserver/internal/config"
 	"goserver/internal/database"
 	"goserver/internal/handler"
@@ -90,12 +91,14 @@ func main() {
 	loginService := service.NewEE88LoginService(agentRepo)
 	agentHandler := handler.NewAgentHandler(agentService, loginService)
 
-	// Layers — Customer (upstream proxy)
-	customerService := service.NewCustomerService()
-	customerHandler := handler.NewCustomerHandler(customerService)
+	// Redis L2 cache (graceful degrade nếu Redis unavailable)
+	redisCache := cache.NewRedisCache(cfg.RedisURL, cfg.RedisTTL)
+	defer redisCache.Close()
 
-	// Layers — Generic proxy (bets, reports, deposit/withdrawal)
-	proxyService := service.NewProxyService()
+	// Layers — Proxy + Customer (shared cache)
+	proxyService := service.NewProxyService(redisCache)
+	customerService := service.NewCustomerService(proxyService)
+	customerHandler := handler.NewCustomerHandler(customerService)
 	proxyHandler := handler.NewProxyHandler(proxyService)
 
 	// Router
@@ -129,6 +132,7 @@ func main() {
 		authMw(http.HandlerFunc(authHandler.Logout)))
 
 	// Agent CRUD routes (protected)
+	mux.Handle("GET /api/agents/upstream-info", authMw(http.HandlerFunc(agentHandler.UpstreamInfo)))
 	mux.Handle("GET /api/agents", authMw(http.HandlerFunc(agentHandler.ListAgents)))
 	mux.Handle("GET /api/agents/cookie-health", authMw(http.HandlerFunc(agentHandler.CookieHealth)))
 	mux.Handle("GET /api/agents/{id}", authMw(http.HandlerFunc(agentHandler.GetAgent)))
@@ -166,10 +170,11 @@ func main() {
 	defer utils.GetCaptchaSolver().Shutdown()
 
 	// Middleware stack (thứ tự: outermost → innermost)
-	// Recovery → SecurityHeaders → RequestLogger → CORS → BodyLimit → Timeout → Router
+	// Recovery → SecurityHeaders → RequestLogger → CORS → Gzip → BodyLimit → Timeout → Router
 	var h http.Handler = mux
 	h = middleware.Timeout(120 * time.Second)(h) // 2 min cho login flows
 	h = middleware.BodyLimit(1 << 20)(h) // 1MB
+	h = middleware.GzipHandler(h)
 	h = middleware.CORS(cfg.AllowedOrigins)(h)
 	h = middleware.RequestLogger(h)
 	h = middleware.SecurityHeaders(h)

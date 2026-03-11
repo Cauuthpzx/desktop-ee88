@@ -60,7 +60,7 @@
           </lay-field>
 
           <!-- Table với toolbar tích hợp -->
-          <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
+          <lay-table :columns="columns" :data-source="tableData" :default-toolbar="['filter', 'export', 'print']" :loading="loading" :page="pagination" @change="handlePageChange">
             <template #toolbar>
               <lay-button-group>
                 <lay-button type="primary" size="xs" @click="handleAddMember">

@@ -3,6 +3,7 @@
 #include "core/upstream_client.h"
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
+#include "core/loading_overlay.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/icon_defs.h"
@@ -266,6 +267,9 @@ void CustomersPage::setup_ui()
     m_table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     tg_layout->addWidget(m_table, 0);
 
+    // Loading overlay — covers table area
+    m_loading_overlay = new LoadingOverlay(m_table);
+
     // ── Pagination — layout: count | prev | page | next | limits | refresh | skip ──
     m_pagination_bar = new QWidget;
     m_pagination_bar->setObjectName("paginationBar");
@@ -434,12 +438,12 @@ void CustomersPage::fetch_customers()
         params["sort_dir"] = sort_dir;
 
     m_search_btn->setEnabled(false);
-    m_search_btn->setText(m_tr->t("common.loading"));
+    m_loading_overlay->start();
 
     m_upstream->fetch_all("/agent/user.html", params, m_current_page, m_page_size,
         [this](const MergedResult& result) {
             m_search_btn->setEnabled(true);
-            m_search_btn->setText(m_tr->t("common.search"));
+            m_loading_overlay->stop();
             populate_table(result.data, result.total);
         });
 }

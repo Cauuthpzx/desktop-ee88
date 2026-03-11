@@ -42,7 +42,7 @@
       </lay-form>
     </lay-field>
 
-    <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
+    <lay-table :columns="columns" :data-source="tableData" :default-toolbar="['filter', 'export', 'print']" :loading="loading" :page="pagination" @change="handlePageChange">
     </lay-table>
 
     <div class="summary-section">

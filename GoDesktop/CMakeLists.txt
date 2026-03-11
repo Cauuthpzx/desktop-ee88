@@ -43,6 +43,7 @@ set(CORE_SOURCES
     src/core/date_range_picker.cpp
     src/core/flow_layout.cpp
     src/core/home_page.cpp
+    src/core/loading_overlay.cpp
     src/core/main_widget.cpp
     src/core/report_page_builder.cpp
     src/core/report_pages.cpp
@@ -75,6 +76,7 @@ set(CORE_HEADERS
     src/core/flow_layout.h
     src/core/home_page.h
     src/core/icon_defs.h
+    src/core/loading_overlay.h
     src/core/main_widget.h
     src/core/report_page_builder.h
     src/core/report_pages.h

@@ -28,6 +28,16 @@ func NewAgentHandler(agentService *service.AgentService, loginService *service.E
 // AGENT CRUD
 // ============================================================================
 
+// GET /api/agents/upstream-info — trả cookie + encrypt_public_key cho Desktop direct fetch.
+func (h *AgentHandler) UpstreamInfo(w http.ResponseWriter, r *http.Request) {
+	agents, err := h.agentService.ListUpstreamInfo(r.Context())
+	if err != nil {
+		agentWriteError(w, err)
+		return
+	}
+	agentWriteJSON(w, http.StatusOK, map[string]interface{}{"agents": agents})
+}
+
 // GET /api/agents
 func (h *AgentHandler) ListAgents(w http.ResponseWriter, r *http.Request) {
 	agents, err := h.agentService.ListAgents(r.Context())

@@ -47,7 +47,7 @@ defineOptions({
 
 const props = withDefaults(defineProps<PageProps>(), {
   limit: 10,
-  pages: 5,
+  pages: 10,
   modelValue: 1,
   total: 0,
   simple: false,

@@ -642,5 +642,6 @@ void SettingsDialog::on_toggle_auto_login(int row)
             ? guard->m_tr->t("settings.msg_auto_login_on")
             : guard->m_tr->t("settings.msg_auto_login_off");
         guard->m_feedback->msg_success(msg.replace("%s", guard->m_agents[row].name));
+        guard->load_agents();
     });
 }

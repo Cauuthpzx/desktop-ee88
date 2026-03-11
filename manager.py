@@ -34,13 +34,16 @@ GOSERVER_ENV = {
     "ENCRYPTION_KEY": "0000000000000000000000000000000000000000000000000000000000000000",
 }
 
+GOSERVER_EXE = os.path.join(PROJECT_ROOT, "Goserver", "goserver.exe")
+
 SERVICES = {
     "Goserver": {
         "cwd": os.path.join(PROJECT_ROOT, "Goserver"),
-        "cmd": ["go", "run", "cmd/server/main.go"],
+        "cmd": [GOSERVER_EXE],
         "env": GOSERVER_ENV,
         "color": "#2ecc71",
         "port": 8080,
+        "build_cmd": ["go", "build", "-o", "goserver.exe", "cmd/server/main.go"],
     },
     "GoWeb": {
         "cwd": os.path.join(PROJECT_ROOT, "GoWeb"),
@@ -364,6 +367,9 @@ class App(tk.Tk):
 
         ttk.Separator(row1, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=4)
 
+        ttk.Button(row1, text="Rebuild", width=8,
+                   command=self.rebuild_goserver,
+                   style="Small.TButton").pack(side=tk.LEFT, padx=1)
         ttk.Button(row1, text="Kill :8080", width=8,
                    command=lambda: self.kill_port_action(8080, "Goserver"),
                    style="Small.TButton").pack(side=tk.LEFT, padx=1)
@@ -465,6 +471,23 @@ class App(tk.Tk):
                     return
                 time.sleep(0.3)
 
+        # Auto build binary nếu chưa tồn tại (Goserver)
+        build_cmd = cfg.get("build_cmd")
+        if build_cmd and not os.path.isfile(cfg["cmd"][0]):
+            self.panels[name].log("Binary chưa có, đang build...", "system")
+
+            def build_then_start():
+                if self._build_goserver(name):
+                    self.after(0, lambda: self._launch_service(name))
+
+            threading.Thread(target=build_then_start, daemon=True).start()
+            return
+
+        self._launch_service(name)
+
+    def _launch_service(self, name):
+        """Khởi chạy service process (gọi từ UI thread)."""
+        cfg = SERVICES[name]
         env = os.environ.copy()
         env.update(cfg["env"])
 
@@ -475,7 +498,6 @@ class App(tk.Tk):
             proc = subprocess.Popen(
                 cfg["cmd"], cwd=cfg["cwd"], env=env,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, bufsize=1,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
             )
             self.processes[name] = proc
@@ -489,6 +511,47 @@ class App(tk.Tk):
             self.panels[name].log(f"Lỗi: {e}", "error")
         except Exception as e:
             self.panels[name].log(f"Lỗi khởi động: {e}", "error")
+
+    def _build_goserver(self, name="Goserver"):
+        """Build Goserver binary. Trả True nếu thành công."""
+        cfg = SERVICES[name]
+        build_cmd = cfg.get("build_cmd")
+        if not build_cmd:
+            return True
+        panel = self.panels[name]
+        panel.log(f"$ {' '.join(build_cmd)}", "dim")
+        env_build = os.environ.copy()
+        env_build.update(cfg["env"])
+        try:
+            result = subprocess.run(
+                build_cmd, cwd=cfg["cwd"], env=env_build,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=120,
+            )
+            if result.returncode != 0:
+                for line in result.stderr.strip().splitlines():
+                    panel.log(line, "error")
+                return False
+            panel.log("Build OK", "success")
+            return True
+        except Exception as e:
+            panel.log(f"Build lỗi: {e}", "error")
+            return False
+
+    def rebuild_goserver(self):
+        """Rebuild binary rồi restart nếu đang chạy."""
+        panel = self.panels["Goserver"]
+        panel.log("══ Rebuild Goserver ══", "system")
+        was_running = self.processes.get("Goserver") is not None
+        if was_running:
+            self.stop_service("Goserver")
+
+        def do_build():
+            if self._build_goserver():
+                if was_running:
+                    self.after(500, lambda: self.start_service("Goserver"))
+
+        threading.Thread(target=do_build, daemon=True).start()
 
     def _kill_proc_tree(self, pid):
         """Kill process và toàn bộ child processes của nó."""
@@ -533,6 +596,21 @@ class App(tk.Tk):
 
         self._kill_proc_tree(proc.pid)
 
+        # Kill port để đảm bảo child processes (go run → main.exe) cũng bị kill
+        port = SERVICES[name].get("port")
+        if port:
+            for _ in range(5):
+                pid = find_pid_on_port(port)
+                if pid is None:
+                    break
+                try:
+                    p = psutil.Process(pid)
+                    p.kill()
+                    p.wait(timeout=2)
+                except Exception:
+                    pass
+                time.sleep(0.3)
+
         self.processes[name] = None
         if not silent:
             self.panels[name].set_running(False)
@@ -540,7 +618,7 @@ class App(tk.Tk):
 
     def restart_service(self, name):
         self.stop_service(name)
-        self.after(600, lambda: self.start_service(name))
+        self.after(1500, lambda: self.start_service(name))
 
     def start_all(self):
         for name in SERVICES:
@@ -554,7 +632,7 @@ class App(tk.Tk):
 
     def restart_all(self):
         self.stop_all()
-        self.after(800, self.start_all)
+        self.after(1500, self.start_all)
 
     # ════════════════════════════════════════════════════════════
     # HEALTH CHECK — API endpoints
@@ -900,7 +978,7 @@ class App(tk.Tk):
                     proc = subprocess.Popen(
                         cmd, cwd=cwd, env=env,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                        text=True, bufsize=1,
+                        text=True, bufsize=1, encoding="utf-8", errors="replace",
                     )
                     self._cmd_procs["GoDesktop"] = proc
                     for line in proc.stdout:
@@ -978,7 +1056,7 @@ class App(tk.Tk):
                 proc = subprocess.Popen(
                     cmd, cwd=cwd, env=env,
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                    text=True, bufsize=1,
+                    text=True, bufsize=1, encoding="utf-8", errors="replace",
                 )
                 self._cmd_procs[panel_name] = proc
                 for line in proc.stdout:
@@ -1009,27 +1087,80 @@ class App(tk.Tk):
     # ════════════════════════════════════════════════════════════
     # OUTPUT READER
     # ════════════════════════════════════════════════════════════
+    @staticmethod
+    def _format_log_line(line):
+        """Parse JSON log (slog) thành text dễ đọc + tag màu phù hợp."""
+        try:
+            data = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            # Không phải JSON — giữ nguyên, detect tag thông thường
+            lower = line.lower()
+            if "error" in lower or "fail" in lower or "panic" in lower:
+                return line, "error"
+            if "warn" in lower:
+                return line, "warn"
+            if "starting" in lower or "ready" in lower or "success" in lower or "listening" in lower:
+                return line, "success"
+            return line, "info"
+
+        level = data.pop("level", "INFO").upper()
+        msg = data.pop("msg", "")
+        data.pop("time", None)
+
+        # Build extras: key=value pairs
+        extras = ""
+        if data:
+            parts = []
+            for k, v in data.items():
+                parts.append(f"{k}={v}")
+            extras = "  " + " | ".join(parts)
+
+        # Tag theo level
+        tag_map = {"ERROR": "error", "WARN": "warn", "DEBUG": "dim"}
+        tag = tag_map.get(level, "info")
+
+        # Một số msg đặc biệt → success
+        if level == "INFO":
+            lower_msg = msg.lower()
+            if any(w in lower_msg for w in ("starting", "started", "connected", "completed",
+                                            "thành công", "hoàn tất", "loaded", "listening")):
+                tag = "success"
+
+        prefix = f"[{level}]" if level != "INFO" else ""
+        text = f"{prefix} {msg}{extras}".strip() if prefix else f"{msg}{extras}"
+        return text, tag
+
     def _read_output(self, name, proc):
         panel = self.panels[name]
         try:
-            for line in proc.stdout:
-                line = line.rstrip()
+            # Đọc bytes rồi decode UTF-8 — tránh Windows codepage issues
+            for raw in proc.stdout:
+                try:
+                    line = raw.decode("utf-8", errors="replace").rstrip()
+                except AttributeError:
+                    line = str(raw).rstrip()
                 if line:
-                    tag = "info"
-                    lower = line.lower()
-                    if "error" in lower or "fail" in lower or "panic" in lower:
-                        tag = "error"
-                    elif "warn" in lower:
-                        tag = "warn"
-                    elif "starting" in lower or "ready" in lower or "success" in lower or "listening" in lower:
-                        tag = "success"
-                    self.after(0, panel.log, line, tag)
+                    text, tag = self._format_log_line(line)
+                    self.after(0, panel.log, text, tag)
         except Exception:
             pass
         finally:
-            self.processes[name] = None
-            self.after(0, panel.set_running, False)
-            self.after(0, panel.log, f"{name} kết thúc.", "system")
+            # Đợi process thực sự exit — tránh báo "kết thúc" giả
+            # khi pipe đóng do child process (captcha OCR worker) exit
+            rc = proc.poll()
+            if rc is None:
+                try:
+                    rc = proc.wait()
+                except Exception:
+                    return
+            # Chỉ clear nếu process hiện tại vẫn là proc này
+            if self.processes.get(name) is proc:
+                self.processes[name] = None
+                self.after(0, panel.set_running, False)
+                if rc != 0:
+                    self.after(0, panel.log, f"{name} kết thúc (exit {rc}).", "error")
+                else:
+                    self.after(0, panel.log, f"{name} kết thúc.", "system")
 
     # ════════════════════════════════════════════════════════════
     # PERIODIC UPDATES
@@ -1082,16 +1213,7 @@ class App(tk.Tk):
                 self._kill_proc_tree(proc.pid)
         self._cmd_procs.clear()
 
-        for cfg in SERVICES.values():
-            port = cfg.get("port")
-            if port:
-                pid = find_pid_on_port(port)
-                if pid:
-                    try:
-                        p = psutil.Process(pid)
-                        p.kill()
-                    except Exception:
-                        pass
+        # Không scan port để kill — tránh kill process chạy độc lập bên ngoài Manager
 
     def _signal_handler(self, signum, frame):
         """Xử lý Ctrl+C, SIGTERM."""

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"goserver/internal/model"
 	"goserver/internal/repository"
 )
 
@@ -111,19 +112,40 @@ func (s *Scheduler) doAutoLogin() {
 	}
 
 	// Lọc agents cần login
-	var needLogin []int64
+	var candidates []*model.Agent
 	for _, agent := range agents {
 		if agent.AutoLogin {
-			needLogin = append(needLogin, agent.ID)
+			candidates = append(candidates, agent)
 		}
 	}
-	if len(needLogin) == 0 {
+	if len(candidates) == 0 {
 		return
 	}
 
-	slog.Info("Auto-login bắt đầu", "count", len(needLogin))
+	slog.Info("Auto-login bắt đầu", "candidates", len(candidates))
 
-	// N agents = N goroutines chạy đồng thời
+	// Bước 1: Check cookie live trước — tránh login chồng đè khi nhiều client cùng dùng
+	var needLogin []int64
+	for _, agent := range candidates {
+		// Nếu agent có cookie trong DB, check xem còn sống không
+		if agent.SessionCookie != "" {
+			valid, _, checkErr := s.loginService.CheckAgentSession(ctx, agent.ID)
+			if checkErr == nil && valid {
+				slog.Info("Auto-login skip: cookie còn sống", "agent_id", agent.ID, "name", agent.Name)
+				continue
+			}
+		}
+		needLogin = append(needLogin, agent.ID)
+	}
+
+	if len(needLogin) == 0 {
+		slog.Info("Auto-login: tất cả cookie còn sống, không cần login")
+		return
+	}
+
+	slog.Info("Auto-login sau check live", "need_login", len(needLogin), "skipped", len(candidates)-len(needLogin))
+
+	// Bước 2: Login các agent thực sự cần
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	success, failed := 0, 0
