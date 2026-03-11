@@ -9,6 +9,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QIcon>
+#include <QListWidget>
 
 class ApiClient;
 class ThemeManager;
@@ -37,8 +38,13 @@ private slots:
 private:
     void setup_ui();
     void setup_toolbar();
+    void setup_sidebar();
     void apply_theme();
+    void apply_sidebar_theme();
     void update_active_nav();
+    void update_sidebar_selection();
+    void retranslate_sidebar();
+    void toggle_sidebar();
     QIcon lang_flag_icon(const QString& locale) const;
 
     ApiClient* m_api;
@@ -81,6 +87,15 @@ private:
     QString m_username;
     QStackedWidget* m_content_stack;
     int m_active_nav_index = 0;
+
+    // Sidebar
+    QWidget* m_sidebar;
+    QListWidget* m_sidebar_list;
+    QPushButton* m_sidebar_toggle;
+    bool m_sidebar_collapsed = false;
+    QLabel* m_sidebar_nav_label;
+    QLabel* m_sidebar_reports_label;
+    QLabel* m_sidebar_system_label;
 
     // Sub-widgets (tách SRP)
     HomePage* m_home_page;

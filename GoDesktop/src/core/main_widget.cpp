@@ -261,12 +261,12 @@ void MainWidget::apply_theme()
     const auto header_bg = m_theme->color("header_bg");
     const auto bg = m_theme->color("bg");
 
-    // Toolbar — SPA-style nav bar
+    // Toolbar — SPA-style nav bar, compact padding
     m_toolbar->setStyleSheet(QString(
         "QToolBar { spacing: 0px; padding: 0px; border-bottom: 1px solid %1;"
         "  background: %2; }"
         "QToolBar > QWidget { background: transparent; }"
-        "QToolButton { padding: 6px 12px; border: none; border-bottom: 2px solid transparent;"
+        "QToolButton { padding: 6px 4px; border: none; border-bottom: 2px solid transparent;"
         "  background-color: transparent; font-size: 13px; color: %3; }"
         "QToolButton:hover { color: %4; background-color: %5; }"
         "QToolButton:pressed { background-color: %6; }"
@@ -283,11 +283,12 @@ void MainWidget::apply_theme()
     m_lang_button->setIcon(lang_flag_icon(m_tr->locale()));
     m_lang_button->setText(m_tr->locale_label(m_tr->locale()));
 
-    // Menu styling — clean dropdown
+    // Menu styling — clean dropdown, icon sát text
     auto menu_style = QString(
         "QMenu { background: %1; border: 1px solid %2; padding: 4px 0px;"
         "  font-size: 13px; }"
-        "QMenu::item { padding: 8px 20px; color: %3; }"
+        "QMenu::icon { padding-left: 8px; }"
+        "QMenu::item { padding: 8px 12px 8px 4px; color: %3; }"
         "QMenu::item:selected { background: %4; color: %5; }"
         "QMenu::separator { height: 1px; background: %2; margin: 4px 12px; }"
     ).arg(bg, border_light, text1, bg_hover, primary);
@@ -322,7 +323,7 @@ void MainWidget::update_active_nav()
 
     // Active nav: primary color bottom border + bold text
     auto active_style = QString(
-        "QToolButton { padding: 6px 12px; border: none; border-bottom: 2px solid %1;"
+        "QToolButton { padding: 6px 4px; border: none; border-bottom: 2px solid %1;"
         "  background-color: transparent; font-size: 13px; color: %1; font-weight: 600; }"
         "QToolButton:hover { background-color: %2; }"
         "QToolButton:pressed { background-color: %3; }"
@@ -331,7 +332,7 @@ void MainWidget::update_active_nav()
 
     // Inactive nav: transparent bottom border
     auto inactive_style = QString(
-        "QToolButton { padding: 6px 12px; border: none; border-bottom: 2px solid transparent;"
+        "QToolButton { padding: 6px 4px; border: none; border-bottom: 2px solid transparent;"
         "  background-color: transparent; font-size: 13px; color: %1; }"
         "QToolButton:hover { color: %2; background-color: %3; }"
         "QToolButton:pressed { background-color: %4; }"
