@@ -10,6 +10,7 @@
 #include <QAction>
 #include <QIcon>
 #include <QListWidget>
+#include <QScrollArea>
 
 class ApiClient;
 class ThemeManager;
@@ -17,6 +18,7 @@ class Translator;
 class HomePage;
 class CustomersPage;
 class ReportPages;
+class UpstreamClient;
 
 class MainWidget : public QWidget {
     Q_OBJECT
@@ -92,12 +94,20 @@ private:
 
     // Sidebar
     QWidget* m_sidebar;
+    QScrollArea* m_sidebar_scroll = nullptr;
     QListWidget* m_sidebar_list;
     QPushButton* m_sidebar_toggle;
     bool m_sidebar_collapsed = true;
     QLabel* m_sidebar_nav_label;
     QLabel* m_sidebar_reports_label;
     QLabel* m_sidebar_system_label;
+
+    // Cached toolbar buttons (lazy init in update_active_nav)
+    QToolButton* m_home_btn = nullptr;
+    QToolButton* m_customers_btn = nullptr;
+
+    // Upstream direct fetch
+    UpstreamClient* m_upstream;
 
     // Sub-widgets (tách SRP)
     HomePage* m_home_page;

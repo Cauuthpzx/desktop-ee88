@@ -6,6 +6,7 @@
 
 #include <QPixmap>
 #include <QScrollArea>
+#include <QIntValidator>
 
 QWidget* ReportPageBuilder::make_field(const QString& label_text, QWidget* field, QVector<QLabel*>& labels)
 {
@@ -134,55 +135,101 @@ ReportPageWidgets ReportPageBuilder::build_page(
 
     tg_layout->addWidget(w.table, 0);
 
-    // Pagination
+    // Pagination — layout: count | prev | page buttons | next | limits | refresh | skip
     w.pagination_bar = new QWidget;
     w.pagination_bar->setObjectName("paginationBar");
     auto* pg_layout = new QHBoxLayout(w.pagination_bar);
     pg_layout->setContentsMargins(8, 6, 8, 6);
-    pg_layout->setSpacing(8);
+    pg_layout->setSpacing(4);
 
-    w.page_prev_btn = new QPushButton("<");
-    w.page_prev_btn->setObjectName("pageBtn");
-    w.page_prev_btn->setFixedSize(30, 28);
-    w.page_prev_btn->setEnabled(false);
-    pg_layout->addWidget(w.page_prev_btn);
-
-    w.page_number = new QLabel("1");
-    w.page_number->setObjectName("pageNumber");
-    w.page_number->setFixedSize(30, 28);
-    w.page_number->setAlignment(Qt::AlignCenter);
-    pg_layout->addWidget(w.page_number);
-
-    w.page_next_btn = new QPushButton(">");
-    w.page_next_btn->setObjectName("pageBtn");
-    w.page_next_btn->setFixedSize(30, 28);
-    w.page_next_btn->setEnabled(false);
-    pg_layout->addWidget(w.page_next_btn);
-
-    pg_layout->addSpacing(12);
-
+    // [count]
     w.page_info = new QLabel(tr ? tr->t("common.total_rows").arg(0) : "Total 0 rows");
     w.page_info->setObjectName("pageInfo");
     pg_layout->addWidget(w.page_info);
 
     pg_layout->addSpacing(8);
 
+    // [prev]
+    w.page_prev_btn = new QPushButton;
+    w.page_prev_btn->setIcon(QIcon(":/icons/chevron_left"));
+    w.page_prev_btn->setIconSize(QSize(14, 14));
+    w.page_prev_btn->setObjectName("pageBtn");
+    w.page_prev_btn->setFixedSize(30, 28);
+    w.page_prev_btn->setCursor(Qt::PointingHandCursor);
+    w.page_prev_btn->setEnabled(false);
+    pg_layout->addWidget(w.page_prev_btn);
+
+    // [page buttons]
+    w.page_btn_container = new QWidget;
+    w.page_btn_container->setStyleSheet("border: none;");
+    w.page_btn_layout = new QHBoxLayout(w.page_btn_container);
+    w.page_btn_layout->setContentsMargins(0, 0, 0, 0);
+    w.page_btn_layout->setSpacing(2);
+    pg_layout->addWidget(w.page_btn_container);
+
+    // [next]
+    w.page_next_btn = new QPushButton;
+    w.page_next_btn->setIcon(QIcon(":/icons/chevron_right"));
+    w.page_next_btn->setIconSize(QSize(14, 14));
+    w.page_next_btn->setObjectName("pageBtn");
+    w.page_next_btn->setFixedSize(30, 28);
+    w.page_next_btn->setCursor(Qt::PointingHandCursor);
+    w.page_next_btn->setEnabled(false);
+    pg_layout->addWidget(w.page_next_btn);
+
+    pg_layout->addSpacing(8);
+
+    // [limits]
     w.page_size_combo = new QComboBox;
     w.page_size_combo->setObjectName("pageSizeCombo");
-    const int page_sizes[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
+    const int page_sizes[] = {10, 20, 30, 50, 100};
     for (int ps : page_sizes) {
         w.page_size_combo->addItem(
             tr ? tr->t("common.rows_per_page").arg(ps) : QString("%1/page").arg(ps), ps);
     }
     w.page_size_combo->setFixedHeight(IconDefs::k_page_combo_height);
+    w.page_size_combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    w.page_size_combo->setMinimumWidth(120);
     pg_layout->addWidget(w.page_size_combo);
+
+    pg_layout->addSpacing(4);
+
+    // [refresh]
+    w.refresh_btn = new QPushButton(QIcon(":/icons/refresh"), "");
+    w.refresh_btn->setObjectName("pageBtn");
+    w.refresh_btn->setFixedSize(30, 28);
+    w.refresh_btn->setIconSize(QSize(14, 14));
+    w.refresh_btn->setCursor(Qt::PointingHandCursor);
+    w.refresh_btn->setToolTip(tr ? tr->t("common.refresh") : "Refresh");
+    pg_layout->addWidget(w.refresh_btn);
+
+    pg_layout->addSpacing(4);
+
+    // [skip]
+    w.skip_label = new QLabel(tr ? tr->t("common.goto_page") : "Go to");
+    w.skip_label->setObjectName("pageInfo");
+    pg_layout->addWidget(w.skip_label);
+
+    w.skip_input = new QLineEdit;
+    w.skip_input->setObjectName("skipInput");
+    w.skip_input->setFixedSize(50, 28);
+    w.skip_input->setAlignment(Qt::AlignCenter);
+    w.skip_input->setValidator(new QIntValidator(1, 99999, w.skip_input));
+    pg_layout->addWidget(w.skip_input);
+
+    w.skip_confirm = new QPushButton(tr ? tr->t("common.confirm") : "OK");
+    w.skip_confirm->setObjectName("skipConfirmBtn");
+    w.skip_confirm->setFixedHeight(28);
+    w.skip_confirm->setMinimumWidth(60);
+    w.skip_confirm->setCursor(Qt::PointingHandCursor);
+    pg_layout->addWidget(w.skip_confirm);
 
     pg_layout->addStretch();
     tg_layout->addWidget(w.pagination_bar);
 
     card_layout->addWidget(table_group, 0);
-    card_layout->addStretch();
-    page_layout->addWidget(w.card, 1);
+    page_layout->addWidget(w.card);
+    page_layout->addStretch();
 
     return w;
 }
@@ -359,15 +406,47 @@ void ReportPageBuilder::apply_page_theme(ReportPageWidgets& w, ThemeManager* the
     ).arg(bg, text1, border, bg_hover, text2);
     w.page_prev_btn->setStyleSheet(page_btn_style);
     w.page_next_btn->setStyleSheet(page_btn_style);
+    w.refresh_btn->setStyleSheet(page_btn_style);
 
-    w.page_number->setStyleSheet(QString(
-        "QLabel#pageNumber { background: %1; color: #fff; border: 1px solid %1;"
-        "  font-size: 13px; padding: 0; qproperty-alignment: 'AlignCenter'; }"
-    ).arg(primary));
+    // Active page button
+    auto active_page_style = QString(
+        "QPushButton#pageNumberActive { background: %1; color: #fff; border: 1px solid %1;"
+        "  font-size: 13px; padding: 0; }"
+    ).arg(primary);
+    for (auto* btn : w.page_btn_container->findChildren<QPushButton*>("pageNumberActive")) {
+        btn->setStyleSheet(active_page_style);
+    }
+
+    // Inactive page buttons
+    for (auto* btn : w.page_btn_container->findChildren<QPushButton*>("pageBtn")) {
+        btn->setStyleSheet(page_btn_style);
+    }
 
     w.page_info->setStyleSheet(QString(
         "font-size: 13px; color: %1; border: none;"
     ).arg(text2));
+
+    if (w.skip_label) {
+        w.skip_label->setStyleSheet(QString(
+            "font-size: 13px; color: %1; border: none;"
+        ).arg(text2));
+    }
+
+    if (w.skip_input) {
+        w.skip_input->setStyleSheet(QString(
+            "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
+            "  font-size: 13px; padding: 0 4px; }"
+            "QLineEdit:focus { border-color: %4; }"
+        ).arg(bg, text1, border, primary));
+    }
+
+    if (w.skip_confirm) {
+        w.skip_confirm->setStyleSheet(QString(
+            "QPushButton#skipConfirmBtn { background: %1; color: #fff; border: 1px solid %1;"
+            "  font-size: 13px; padding: 0 8px; }"
+            "QPushButton#skipConfirmBtn:hover { background: #0d8a7e; }"
+        ).arg(primary));
+    }
 
     w.page_size_combo->setStyleSheet(input_style);
 

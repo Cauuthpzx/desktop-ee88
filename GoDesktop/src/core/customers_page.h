@@ -15,12 +15,13 @@ class ApiClient;
 class DateRangePicker;
 class ThemeManager;
 class Translator;
+class UpstreamClient;
 
 class CustomersPage : public QWidget {
     Q_OBJECT
 
 public:
-    explicit CustomersPage(ApiClient* api, ThemeManager* theme, Translator* tr, QWidget* parent = nullptr);
+    explicit CustomersPage(ApiClient* api, UpstreamClient* upstream, ThemeManager* theme, Translator* tr, QWidget* parent = nullptr);
 
     void apply_theme();
     void retranslate();
@@ -36,6 +37,7 @@ private:
     void on_print_table();
 
     ApiClient* m_api;
+    UpstreamClient* m_upstream;
     ThemeManager* m_theme;
     Translator* m_tr;
 

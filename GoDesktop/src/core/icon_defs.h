@@ -41,6 +41,10 @@ constexpr int k_search_spacing       = 8;    // Search form spacing
 constexpr int k_btn_spacing          = 4;    // Action buttons spacing in table
 constexpr int k_dialog_spacing       = 14;   // Dialog form row spacing
 
+// ── Colors ──
+static constexpr const char* k_color_primary = "#16baaa";
+static constexpr const char* k_color_muted   = "#cccccc";
+
 // ── Font Sizes (px) ──
 constexpr int k_font_table_btn       = 11;   // Table row button text
 constexpr int k_font_search_btn      = 12;   // Search/header button text

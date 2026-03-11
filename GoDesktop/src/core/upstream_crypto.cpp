@@ -201,17 +201,11 @@ QString encode_string(const QString& input)
     return QString::fromUtf8(reversed.toUtf8().toBase64());
 }
 
-// ── High-level: encrypt request ──
+// ── Internal: shared encrypt logic (AES + RSA + encode) ──
 
-EncryptResult encrypt_request(const QByteArray& json_body, const QString& encrypt_public_key)
+static EncryptResult encrypt_internal(const QByteArray& json_body, const QString& pem)
 {
     EncryptResult r;
-
-    QString pem = decode_encrypt_public_key(encrypt_public_key);
-    if (pem.isEmpty()) {
-        r.error = "decode encrypt_public_key failed";
-        return r;
-    }
 
     r.aes_key = generate_aes_key();
 
@@ -233,35 +227,29 @@ EncryptResult encrypt_request(const QByteArray& json_body, const QString& encryp
     return r;
 }
 
+// ── High-level: encrypt request ──
+
+EncryptResult encrypt_request(const QByteArray& json_body, const QString& encrypt_public_key)
+{
+    QString pem = decode_encrypt_public_key(encrypt_public_key);
+    if (pem.isEmpty()) {
+        EncryptResult r;
+        r.error = "decode encrypt_public_key failed";
+        return r;
+    }
+    return encrypt_internal(json_body, pem);
+}
+
 // ── High-level: encrypt with pre-decoded PEM (skip decode step) ──
 
 EncryptResult encrypt_request_with_pem(const QByteArray& json_body, const QString& decoded_pem)
 {
-    EncryptResult r;
-
     if (decoded_pem.isEmpty()) {
+        EncryptResult r;
         r.error = "empty decoded PEM key";
         return r;
     }
-
-    r.aes_key = generate_aes_key();
-
-    r.encrypted_body = aes_ecb_encrypt(json_body, r.aes_key);
-    if (r.encrypted_body.isEmpty()) {
-        r.error = "AES-ECB encrypt failed";
-        return r;
-    }
-
-    QByteArray rsa_encrypted = rsa_encrypt(r.aes_key, decoded_pem);
-    if (rsa_encrypted.isEmpty()) {
-        r.error = "RSA encrypt AES key failed";
-        return r;
-    }
-    QString rsa_b64 = QString::fromUtf8(rsa_encrypted.toBase64());
-
-    r.cek_k = encode_string(rsa_b64);
-    r.ok = true;
-    return r;
+    return encrypt_internal(json_body, decoded_pem);
 }
 
 // ── High-level: decrypt response ──

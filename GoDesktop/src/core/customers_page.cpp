@@ -1,10 +1,12 @@
 #include "core/customers_page.h"
 #include "core/api_client.h"
+#include "core/upstream_client.h"
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/icon_defs.h"
+#include "utils/upstream_translate.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -22,9 +24,10 @@
 #include <QJsonObject>
 #include <QUrlQuery>
 
-CustomersPage::CustomersPage(ApiClient* api, ThemeManager* theme, Translator* tr, QWidget* parent)
+CustomersPage::CustomersPage(ApiClient* api, UpstreamClient* upstream, ThemeManager* theme, Translator* tr, QWidget* parent)
     : QWidget(parent)
     , m_api(api)
+    , m_upstream(upstream)
     , m_theme(theme)
     , m_tr(tr)
 {
@@ -230,12 +233,11 @@ void CustomersPage::setup_ui()
     tg_layout->addWidget(m_table_toolbar);
 
     // ── Table ──
-    m_table = new QTableWidget(0, 13);
+    m_table = new QTableWidget(0, 12);
     m_table->setObjectName("customersTable");
 
     const QStringList headers = {
         m_tr->t("customers.col_member"),
-        m_tr->t("customers.col_agent_name"),
         m_tr->t("customers.col_member_type"),
         m_tr->t("customers.col_agent_account"),
         m_tr->t("customers.col_balance"),
@@ -396,8 +398,8 @@ void CustomersPage::setup_ui()
     connect(m_skip_input, &QLineEdit::returnPressed, m_skip_confirm, &QPushButton::click);
 
     card_layout->addWidget(table_group, 0);
-    card_layout->addStretch();
-    page_layout->addWidget(m_card, 1);
+    page_layout->addWidget(m_card);
+    page_layout->addStretch();
 }
 
 void CustomersPage::load_data()
@@ -412,44 +414,34 @@ void CustomersPage::fetch_customers()
     if (!m_ready || m_api->token().isEmpty())
         return;
 
-    QUrlQuery query;
-    query.addQueryItem("page", QString::number(m_current_page));
-    query.addQueryItem("limit", QString::number(m_page_size));
+    QMap<QString, QString> params;
 
     auto username = m_search_username->text().trimmed();
     if (!username.isEmpty())
-        query.addQueryItem("username", username);
+        params["username"] = username;
 
     auto status_data = m_search_status->currentData().toString();
     if (!status_data.isEmpty())
-        query.addQueryItem("status", status_data);
+        params["status"] = status_data;
 
+    // sort_field, sort_dir — upstream hỗ trợ qua user_type
     auto sort_field = m_search_sort_field->currentData().toString();
     if (!sort_field.isEmpty())
-        query.addQueryItem("sort_field", sort_field);
+        params["sort_field"] = sort_field;
 
     auto sort_dir = m_search_sort_dir->currentData().toString();
     if (!sort_dir.isEmpty())
-        query.addQueryItem("sort_dir", sort_dir);
-
-    QString path = "/api/customers?" + query.toString(QUrl::FullyEncoded);
+        params["sort_dir"] = sort_dir;
 
     m_search_btn->setEnabled(false);
     m_search_btn->setText(m_tr->t("common.loading"));
 
-    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
-        m_search_btn->setEnabled(true);
-        m_search_btn->setText(m_tr->t("common.search"));
-
-        if (err.kind != ApiErrorKind::None) {
-            m_page_info->setText(err.message);
-            return;
-        }
-
-        auto arr = data["data"].toArray();
-        int total = data["total"].toInt();
-        populate_table(arr, total);
-    });
+    m_upstream->fetch_all("/agent/user.html", params, m_current_page, m_page_size,
+        [this](const MergedResult& result) {
+            m_search_btn->setEnabled(true);
+            m_search_btn->setText(m_tr->t("common.search"));
+            populate_table(result.data, result.total);
+        });
 }
 
 void CustomersPage::populate_table(const QJsonArray& data, int total)
@@ -464,8 +456,7 @@ void CustomersPage::populate_table(const QJsonArray& data, int total)
 
         const QStringList cells = {
             obj["username"].toString(),
-            obj["agent_name"].toString(),
-            obj["type_format"].toString(),
+            UpstreamTranslate::zh_to_vi(obj["type_format"].toString()),
             obj["parent_user"].toString(),
             obj["money"].toString(),
             QString::number(obj["deposit_count"].toInt()),
@@ -474,7 +465,6 @@ void CustomersPage::populate_table(const QJsonArray& data, int total)
             obj["withdrawal_amount"].toString(),
             obj["login_time"].toString(),
             obj["register_time"].toString(),
-            obj["status_format"].toString(),
         };
 
         for (int c = 0; c < cells.size(); ++c) {
@@ -483,12 +473,36 @@ void CustomersPage::populate_table(const QJsonArray& data, int total)
             m_table->setItem(row, c, item);
         }
 
-        // Action column (index 12) — rebate settings button
+        // Status column (col 10) — colored text
+        int status_col = 10;
+        QString status_raw = obj["status_format"].toString();
+        QString status_text = UpstreamTranslate::zh_to_vi(status_raw);
+        auto* status_label = new QLabel(status_text);
+        status_label->setAlignment(Qt::AlignCenter);
+        QColor sc = UpstreamTranslate::status_color(status_text);
+        if (sc.isValid()) {
+            status_label->setStyleSheet(QString(
+                "QLabel { color: %1; font-size: 12px; font-weight: 600;"
+                "  background: %2; border: none; padding: 2px 8px; }"
+            ).arg(sc.name(), sc.name() + "1a")); // 1a = ~10% opacity bg
+        } else {
+            status_label->setStyleSheet("QLabel { font-size: 12px; border: none; padding: 2px 8px; }");
+        }
+        m_table->setCellWidget(row, status_col, status_label);
+
+        // Action column (col 11) — "Cài đặt hoàn trả" button
+        int action_col = 11;
         auto* rebate_btn = new QPushButton(m_tr->t("customers.rebate_settings"));
         rebate_btn->setObjectName("rebateBtn");
         rebate_btn->setCursor(Qt::PointingHandCursor);
-        rebate_btn->setFixedHeight(IconDefs::k_table_btn_height + 2);
-        m_table->setCellWidget(row, 12, rebate_btn);
+        rebate_btn->setFixedHeight(24);
+        rebate_btn->setStyleSheet(QString(
+            "QPushButton { background: %1; color: #fff; border: none;"
+            "  padding: 2px 8px; font-size: 11px; }"
+            "QPushButton:hover { background: #0d8a7e; }"
+        ).arg(m_theme->color("primary")));
+        m_table->setCellWidget(row, action_col, rebate_btn);
+
         m_table->setRowHeight(row, 38);
     }
 
@@ -700,12 +714,28 @@ void CustomersPage::apply_theme()
     ).arg(bg, text1, border, bg_hover, bg2));
 
     for (int r = 0; r < m_table->rowCount(); ++r) {
-        if (auto* w = m_table->cellWidget(r, 12)) {
-            w->setStyleSheet(QString(
-                "QPushButton { background: %1; color: #fff; border: none;"
-                "  padding: 2px 8px; font-size: 11px; }"
-                "QPushButton:hover { background: #0d8a7e; }"
-            ).arg(primary));
+        // Re-style action buttons
+        if (auto* w = m_table->cellWidget(r, 11)) {
+            if (auto* btn = qobject_cast<QPushButton*>(w)) {
+                btn->setStyleSheet(QString(
+                    "QPushButton { background: %1; color: #fff; border: none;"
+                    "  padding: 2px 8px; font-size: 11px; }"
+                    "QPushButton:hover { background: #0d8a7e; }"
+                ).arg(primary));
+            }
+        }
+        // Re-style status labels
+        if (auto* w = m_table->cellWidget(r, 10)) {
+            if (auto* lbl = qobject_cast<QLabel*>(w)) {
+                QString status_text = lbl->text();
+                QColor sc = UpstreamTranslate::status_color(status_text);
+                if (sc.isValid()) {
+                    lbl->setStyleSheet(QString(
+                        "QLabel { color: %1; font-size: 12px; font-weight: 600;"
+                        "  background: %2; border: none; padding: 2px 8px; }"
+                    ).arg(sc.name(), sc.name() + "1a"));
+                }
+            }
         }
     }
 
@@ -931,12 +961,17 @@ void CustomersPage::retranslate()
 
     // Table headers
     m_table->setHorizontalHeaderLabels({
-        m_tr->t("customers.col_member"), m_tr->t("customers.col_agent_name"),
-        m_tr->t("customers.col_member_type"), m_tr->t("customers.col_agent_account"),
-        m_tr->t("customers.col_balance"), m_tr->t("customers.col_deposit_count"),
-        m_tr->t("customers.col_withdraw_count"), m_tr->t("customers.col_total_deposit"),
-        m_tr->t("customers.col_total_withdraw"), m_tr->t("customers.col_last_login"),
-        m_tr->t("customers.col_register_time"), m_tr->t("customers.col_status"),
+        m_tr->t("customers.col_member"),
+        m_tr->t("customers.col_member_type"),
+        m_tr->t("customers.col_agent_account"),
+        m_tr->t("customers.col_balance"),
+        m_tr->t("customers.col_deposit_count"),
+        m_tr->t("customers.col_withdraw_count"),
+        m_tr->t("customers.col_total_deposit"),
+        m_tr->t("customers.col_total_withdraw"),
+        m_tr->t("customers.col_last_login"),
+        m_tr->t("customers.col_register_time"),
+        m_tr->t("customers.col_status"),
         m_tr->t("customers.col_action"),
     });
 

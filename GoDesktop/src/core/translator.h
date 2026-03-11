@@ -18,6 +18,9 @@ public:
     // t("nav.home") → "Trang chủ"
     QString t(const QString& key) const;
 
+    // Auth-screen translations (uses short lang code: vi/en/zh).
+    QString auth_t(const QString& lang, const QString& key) const;
+
     QStringList available_locales() const;
     QString locale_label(const QString& locale) const;
 
@@ -27,6 +30,8 @@ signals:
 private:
     QString m_locale;
     QMap<QString, QJsonObject> m_translations;
+    QMap<QString, QMap<QString, QString>> m_auth_translations;
 
+    void init_auth_translations();
     QString resolve(const QJsonObject& obj, const QStringList& parts) const;
 };

@@ -89,26 +89,26 @@ void UpstreamClient::load_credentials(std::function<void(bool ok)> callback)
 
 // ── Cache key builders ──
 
+static QString build_params_suffix(const QMap<QString, QString>& params)
+{
+    QString suffix;
+    for (auto it = params.cbegin(); it != params.cend(); ++it) {
+        if (it.key() == "page" || it.key() == "limit") continue;
+        suffix += it.key() + "=" + it.value() + "&";
+    }
+    return suffix;
+}
+
 QString UpstreamClient::make_agent_cache_key(int64_t agent_id, const QString& path,
                                               const QMap<QString, QString>& params)
 {
-    QString key = QString::number(agent_id) + ":" + path + ":";
-    for (auto it = params.cbegin(); it != params.cend(); ++it) {
-        if (it.key() == "page" || it.key() == "limit") continue;
-        key += it.key() + "=" + it.value() + "&";
-    }
-    return key;
+    return QString::number(agent_id) + ":" + path + ":" + build_params_suffix(params);
 }
 
 QString UpstreamClient::make_merged_cache_key(const QString& path,
                                                const QMap<QString, QString>& params)
 {
-    QString key = path + ":";
-    for (auto it = params.cbegin(); it != params.cend(); ++it) {
-        if (it.key() == "page" || it.key() == "limit") continue;
-        key += it.key() + "=" + it.value() + "&";
-    }
-    return key;
+    return path + ":" + build_params_suffix(params);
 }
 
 // ── Paginate từ merged cache — O(limit) ──

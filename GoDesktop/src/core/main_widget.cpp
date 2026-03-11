@@ -6,6 +6,7 @@
 #include "core/customers_page.h"
 #include "core/report_pages.h"
 #include "core/settings_dialog.h"
+#include "core/upstream_client.h"
 #include "core/icon_defs.h"
 
 #include <QHBoxLayout>
@@ -15,6 +16,7 @@
 #include <QScrollArea>
 #include <QResizeEvent>
 #include <QPropertyAnimation>
+#include <QPointer>
 
 MainWidget::MainWidget(ApiClient* api, ThemeManager* theme, Translator* tr, QWidget* parent)
     : QWidget(parent)
@@ -34,6 +36,9 @@ void MainWidget::set_username(const QString& username)
     m_username_label->setText(username);
     m_home_page->set_username(username);
     m_account_button->setText(username);
+
+    // Load upstream credentials sau khi login thành công
+    m_upstream->load_credentials();
 }
 
 void MainWidget::setup_ui()
@@ -45,10 +50,13 @@ void MainWidget::setup_ui()
     setup_toolbar();
     root->addWidget(m_toolbar);
 
+    // Upstream direct fetch — credentials sẽ load sau khi login (set_username)
+    m_upstream = new UpstreamClient(m_api, this);
+
     // Sub-widgets
     m_home_page = new HomePage(m_theme, m_tr, this);
-    m_customers_page = new CustomersPage(m_api, m_theme, m_tr, this);
-    m_report_pages = new ReportPages(m_api, m_theme, m_tr, this);
+    m_customers_page = new CustomersPage(m_api, m_upstream, m_theme, m_tr, this);
+    m_report_pages = new ReportPages(m_api, m_upstream, m_theme, m_tr, this);
 
     m_content_stack = new QStackedWidget;
     m_content_stack->addWidget(m_home_page);                                  // 0
@@ -253,10 +261,10 @@ void MainWidget::setup_sidebar()
     sidebar_layout->setSpacing(0);
 
     // Scrollable list area (empty for now)
-    auto* scroll = new QScrollArea;
-    scroll->setWidgetResizable(true);
-    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setFrameShape(QFrame::NoFrame);
+    m_sidebar_scroll = new QScrollArea;
+    m_sidebar_scroll->setWidgetResizable(true);
+    m_sidebar_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_sidebar_scroll->setFrameShape(QFrame::NoFrame);
 
     auto* list_container = new QWidget;
     auto* list_layout = new QVBoxLayout(list_container);
@@ -275,8 +283,8 @@ void MainWidget::setup_sidebar()
 
     list_layout->addStretch(1);
 
-    scroll->setWidget(list_container);
-    sidebar_layout->addWidget(scroll, 1);
+    m_sidebar_scroll->setWidget(list_container);
+    sidebar_layout->addWidget(m_sidebar_scroll, 1);
 
     // Toggle button — floats on the right edge of sidebar, vertically centered
     m_sidebar_toggle = new QPushButton(m_sidebar);
@@ -287,9 +295,7 @@ void MainWidget::setup_sidebar()
     connect(m_sidebar_toggle, &QPushButton::clicked, this, &MainWidget::toggle_sidebar);
 
     // Default collapsed — hide scroll area
-    for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
-        scroll->setVisible(false);
-    }
+    m_sidebar_scroll->setVisible(false);
 }
 
 void MainWidget::toggle_sidebar()
@@ -300,13 +306,9 @@ void MainWidget::toggle_sidebar()
 
     if (m_sidebar_collapsed) {
         m_sidebar_toggle->setIcon(QIcon(":/icons/chevron_right"));
-        for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
-            scroll->setVisible(false);
-        }
+        m_sidebar_scroll->setVisible(false);
     } else {
-        for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
-            scroll->setVisible(true);
-        }
+        m_sidebar_scroll->setVisible(true);
         m_sidebar_toggle->setIcon(QIcon(":/icons/chevron_left"));
     }
 
@@ -368,11 +370,9 @@ void MainWidget::apply_sidebar_theme()
     ));
 
     // Scroll area
-    for (auto* scroll : m_sidebar->findChildren<QScrollArea*>()) {
-        scroll->setStyleSheet(QString(
-            "QScrollArea { background: %1; border: none; }"
-        ).arg(bg));
-    }
+    m_sidebar_scroll->setStyleSheet(QString(
+        "QScrollArea { background: %1; border: none; }"
+    ).arg(bg));
 }
 
 void MainWidget::update_sidebar_selection()
@@ -394,7 +394,7 @@ QIcon MainWidget::lang_flag_icon(const QString& locale) const
 
 void MainWidget::navigate_to(int index)
 {
-    if (index < m_content_stack->count()) {
+    if (index >= 0 && index < m_content_stack->count()) {
         m_content_stack->setCurrentIndex(index);
     }
     m_active_nav_index = index;
@@ -514,19 +514,16 @@ void MainWidget::update_active_nav()
     else if (m_active_nav_index >= 5 && m_active_nav_index <= 6) active_group = 3;
     else if (m_active_nav_index >= 7 && m_active_nav_index <= 8) active_group = 4;
 
-    // Find QToolButtons for QAction-based items (Home, Customers)
-    auto find_action_button = [this](QAction* action) -> QToolButton* {
+    // Cache QToolButtons for QAction-based items (lazy init)
+    if (!m_home_btn) {
         for (auto* child : m_toolbar->findChildren<QToolButton*>()) {
-            if (child->defaultAction() == action) return child;
+            if (child->defaultAction() == m_home_action) m_home_btn = child;
+            else if (child->defaultAction() == m_customers_action) m_customers_btn = child;
         }
-        return nullptr;
-    };
+    }
 
-    QToolButton* home_btn = find_action_button(m_home_action);
-    QToolButton* customers_btn = find_action_button(m_customers_action);
-
-    if (home_btn) home_btn->setStyleSheet(active_group == 0 ? active_style : inactive_style);
-    if (customers_btn) customers_btn->setStyleSheet(active_group == 1 ? active_style : inactive_style);
+    if (m_home_btn) m_home_btn->setStyleSheet(active_group == 0 ? active_style : inactive_style);
+    if (m_customers_btn) m_customers_btn->setStyleSheet(active_group == 1 ? active_style : inactive_style);
     m_report_button->setStyleSheet(active_group == 2 ? active_style : inactive_style);
     m_bet_order_button->setStyleSheet(active_group == 3 ? active_style : inactive_style);
     m_deposit_withdraw_button->setStyleSheet(active_group == 4 ? active_style : inactive_style);
@@ -618,21 +615,25 @@ void MainWidget::on_change_password()
         return;
     }
 
-    m_api->change_password(old_pwd, new_pwd, [this](bool success, const QJsonObject& data) {
+    QPointer<MainWidget> guard(this);
+    m_api->change_password(old_pwd, new_pwd, [guard](bool success, const QJsonObject& data) {
+        if (!guard) return;
         if (success) {
-            QMessageBox::information(this,
-                m_tr->t("auth.change_password"),
-                m_tr->t("auth.change_success"));
+            QMessageBox::information(guard,
+                guard->m_tr->t("auth.change_password"),
+                guard->m_tr->t("auth.change_success"));
         } else {
-            const auto msg = data.value("message").toString(m_tr->t("auth.change_failed"));
-            QMessageBox::warning(this, m_tr->t("auth.change_password"), msg);
+            const auto msg = data.value("message").toString(guard->m_tr->t("auth.change_failed"));
+            QMessageBox::warning(guard, guard->m_tr->t("auth.change_password"), msg);
         }
     });
 }
 
 void MainWidget::on_logout()
 {
-    m_api->logout([this](bool /*success*/, const QJsonObject& /*data*/) {
-        emit logout_requested();
+    QPointer<MainWidget> guard(this);
+    m_api->logout([guard](bool /*success*/, const QJsonObject& /*data*/) {
+        if (!guard) return;
+        emit guard->logout_requested();
     });
 }

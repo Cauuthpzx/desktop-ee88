@@ -34,13 +34,18 @@ struct ReportPageWidgets {
     QPushButton* print_btn = nullptr;
     QTableWidget* table = nullptr;
 
-    // Pagination
+    // Pagination (giống customers_page)
     QWidget* pagination_bar = nullptr;
-    QPushButton* page_prev_btn = nullptr;
-    QPushButton* page_next_btn = nullptr;
-    QLabel* page_number = nullptr;
     QLabel* page_info = nullptr;
+    QPushButton* page_prev_btn = nullptr;
+    QWidget* page_btn_container = nullptr;
+    QHBoxLayout* page_btn_layout = nullptr;
+    QPushButton* page_next_btn = nullptr;
     QComboBox* page_size_combo = nullptr;
+    QPushButton* refresh_btn = nullptr;
+    QLabel* skip_label = nullptr;
+    QLineEdit* skip_input = nullptr;
+    QPushButton* skip_confirm = nullptr;
 
     // Summary (optional)
     QWidget* summary_section = nullptr;

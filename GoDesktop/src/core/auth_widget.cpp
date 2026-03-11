@@ -1,5 +1,5 @@
 #include "core/auth_widget.h"
-#include "core/auth_i18n.h"
+#include "core/translator.h"
 #include "core/api_client.h"
 
 #include <QHBoxLayout>
@@ -8,15 +8,17 @@
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QJsonObject>
+#include <QPointer>
 
 QString AuthWidget::t(const QString& key) const
 {
-    return AuthI18n::t(m_lang, key);
+    return m_tr->auth_t(m_lang, key);
 }
 
-AuthWidget::AuthWidget(ApiClient* api, QWidget* parent)
+AuthWidget::AuthWidget(ApiClient* api, Translator* tr, QWidget* parent)
     : QWidget(parent)
     , m_api(api)
+    , m_tr(tr)
     , m_dark(true)
     , m_lang("vi")
     , m_active_tab(0)
@@ -785,19 +787,21 @@ void AuthWidget::on_login_submit()
     m_login_submit->setEnabled(false);
     m_login_submit->setText(t("loading_login"));
 
-    m_api->login(username, password, [this](bool success, const QJsonObject& data) {
-        m_loading = false;
-        m_login_submit->setEnabled(true);
-        m_login_submit->setText(t("btn_login"));
+    QPointer<AuthWidget> guard(this);
+    m_api->login(username, password, [guard](bool success, const QJsonObject& data) {
+        if (!guard) return;
+        guard->m_loading = false;
+        guard->m_login_submit->setEnabled(true);
+        guard->m_login_submit->setText(guard->t("btn_login"));
 
         if (success && data.contains("token")) {
-            m_api->set_token(data["token"].toString());
+            guard->m_api->set_token(data["token"].toString());
             if (data.contains("user")) {
-                m_api->set_username(data["user"].toObject().value("username").toString());
+                guard->m_api->set_username(data["user"].toObject().value("username").toString());
             }
-            emit login_success();
+            emit guard->login_success();
         } else {
-            set_error(data.value("message").toString(t("err_login")));
+            guard->set_error(data.value("message").toString(guard->t("err_login")));
         }
     });
 }
@@ -831,19 +835,21 @@ void AuthWidget::on_register_submit()
     m_reg_submit->setEnabled(false);
     m_reg_submit->setText(t("loading_register"));
 
-    m_api->register_user(username, password, [this](bool success, const QJsonObject& data) {
-        m_loading = false;
-        m_reg_submit->setEnabled(true);
-        m_reg_submit->setText(t("btn_register"));
+    QPointer<AuthWidget> guard(this);
+    m_api->register_user(username, password, [guard](bool success, const QJsonObject& data) {
+        if (!guard) return;
+        guard->m_loading = false;
+        guard->m_reg_submit->setEnabled(true);
+        guard->m_reg_submit->setText(guard->t("btn_register"));
 
         if (success && data.contains("token")) {
-            m_api->set_token(data["token"].toString());
+            guard->m_api->set_token(data["token"].toString());
             if (data.contains("user")) {
-                m_api->set_username(data["user"].toObject().value("username").toString());
+                guard->m_api->set_username(data["user"].toObject().value("username").toString());
             }
-            emit login_success();
+            emit guard->login_success();
         } else {
-            set_error(data.value("message").toString(t("err_register")));
+            guard->set_error(data.value("message").toString(guard->t("err_register")));
         }
     });
 }

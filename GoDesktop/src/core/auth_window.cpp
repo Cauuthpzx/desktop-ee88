@@ -45,7 +45,7 @@ AuthWindow::AuthWindow(QWidget* parent)
     setCentralWidget(m_stack);
 
     // Auth page (unified login + register)
-    m_auth = new AuthWidget(m_api.get(), this);
+    m_auth = new AuthWidget(m_api.get(), m_tr, this);
     m_stack->addWidget(m_auth);
 
     // Main page (post-login)

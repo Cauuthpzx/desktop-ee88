@@ -1,4 +1,6 @@
 #include "core/settings_dialog.h"
+#include "core/add_agent_dialog.h"
+#include "core/cookies_dialog.h"
 #include "core/theme_manager.h"
 #include "core/translator.h"
 #include "core/icon_defs.h"
@@ -9,268 +11,12 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QHeaderView>
+#include <QFrame>
 #include <memory>
-
-// ════════════════════════════════════════
-// AddAgentDialog
-// ════════════════════════════════════════
-
-AddAgentDialog::AddAgentDialog(ThemeManager* theme, Translator* tr, QWidget* parent)
-    : QDialog(parent), m_theme(theme), m_tr(tr)
-{
-    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-    setFixedSize(420, 340);
-
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(24, 20, 24, 20);
-    root->setSpacing(14);
-
-    m_title_label = new QLabel(m_tr->t("settings.add_agent_title"));
-    m_title_label->setAlignment(Qt::AlignCenter);
-    m_title_label->setStyleSheet("font-size: 15px; font-weight: bold; border: none;");
-    root->addWidget(m_title_label);
-
-    auto make_row = [&](QLabel*& lbl, QLineEdit*& edit, const QString& label_text,
-                        const QString& placeholder, QLineEdit::EchoMode echo = QLineEdit::Normal) {
-        auto* row = new QHBoxLayout;
-        row->setSpacing(10);
-        lbl = new QLabel(label_text);
-        lbl->setFixedWidth(100);
-        lbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        lbl->setStyleSheet("font-size: 13px; border: none;");
-        edit = new QLineEdit;
-        edit->setPlaceholderText(placeholder);
-        edit->setFixedHeight(IconDefs::k_input_height);
-        edit->setEchoMode(echo);
-        row->addWidget(lbl);
-        row->addWidget(edit);
-        root->addLayout(row);
-    };
-
-    make_row(m_lbl_name, m_edit_name,
-             m_tr->t("settings.display_name_label"), m_tr->t("settings.display_name_placeholder"));
-    make_row(m_lbl_username, m_edit_username,
-             m_tr->t("settings.account_label"), m_tr->t("settings.account_placeholder"));
-    make_row(m_lbl_password, m_edit_password,
-             m_tr->t("settings.password_label"), m_tr->t("settings.password_placeholder"),
-             QLineEdit::Password);
-    make_row(m_lbl_base_url, m_edit_base_url,
-             m_tr->t("settings.url_label"), "https://...");
-
-    root->addStretch();
-
-    auto* btn_row = new QHBoxLayout;
-    btn_row->setSpacing(10);
-    m_btn_cancel = new QPushButton(m_tr->t("settings.cancel"));
-    m_btn_cancel->setFixedHeight(IconDefs::k_dialog_btn_height);
-    m_btn_cancel->setCursor(Qt::PointingHandCursor);
-    m_btn_add = new QPushButton(m_tr->t("settings.add_agent"));
-    m_btn_add->setFixedHeight(IconDefs::k_dialog_btn_height);
-    m_btn_add->setCursor(Qt::PointingHandCursor);
-    btn_row->addWidget(m_btn_cancel);
-    btn_row->addWidget(m_btn_add);
-    root->addLayout(btn_row);
-
-    connect(m_btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
-    connect(m_btn_add, &QPushButton::clicked, this, &QDialog::accept);
-
-    setWindowTitle(m_tr->t("settings.add_agent_title"));
-    apply_theme();
-}
-
-void AddAgentDialog::apply_theme()
-{
-    auto bg = m_theme->color("bg");
-    auto fg = m_theme->color("text_primary");
-    auto border = m_theme->color("border");
-    auto primary = m_theme->color("primary");
-    auto warm = m_theme->color("warm");
-    auto bg_hover = m_theme->color("bg_hover");
-
-    setStyleSheet(QString("QDialog { background: %1; }").arg(bg));
-    m_title_label->setStyleSheet(QString("font-size: 15px; font-weight: bold; color: %1; border: none;").arg(fg));
-
-    auto input_style = QString(
-        "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
-        "  padding: 4px 8px; font-size: 13px; }"
-        "QLineEdit:focus { border-color: %4; }"
-    ).arg(bg, fg, border, primary);
-
-    m_edit_name->setStyleSheet(input_style);
-    m_edit_username->setStyleSheet(input_style);
-    m_edit_password->setStyleSheet(input_style);
-    m_edit_base_url->setStyleSheet(input_style);
-
-    for (auto* lbl : {m_lbl_name, m_lbl_username, m_lbl_password, m_lbl_base_url})
-        lbl->setStyleSheet(QString("font-size: 13px; color: %1; border: none;").arg(fg));
-
-    m_btn_cancel->setStyleSheet(QString(
-        "QPushButton { background: transparent; color: %1; border: 1px solid %2;"
-        "  padding: 0 16px; font-size: 13px; }"
-        "QPushButton:hover { background: %3; }"
-    ).arg(warm, warm, bg_hover));
-
-    m_btn_add->setStyleSheet(QString(
-        "QPushButton { background: %1; color: #fff; border: none;"
-        "  padding: 0 16px; font-size: 13px; }"
-        "QPushButton:hover { opacity: 0.9; }"
-    ).arg(primary));
-}
-
-void AddAgentDialog::retranslate()
-{
-    setWindowTitle(m_tr->t("settings.add_agent_title"));
-    m_title_label->setText(m_tr->t("settings.add_agent_title"));
-    m_lbl_name->setText(m_tr->t("settings.display_name_label"));
-    m_lbl_username->setText(m_tr->t("settings.account_label"));
-    m_lbl_password->setText(m_tr->t("settings.password_label"));
-    m_lbl_base_url->setText(m_tr->t("settings.url_label"));
-    m_edit_name->setPlaceholderText(m_tr->t("settings.display_name_placeholder"));
-    m_edit_username->setPlaceholderText(m_tr->t("settings.account_placeholder"));
-    m_edit_password->setPlaceholderText(m_tr->t("settings.password_placeholder"));
-    m_btn_cancel->setText(m_tr->t("settings.cancel"));
-    m_btn_add->setText(m_tr->t("settings.add_agent"));
-}
-
-void AddAgentDialog::set_edit_mode(const QString& name, const QString& username, const QString& base_url)
-{
-    m_title_label->setText(m_tr->t("settings.edit_agent_title"));
-    setWindowTitle(m_tr->t("settings.edit_agent_title"));
-    m_btn_add->setText(m_tr->t("settings.update"));
-    m_edit_name->setText(name);
-    m_edit_username->setText(username);
-    m_edit_username->setReadOnly(true);
-    m_edit_base_url->setText(base_url);
-}
-
-QString AddAgentDialog::agent_name() const { return m_edit_name->text(); }
-QString AddAgentDialog::agent_username() const { return m_edit_username->text(); }
-QString AddAgentDialog::agent_password() const { return m_edit_password->text(); }
-QString AddAgentDialog::agent_base_url() const { return m_edit_base_url->text(); }
-
-// ════════════════════════════════════════
-// CookiesDialog
-// ════════════════════════════════════════
-
-CookiesDialog::CookiesDialog(ThemeManager* theme, Translator* tr, QWidget* parent)
-    : QDialog(parent), m_theme(theme), m_tr(tr)
-{
-    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-    setFixedSize(500, 320);
-
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(24, 20, 24, 20);
-    root->setSpacing(14);
-
-    m_title_label = new QLabel(m_tr->t("settings.assign_cookies_title"));
-    m_title_label->setAlignment(Qt::AlignCenter);
-    m_title_label->setStyleSheet("font-size: 15px; font-weight: bold; border: none;");
-    root->addWidget(m_title_label);
-
-    auto* agent_row = new QHBoxLayout;
-    agent_row->setSpacing(10);
-    m_lbl_agent = new QLabel(m_tr->t("settings.agent_label"));
-    m_lbl_agent->setFixedWidth(80);
-    m_lbl_agent->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_lbl_agent->setStyleSheet("font-size: 13px; border: none;");
-    m_edit_agent = new QLineEdit;
-    m_edit_agent->setReadOnly(true);
-    m_edit_agent->setFixedHeight(IconDefs::k_input_height);
-    agent_row->addWidget(m_lbl_agent);
-    agent_row->addWidget(m_edit_agent);
-    root->addLayout(agent_row);
-
-    auto* cookies_row = new QHBoxLayout;
-    cookies_row->setSpacing(10);
-    cookies_row->setAlignment(Qt::AlignTop);
-    m_lbl_cookies = new QLabel("COOKIES :");
-    m_lbl_cookies->setFixedWidth(80);
-    m_lbl_cookies->setAlignment(Qt::AlignRight | Qt::AlignTop);
-    m_lbl_cookies->setStyleSheet("font-size: 13px; border: none; padding-top: 6px;");
-    m_edit_cookies = new QTextEdit;
-    m_edit_cookies->setFixedHeight(120);
-    m_edit_cookies->setPlaceholderText(m_tr->t("settings.cookies_placeholder"));
-    cookies_row->addWidget(m_lbl_cookies);
-    cookies_row->addWidget(m_edit_cookies);
-    root->addLayout(cookies_row);
-
-    root->addStretch();
-
-    auto* btn_row = new QHBoxLayout;
-    btn_row->setSpacing(10);
-    m_btn_cancel = new QPushButton(m_tr->t("settings.cancel"));
-    m_btn_cancel->setFixedHeight(IconDefs::k_dialog_btn_height);
-    m_btn_cancel->setCursor(Qt::PointingHandCursor);
-    m_btn_save = new QPushButton(m_tr->t("settings.save"));
-    m_btn_save->setFixedHeight(IconDefs::k_dialog_btn_height);
-    m_btn_save->setCursor(Qt::PointingHandCursor);
-    btn_row->addWidget(m_btn_cancel);
-    btn_row->addWidget(m_btn_save);
-    root->addLayout(btn_row);
-
-    connect(m_btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
-    connect(m_btn_save, &QPushButton::clicked, this, &QDialog::accept);
-
-    setWindowTitle(m_tr->t("settings.assign_cookies_title"));
-    apply_theme();
-}
-
-void CookiesDialog::apply_theme()
-{
-    auto bg = m_theme->color("bg");
-    auto fg = m_theme->color("text_primary");
-    auto border = m_theme->color("border");
-    auto primary = m_theme->color("primary");
-    auto warm = m_theme->color("warm");
-    auto bg_hover = m_theme->color("bg_hover");
-
-    setStyleSheet(QString("QDialog { background: %1; }").arg(bg));
-    m_title_label->setStyleSheet(QString("font-size: 15px; font-weight: bold; color: %1; border: none;").arg(fg));
-
-    auto input_style = QString(
-        "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
-        "  padding: 4px 8px; font-size: 13px; }"
-    ).arg(bg, fg, border);
-    m_edit_agent->setStyleSheet(input_style);
-
-    m_edit_cookies->setStyleSheet(QString(
-        "QTextEdit { background: %1; color: %2; border: 1px solid %3;"
-        "  padding: 4px 8px; font-size: 13px; }"
-        "QTextEdit:focus { border-color: %4; }"
-    ).arg(bg, fg, border, primary));
-
-    for (auto* lbl : {m_lbl_agent, m_lbl_cookies})
-        lbl->setStyleSheet(QString("font-size: 13px; color: %1; border: none;").arg(fg));
-
-    m_btn_cancel->setStyleSheet(QString(
-        "QPushButton { background: transparent; color: %1; border: 1px solid %2;"
-        "  padding: 0 16px; font-size: 13px; }"
-        "QPushButton:hover { background: %3; }"
-    ).arg(warm, warm, bg_hover));
-
-    m_btn_save->setStyleSheet(QString(
-        "QPushButton { background: %1; color: #fff; border: none;"
-        "  padding: 0 16px; font-size: 13px; }"
-        "QPushButton:hover { opacity: 0.9; }"
-    ).arg(primary));
-}
-
-void CookiesDialog::retranslate()
-{
-    setWindowTitle(m_tr->t("settings.assign_cookies_title"));
-    m_title_label->setText(m_tr->t("settings.assign_cookies_title"));
-    m_lbl_agent->setText(m_tr->t("settings.agent_label"));
-    m_edit_cookies->setPlaceholderText(m_tr->t("settings.cookies_placeholder"));
-    m_btn_cancel->setText(m_tr->t("settings.cancel"));
-    m_btn_save->setText(m_tr->t("settings.save"));
-}
-
-void CookiesDialog::set_agent(const QString& name, const QString& username)
-{
-    m_edit_agent->setText(name + " (" + username + ")");
-}
-
-QString CookiesDialog::cookies_value() const { return m_edit_cookies->toPlainText(); }
+#include <QPointer>
 
 // ════════════════════════════════════════
 // SettingsDialog
@@ -376,12 +122,14 @@ void SettingsDialog::setup_ui()
 
 void SettingsDialog::load_agents()
 {
-    m_api->get("/api/agents", [this](const ApiError& err, const QJsonObject& data) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->get("/api/agents", [guard](const ApiError& err, const QJsonObject& data) {
+        if (!guard) return;
         if (!err.is_ok()) {
-            m_feedback->msg_error(err.message);
+            guard->m_feedback->msg_error(err.message);
             return;
         }
-        m_agents.clear();
+        guard->m_agents.clear();
         const auto arr = data["agents"].toArray();
         for (const auto& v : arr) {
             auto obj = v.toObject();
@@ -396,9 +144,9 @@ void SettingsDialog::load_agents()
             info.created_at = dt.isValid()
                 ? dt.toString("yyyy-MM-dd hh:mm:ss")
                 : obj["created_at"].toString();
-            m_agents.append(info);
+            guard->m_agents.append(info);
         }
-        refresh_table();
+        guard->refresh_table();
     });
 }
 
@@ -596,14 +344,16 @@ void SettingsDialog::on_add_agent()
     body["ext_password"] = dlg.agent_password();
     body["base_url"] = dlg.agent_base_url().trimmed();
 
-    m_api->post("/api/agents", body, [this, loading](const ApiError& err, const QJsonObject&) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->post("/api/agents", body, [guard, loading](const ApiError& err, const QJsonObject&) {
+        if (!guard) return;
         Feedback::close_loading(loading);
         if (!err.is_ok()) {
-            m_feedback->msg_error(err.message);
+            guard->m_feedback->msg_error(err.message);
             return;
         }
-        m_feedback->msg_success(m_tr->t("settings.msg_agent_added"));
-        load_agents();
+        guard->m_feedback->msg_success(guard->m_tr->t("settings.msg_agent_added"));
+        guard->load_agents();
     });
 }
 
@@ -615,10 +365,12 @@ void SettingsDialog::on_check_all()
     }
     auto* loading = m_feedback->show_loading(m_tr->t("settings.msg_checking_all"));
 
-    m_api->get("/api/agents/cookie-health", [this, loading](const ApiError& err, const QJsonObject& data) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->get("/api/agents/cookie-health", [guard, loading](const ApiError& err, const QJsonObject& data) {
+        if (!guard) return;
         Feedback::close_loading(loading);
         if (!err.is_ok()) {
-            m_feedback->msg_error(m_tr->t("settings.msg_check_failed"));
+            guard->m_feedback->msg_error(guard->m_tr->t("settings.msg_check_failed"));
             return;
         }
         int alive = 0, dead = 0;
@@ -628,17 +380,17 @@ void SettingsDialog::on_check_all()
             auto id = static_cast<int64_t>(obj["id"].toDouble());
             bool is_alive = obj["alive"].toBool();
             is_alive ? alive++ : dead++;
-            for (auto& a : m_agents) {
+            for (auto& a : guard->m_agents) {
                 if (a.id == id) {
                     a.status = is_alive ? "active" : "offline";
                     break;
                 }
             }
         }
-        refresh_table();
+        guard->refresh_table();
         auto msg = QString::fromUtf8("Kiểm tra xong: %1 online, %2 offline")
                        .arg(alive).arg(dead);
-        alive > 0 ? m_feedback->msg_success(msg) : m_feedback->msg_error(msg);
+        alive > 0 ? guard->m_feedback->msg_success(msg) : guard->m_feedback->msg_error(msg);
     });
 }
 
@@ -650,19 +402,21 @@ void SettingsDialog::on_login_all()
     }
     auto* loading = m_feedback->show_loading(m_tr->t("settings.msg_logging_in_all"));
 
+    QPointer<SettingsDialog> guard(this);
     m_api->post("/api/ee88-auth/login-all", QJsonObject{},
-        [this, loading](const ApiError& err, const QJsonObject& data) {
+        [guard, loading](const ApiError& err, const QJsonObject& data) {
+            if (!guard) return;
             Feedback::close_loading(loading);
             if (!err.is_ok()) {
-                m_feedback->msg_error(m_tr->t("settings.msg_login_all_failed"));
+                guard->m_feedback->msg_error(guard->m_tr->t("settings.msg_login_all_failed"));
                 return;
             }
             int success = data["success"].toInt();
             int failed = data["failed"].toInt();
-            load_agents();
+            guard->load_agents();
             auto msg = QString::fromUtf8("Đăng nhập xong: %1 thành công, %2 thất bại")
                            .arg(success).arg(failed);
-            failed > 0 ? m_feedback->msg_error(msg) : m_feedback->msg_success(msg);
+            failed > 0 ? guard->m_feedback->msg_error(msg) : guard->m_feedback->msg_success(msg);
         });
 }
 
@@ -681,20 +435,22 @@ void SettingsDialog::on_delete_all()
     auto* loading = m_feedback->show_loading();
     auto remaining = std::make_shared<int>(m_agents.size());
     auto had_error = std::make_shared<bool>(false);
+    QPointer<SettingsDialog> guard(this);
 
     for (const auto& agent : m_agents) {
         auto path = QString("/api/agents/%1?mode=destroy").arg(agent.id);
-        m_api->del(path, [this, loading, remaining, had_error](const ApiError& err, const QJsonObject&) {
+        m_api->del(path, [guard, loading, remaining, had_error](const ApiError& err, const QJsonObject&) {
+            if (!guard) return;
             if (!err.is_ok()) *had_error = true;
             (*remaining)--;
             if (*remaining <= 0) {
                 Feedback::close_loading(loading);
                 if (*had_error) {
-                    m_feedback->msg_error(m_tr->t("settings.msg_delete_failed"));
+                    guard->m_feedback->msg_error(guard->m_tr->t("settings.msg_delete_failed"));
                 } else {
-                    m_feedback->msg_success(m_tr->t("settings.msg_all_deleted"));
+                    guard->m_feedback->msg_success(guard->m_tr->t("settings.msg_all_deleted"));
                 }
-                load_agents();
+                guard->load_agents();
             }
         });
     }
@@ -719,14 +475,16 @@ void SettingsDialog::on_edit_agent(int row)
         body["base_url"] = dlg.agent_base_url().trimmed();
 
     auto path = QString("/api/agents/%1").arg(agent.id);
-    m_api->patch(path, body, [this, loading](const ApiError& err, const QJsonObject&) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->patch(path, body, [guard, loading](const ApiError& err, const QJsonObject&) {
+        if (!guard) return;
         Feedback::close_loading(loading);
         if (!err.is_ok()) {
-            m_feedback->msg_error(err.message);
+            guard->m_feedback->msg_error(err.message);
             return;
         }
-        m_feedback->msg_success(m_tr->t("settings.msg_agent_updated"));
-        load_agents();
+        guard->m_feedback->msg_success(guard->m_tr->t("settings.msg_agent_updated"));
+        guard->load_agents();
     });
 }
 
@@ -743,14 +501,16 @@ void SettingsDialog::on_delete_agent(int row)
 
     auto* loading = m_feedback->show_loading();
     auto path = QString("/api/agents/%1?mode=destroy").arg(agent.id);
-    m_api->del(path, [this, loading](const ApiError& err, const QJsonObject&) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->del(path, [guard, loading](const ApiError& err, const QJsonObject&) {
+        if (!guard) return;
         Feedback::close_loading(loading);
         if (!err.is_ok()) {
-            m_feedback->msg_error(m_tr->t("settings.msg_delete_failed"));
+            guard->m_feedback->msg_error(guard->m_tr->t("settings.msg_delete_failed"));
             return;
         }
-        m_feedback->msg_success(m_tr->t("settings.msg_agent_deleted"));
-        load_agents();
+        guard->m_feedback->msg_success(guard->m_tr->t("settings.msg_agent_deleted"));
+        guard->load_agents();
     });
 }
 
@@ -763,22 +523,24 @@ void SettingsDialog::on_check_agent(int row)
         m_tr->t("settings.msg_checking").replace("%s", agent.name));
 
     auto path = QString("/api/ee88-auth/%1/check").arg(agent.id);
-    m_api->post(path, QJsonObject{}, [this, loading, row](const ApiError& err, const QJsonObject& data) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->post(path, QJsonObject{}, [guard, loading, row](const ApiError& err, const QJsonObject& data) {
+        if (!guard) return;
         Feedback::close_loading(loading);
-        if (row >= m_agents.size()) return;
+        if (row >= guard->m_agents.size()) return;
 
         if (!err.is_ok()) {
-            m_feedback->msg_error(m_agents[row].name + ": " + m_tr->t("settings.msg_check_failed"));
+            guard->m_feedback->msg_error(guard->m_agents[row].name + ": " + guard->m_tr->t("settings.msg_check_failed"));
             return;
         }
         bool valid = data["valid"].toBool();
-        m_agents[row].status = valid ? "active" : "offline";
-        refresh_table();
+        guard->m_agents[row].status = valid ? "active" : "offline";
+        guard->refresh_table();
 
-        auto msg = m_agents[row].name + ": " +
+        auto msg = guard->m_agents[row].name + ": " +
             (valid ? QString::fromUtf8("Session còn hoạt động")
                    : QString::fromUtf8("Session hết hạn"));
-        valid ? m_feedback->msg_success(msg) : m_feedback->msg_error(msg);
+        valid ? guard->m_feedback->msg_success(msg) : guard->m_feedback->msg_error(msg);
     });
 }
 
@@ -792,25 +554,27 @@ void SettingsDialog::on_login_agent(int row)
         m_tr->t("settings.msg_logging_in").replace("%s", m_agents[row].name));
 
     auto path = QString("/api/ee88-auth/%1/login").arg(m_agents[row].id);
-    m_api->post(path, QJsonObject{}, [this, loading, row](const ApiError& err, const QJsonObject& data) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->post(path, QJsonObject{}, [guard, loading, row](const ApiError& err, const QJsonObject& data) {
+        if (!guard) return;
         Feedback::close_loading(loading);
-        if (row >= m_agents.size()) return;
+        if (row >= guard->m_agents.size()) return;
 
         if (!err.is_ok()) {
-            m_agents[row].status = "error";
-            refresh_table();
-            m_feedback->msg_error(m_agents[row].name + ": " + err.message);
+            guard->m_agents[row].status = "error";
+            guard->refresh_table();
+            guard->m_feedback->msg_error(guard->m_agents[row].name + ": " + err.message);
             return;
         }
         bool success = data["success"].toBool();
-        m_agents[row].status = success ? "active" : "error";
-        refresh_table();
+        guard->m_agents[row].status = success ? "active" : "error";
+        guard->refresh_table();
 
         if (success) {
-            m_feedback->msg_success(m_agents[row].name + QString::fromUtf8(": Đăng nhập thành công"));
+            guard->m_feedback->msg_success(guard->m_agents[row].name + QString::fromUtf8(": Đăng nhập thành công"));
         } else {
             auto err_msg = data["error_message"].toString();
-            m_feedback->msg_error(m_agents[row].name + ": " +
+            guard->m_feedback->msg_error(guard->m_agents[row].name + ": " +
                 (err_msg.isEmpty() ? QString::fromUtf8("Đăng nhập thất bại") : err_msg));
         }
     });
@@ -835,14 +599,16 @@ void SettingsDialog::on_assign_cookies(int row)
     body["cookie"] = dlg.cookies_value().trimmed();
 
     auto path = QString("/api/ee88-auth/%1/cookie").arg(agent.id);
-    m_api->patch(path, body, [this, loading](const ApiError& err, const QJsonObject&) {
+    QPointer<SettingsDialog> guard(this);
+    m_api->patch(path, body, [guard, loading](const ApiError& err, const QJsonObject&) {
+        if (!guard) return;
         Feedback::close_loading(loading);
         if (!err.is_ok()) {
-            m_feedback->msg_error(m_tr->t("settings.msg_cookies_failed"));
+            guard->m_feedback->msg_error(guard->m_tr->t("settings.msg_cookies_failed"));
             return;
         }
-        m_feedback->msg_success(m_tr->t("settings.msg_cookies_saved"));
-        load_agents();
+        guard->m_feedback->msg_success(guard->m_tr->t("settings.msg_cookies_saved"));
+        guard->load_agents();
     });
 }
 
@@ -855,17 +621,19 @@ void SettingsDialog::on_toggle_auto_login(int row)
     body["auto_login"] = agent.auto_login;
 
     auto path = QString("/api/agents/%1").arg(agent.id);
-    m_api->patch(path, body, [this, row](const ApiError& err, const QJsonObject&) {
-        if (row >= m_agents.size()) return;
+    QPointer<SettingsDialog> guard(this);
+    m_api->patch(path, body, [guard, row](const ApiError& err, const QJsonObject&) {
+        if (!guard) return;
+        if (row >= guard->m_agents.size()) return;
         if (!err.is_ok()) {
-            m_agents[row].auto_login = !m_agents[row].auto_login;
-            refresh_table();
-            m_feedback->msg_error(m_tr->t("settings.msg_update_failed"));
+            guard->m_agents[row].auto_login = !guard->m_agents[row].auto_login;
+            guard->refresh_table();
+            guard->m_feedback->msg_error(guard->m_tr->t("settings.msg_update_failed"));
             return;
         }
-        auto msg = m_agents[row].auto_login
-            ? m_tr->t("settings.msg_auto_login_on")
-            : m_tr->t("settings.msg_auto_login_off");
-        m_feedback->msg_success(msg.replace("%s", m_agents[row].name));
+        auto msg = guard->m_agents[row].auto_login
+            ? guard->m_tr->t("settings.msg_auto_login_on")
+            : guard->m_tr->t("settings.msg_auto_login_off");
+        guard->m_feedback->msg_success(msg.replace("%s", guard->m_agents[row].name));
     });
 }

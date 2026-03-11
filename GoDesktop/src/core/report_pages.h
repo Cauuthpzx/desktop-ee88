@@ -4,18 +4,24 @@
 #include <QComboBox>
 #include <QLineEdit>
 
+#include <array>
+#include <functional>
+
 #include "core/report_page_builder.h"
 
 class ApiClient;
 class DateRangePicker;
 class ThemeManager;
 class Translator;
+class UpstreamClient;
 
 class ReportPages : public QObject {
     Q_OBJECT
 
 public:
-    explicit ReportPages(ApiClient* api, ThemeManager* theme, Translator* tr, QObject* parent = nullptr);
+    static constexpr int k_page_count = 7;
+
+    explicit ReportPages(ApiClient* api, UpstreamClient* upstream, ThemeManager* theme, Translator* tr, QObject* parent = nullptr);
 
     QWidget* create_lottery_report_page();
     QWidget* create_transaction_log_page();
@@ -50,6 +56,10 @@ private:
     // Pagination helpers
     void update_pagination(ReportPageWidgets& w, int current_page,
                            int page_size, int total);
+    void rebuild_page_buttons(ReportPageWidgets& w, int current_page,
+                              int max_page,
+                              std::function<void()> fetch_fn = nullptr);
+    int page_index_of(const ReportPageWidgets& w) const;
     void connect_pagination(ReportPageWidgets& w, int& current_page,
                             int& page_size, int& total,
                             std::function<void()> fetch_fn);
@@ -62,6 +72,7 @@ private:
     void apply_quick_date(int picker_index, int combo_index);
 
     ApiClient* m_api;
+    UpstreamClient* m_upstream;
     ThemeManager* m_theme;
     Translator* m_tr;
 
@@ -73,8 +84,8 @@ private:
     ReportPageWidgets m_withdrawal_history;
     ReportPageWidgets m_deposit_history;
 
-    DateRangePicker* m_date_pickers[7] = {};
-    QComboBox* m_quick_date_combos[7] = {};
+    std::array<DateRangePicker*, k_page_count> m_date_pickers = {};
+    std::array<QComboBox*, k_page_count> m_quick_date_combos = {};
 
     // Search field references (để đọc giá trị khi fetch)
     // Lottery Report
@@ -117,5 +128,7 @@ private:
         int total = 0;
         bool loaded = false;
     };
-    PageState m_page_state[7];
+    std::array<PageState, k_page_count> m_page_state = {};
+
+    std::array<std::function<void()>, k_page_count> m_fetch_fns = {};
 };

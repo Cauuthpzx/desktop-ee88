@@ -7,12 +7,13 @@
 #include <QStackedWidget>
 
 class ApiClient;
+class Translator;
 
 class AuthWidget : public QWidget {
     Q_OBJECT
 
 public:
-    explicit AuthWidget(ApiClient* api, QWidget* parent = nullptr);
+    explicit AuthWidget(ApiClient* api, Translator* tr, QWidget* parent = nullptr);
     void show_login_tab();
     void show_register_tab();
 
@@ -34,6 +35,7 @@ private:
     QString t(const QString& key) const;
 
     ApiClient* m_api;
+    Translator* m_tr;
     bool m_dark;
     QString m_lang;
     int m_active_tab; // 0=login, 1=register
