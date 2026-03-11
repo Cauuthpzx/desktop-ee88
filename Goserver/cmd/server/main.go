@@ -94,6 +94,10 @@ func main() {
 	customerService := service.NewCustomerService()
 	customerHandler := handler.NewCustomerHandler(customerService)
 
+	// Layers — Generic proxy (bets, reports, deposit/withdrawal)
+	proxyService := service.NewProxyService()
+	proxyHandler := handler.NewProxyHandler(proxyService)
+
 	// Router
 	mux := http.NewServeMux()
 
@@ -143,6 +147,15 @@ func main() {
 
 	// Customer upstream proxy (protected)
 	mux.Handle("GET /api/customers", authMw(http.HandlerFunc(customerHandler.ListCustomers)))
+
+	// Proxy upstream routes (protected)
+	mux.Handle("GET /api/proxy/lottery-bets", authMw(http.HandlerFunc(proxyHandler.LotteryBets)))
+	mux.Handle("GET /api/proxy/provider-bets", authMw(http.HandlerFunc(proxyHandler.ProviderBets)))
+	mux.Handle("GET /api/proxy/lottery-report", authMw(http.HandlerFunc(proxyHandler.LotteryReport)))
+	mux.Handle("GET /api/proxy/provider-report", authMw(http.HandlerFunc(proxyHandler.ProviderReport)))
+	mux.Handle("GET /api/proxy/transaction-log", authMw(http.HandlerFunc(proxyHandler.TransactionLog)))
+	mux.Handle("GET /api/proxy/deposit-history", authMw(http.HandlerFunc(proxyHandler.DepositHistory)))
+	mux.Handle("GET /api/proxy/withdrawal-history", authMw(http.HandlerFunc(proxyHandler.WithdrawalHistory)))
 
 	// Scheduler — health check + auto-login
 	scheduler := service.NewScheduler(loginService, agentRepo)

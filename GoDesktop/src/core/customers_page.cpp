@@ -259,7 +259,10 @@ void CustomersPage::setup_ui()
     m_table->setShowGrid(true);
     m_table->horizontalHeader()->setHighlightSections(false);
 
-    tg_layout->addWidget(m_table, 1);
+    m_table->setFrameShape(QFrame::NoFrame);
+    m_table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    m_table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    tg_layout->addWidget(m_table, 0);
 
     // ── Pagination — layout: count | prev | page | next | limits | refresh | skip ──
     m_pagination_bar = new QWidget;
@@ -276,9 +279,12 @@ void CustomersPage::setup_ui()
     pg_layout->addSpacing(8);
 
     // [prev]
-    m_page_prev_btn = new QPushButton("<");
+    m_page_prev_btn = new QPushButton;
+    m_page_prev_btn->setIcon(QIcon(":/icons/chevron_left"));
+    m_page_prev_btn->setIconSize(QSize(14, 14));
     m_page_prev_btn->setObjectName("pageBtn");
     m_page_prev_btn->setFixedSize(30, 28);
+    m_page_prev_btn->setCursor(Qt::PointingHandCursor);
     m_page_prev_btn->setEnabled(false);
     pg_layout->addWidget(m_page_prev_btn);
 
@@ -291,9 +297,12 @@ void CustomersPage::setup_ui()
     pg_layout->addWidget(m_page_btn_container);
 
     // [next]
-    m_page_next_btn = new QPushButton(">");
+    m_page_next_btn = new QPushButton;
+    m_page_next_btn->setIcon(QIcon(":/icons/chevron_right"));
+    m_page_next_btn->setIconSize(QSize(14, 14));
     m_page_next_btn->setObjectName("pageBtn");
     m_page_next_btn->setFixedSize(30, 28);
+    m_page_next_btn->setCursor(Qt::PointingHandCursor);
     m_page_next_btn->setEnabled(false);
     pg_layout->addWidget(m_page_next_btn);
 
@@ -338,8 +347,10 @@ void CustomersPage::setup_ui()
     pg_layout->addWidget(m_skip_input);
 
     m_skip_confirm = new QPushButton(m_tr->t("common.confirm"));
-    m_skip_confirm->setObjectName("pageBtn");
+    m_skip_confirm->setObjectName("skipConfirmBtn");
     m_skip_confirm->setFixedHeight(28);
+    m_skip_confirm->setMinimumWidth(60);
+    m_skip_confirm->setCursor(Qt::PointingHandCursor);
     pg_layout->addWidget(m_skip_confirm);
 
     pg_layout->addStretch();
@@ -384,7 +395,8 @@ void CustomersPage::setup_ui()
 
     connect(m_skip_input, &QLineEdit::returnPressed, m_skip_confirm, &QPushButton::click);
 
-    card_layout->addWidget(table_group, 1);
+    card_layout->addWidget(table_group, 0);
+    card_layout->addStretch();
     page_layout->addWidget(m_card, 1);
 }
 
@@ -480,6 +492,13 @@ void CustomersPage::populate_table(const QJsonArray& data, int total)
         m_table->setRowHeight(row, 38);
     }
 
+    // Resize table to fit rows
+    int table_height = m_table->horizontalHeader()->height();
+    for (int r = 0; r < m_table->rowCount(); ++r)
+        table_height += m_table->rowHeight(r);
+    table_height += 1; // border-top only
+    m_table->setFixedHeight(table_height);
+
     // Update pagination UI
     int max_page = (m_total + m_page_size - 1) / m_page_size;
     if (max_page < 1) max_page = 1;
@@ -508,7 +527,9 @@ void CustomersPage::rebuild_page_buttons(int max_page)
     auto add_page_btn = [this](int page, bool active) {
         auto* btn = new QPushButton(QString::number(page));
         btn->setObjectName(active ? "pageNumberActive" : "pageBtn");
-        btn->setFixedSize(30, 28);
+        int digits = QString::number(page).length();
+        int width = (digits <= 1) ? 30 : (digits == 2) ? 35 : (digits == 3) ? 40 : 45;
+        btn->setFixedSize(width, 28);
         btn->setCursor(Qt::PointingHandCursor);
         if (!active) {
             connect(btn, &QPushButton::clicked, this, [this, page]() {
@@ -642,7 +663,10 @@ void CustomersPage::apply_theme()
 
     // Table toolbar
     m_table_toolbar->setStyleSheet(QString(
-        "QWidget#tableToolbar { background: %1; border: 1px solid %2; border-bottom: none; }"
+        "QWidget#tableToolbar { background: %1;"
+        "  border-top: 1px solid %2; border-left: 1px solid %2;"
+        "  border-right: 1px solid %2; border-bottom: none;"
+        "  padding-right: 2px; }"
     ).arg(bg2, border));
 
     auto tb_btn_style = QString(
@@ -663,14 +687,16 @@ void CustomersPage::apply_theme()
 
     // Table
     m_table->setStyleSheet(QString(
-        "QTableWidget { background: %1; color: %2; border: 1px solid %3;"
+        "QTableWidget { background: %1; color: %2;"
+        "  border-left: 1px solid %3; border-right: none;"
+        "  border-top: 1px solid %3; border-bottom: none;"
         "  gridline-color: %3; font-size: 13px; }"
-        "QTableWidget::item { padding: 4px 8px; border: none; }"
+        "QTableWidget::item { padding: 4px 8px; }"
         "QTableWidget::item:selected { background: %4; color: %2; }"
         "QHeaderView::section { background: %5; color: %2; border: none;"
         "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
         "  padding: 6px 8px; font-size: 13px; font-weight: 600; }"
-        "QHeaderView::section:last { border-right: none; }"
+        "QHeaderView::section:last { border-right: 1px solid %3; }"
     ).arg(bg, text1, border, bg_hover, bg2));
 
     for (int r = 0; r < m_table->rowCount(); ++r) {
@@ -685,7 +711,9 @@ void CustomersPage::apply_theme()
 
     // Pagination
     m_pagination_bar->setStyleSheet(QString(
-        "QWidget#paginationBar { background: %1; border: 1px solid %2; border-top: none; }"
+        "QWidget#paginationBar { background: %1;"
+        "  border-top: none; border-left: 1px solid %2;"
+        "  border-right: 1px solid %2; border-bottom: 1px solid %2; }"
     ).arg(bg, border));
 
     auto page_btn_style = QString(
@@ -697,7 +725,13 @@ void CustomersPage::apply_theme()
     m_page_prev_btn->setStyleSheet(page_btn_style);
     m_page_next_btn->setStyleSheet(page_btn_style);
     m_refresh_btn->setStyleSheet(page_btn_style);
-    m_skip_confirm->setStyleSheet(page_btn_style);
+
+    auto skip_confirm_style = QString(
+        "QPushButton#skipConfirmBtn { background: %1; color: #fff; border: 1px solid %1;"
+        "  font-size: 13px; padding: 0 8px; }"
+        "QPushButton#skipConfirmBtn:hover { background: #0d8a7e; }"
+    ).arg(primary);
+    m_skip_confirm->setStyleSheet(skip_confirm_style);
 
     // Active page button
     auto active_page_style = QString(

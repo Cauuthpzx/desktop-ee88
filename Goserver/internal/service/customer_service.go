@@ -110,6 +110,7 @@ func (s *CustomerService) ListCustomers(ctx context.Context, params *model.Custo
 // fetchFromAgent gọi upstream /agent/user.html cho 1 agent.
 func (s *CustomerService) fetchFromAgent(ctx context.Context, agent ActiveAgentInfo, params *model.CustomerListParams) ([]model.UpstreamUser, error) {
 	upstreamParams := map[string]string{
+		"es":        "1",
 		"page":      "1",
 		"limit":     "9999",
 		"username":  params.Username,

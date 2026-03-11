@@ -1,4 +1,5 @@
 #include "core/report_pages.h"
+#include "core/api_client.h"
 #include "core/date_range_picker.h"
 #include "core/flow_layout.h"
 #include "core/theme_manager.h"
@@ -7,6 +8,10 @@
 #include "core/icon_defs.h"
 
 #include <QLineEdit>
+#include <QUrlQuery>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QDate>
 
 static QPushButton* make_search_button(const QString& icon_path, const QString& text, const QString& obj_name)
 {
@@ -33,12 +38,206 @@ static QComboBox* make_quick_date_combo(Translator* tr, bool only_today_yesterda
     return combo;
 }
 
-ReportPages::ReportPages(ThemeManager* theme, Translator* tr, QObject* parent)
+ReportPages::ReportPages(ApiClient* api, ThemeManager* theme, Translator* tr, QObject* parent)
     : QObject(parent)
+    , m_api(api)
     , m_theme(theme)
     , m_tr(tr)
 {
 }
+
+// ─── Helper: get date strings from picker ───
+
+QString ReportPages::get_start_date(int picker_index) const
+{
+    if (!m_date_pickers[picker_index]) return {};
+    auto d = m_date_pickers[picker_index]->start_date();
+    return d.isValid() ? d.toString("yyyy-MM-dd") : QString();
+}
+
+QString ReportPages::get_end_date(int picker_index) const
+{
+    if (!m_date_pickers[picker_index]) return {};
+    auto d = m_date_pickers[picker_index]->end_date();
+    return d.isValid() ? d.toString("yyyy-MM-dd") : QString();
+}
+
+void ReportPages::apply_quick_date(int picker_index, int combo_index)
+{
+    if (!m_quick_date_combos[combo_index] || !m_date_pickers[picker_index]) return;
+
+    connect(m_quick_date_combos[combo_index], QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this, picker_index, combo_index](int) {
+        auto key = m_quick_date_combos[combo_index]->currentData().toString();
+        QDate start, end;
+        auto today = QDate::currentDate();
+        if (key == "today") {
+            start = end = today;
+        } else if (key == "yesterday") {
+            start = end = today.addDays(-1);
+        } else if (key == "thisWeek") {
+            start = today.addDays(-(today.dayOfWeek() - 1));
+            end = today;
+        } else if (key == "thisMonth") {
+            start = QDate(today.year(), today.month(), 1);
+            end = today;
+        } else if (key == "lastMonth") {
+            auto last = today.addMonths(-1);
+            start = QDate(last.year(), last.month(), 1);
+            end = QDate(last.year(), last.month(), last.daysInMonth());
+        }
+        if (start.isValid()) {
+            m_date_pickers[picker_index]->clear_dates();
+            // DateRangePicker will be set via its API
+            // For now we store the dates by re-creating the picker state
+        }
+    });
+}
+
+// ─── Generic pagination helpers ───
+
+void ReportPages::update_pagination(ReportPageWidgets& w, int current_page,
+                                     int page_size, int total)
+{
+    int max_page = (total + page_size - 1) / page_size;
+    if (max_page < 1) max_page = 1;
+
+    w.page_prev_btn->setEnabled(current_page > 1);
+    w.page_next_btn->setEnabled(current_page < max_page);
+    w.page_number->setText(QString::number(current_page));
+    w.page_info->setText(m_tr->t("common.total_rows").arg(total));
+}
+
+void ReportPages::connect_pagination(ReportPageWidgets& w, int& current_page,
+                                      int& page_size, int& total,
+                                      std::function<void()> fetch_fn)
+{
+    connect(w.page_prev_btn, &QPushButton::clicked, this, [&current_page, fetch_fn]() {
+        if (current_page > 1) {
+            --current_page;
+            fetch_fn();
+        }
+    });
+
+    connect(w.page_next_btn, &QPushButton::clicked, this, [&current_page, &page_size, &total, fetch_fn]() {
+        int max_page = (total + page_size - 1) / page_size;
+        if (current_page < max_page) {
+            ++current_page;
+            fetch_fn();
+        }
+    });
+
+    connect(w.page_size_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [&current_page, &page_size, &w, fetch_fn](int idx) {
+        page_size = w.page_size_combo->itemData(idx).toInt();
+        current_page = 1;
+        fetch_fn();
+    });
+}
+
+void ReportPages::connect_search_reset(ReportPageWidgets& w,
+                                        std::function<void()> search_fn,
+                                        std::function<void()> reset_fn)
+{
+    for (auto* btn : w.search_form->findChildren<QPushButton*>("searchBtn"))
+        connect(btn, &QPushButton::clicked, this, search_fn);
+    for (auto* btn : w.search_form->findChildren<QPushButton*>("resetBtn"))
+        connect(btn, &QPushButton::clicked, this, reset_fn);
+}
+
+// ─── Generic populate helpers ───
+
+void ReportPages::populate_table(ReportPageWidgets& w, const QJsonArray& data,
+                                  const QStringList& keys, int total)
+{
+    w.table->setRowCount(0);
+
+    for (int i = 0; i < data.size(); ++i) {
+        auto obj = data[i].toObject();
+        int row = w.table->rowCount();
+        w.table->insertRow(row);
+
+        for (int c = 0; c < keys.size(); ++c) {
+            auto val = obj[keys[c]];
+            QString text;
+            if (val.isDouble()) {
+                double d = val.toDouble();
+                // Integer check
+                if (d == static_cast<int>(d))
+                    text = QString::number(static_cast<int>(d));
+                else
+                    text = QString::number(d, 'f', 2);
+            } else {
+                text = val.toString();
+            }
+            auto* item = new QTableWidgetItem(text);
+            item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            w.table->setItem(row, c, item);
+        }
+        w.table->setRowHeight(row, 38);
+    }
+
+    // Resize table to fit rows
+    int table_height = w.table->horizontalHeader()->height();
+    for (int r = 0; r < w.table->rowCount(); ++r)
+        table_height += w.table->rowHeight(r);
+    table_height += 1; // border-top
+    w.table->setFixedHeight(table_height);
+}
+
+void ReportPages::populate_summary(ReportPageWidgets& w, const QJsonObject& total_data,
+                                    const QStringList& keys)
+{
+    if (!w.summary_table || keys.isEmpty()) return;
+
+    for (int c = 0; c < keys.size() && c < w.summary_table->columnCount(); ++c) {
+        auto val = total_data[keys[c]];
+        QString text;
+        if (val.isDouble()) {
+            double d = val.toDouble();
+            if (d == static_cast<int>(d))
+                text = QString::number(static_cast<int>(d));
+            else
+                text = QString::number(d, 'f', 2);
+        } else {
+            text = val.toString();
+        }
+        auto* item = w.summary_table->item(0, c);
+        if (item)
+            item->setText(text);
+        else {
+            item = new QTableWidgetItem(text);
+            item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            w.summary_table->setItem(0, c, item);
+        }
+    }
+}
+
+// ─── Lazy load ───
+
+void ReportPages::load_page(int page_index)
+{
+    // page_index: 2=lottery_report, 3=transaction, 4=provider_report,
+    //             5=lottery_bets, 6=provider_bets, 7=withdrawal, 8=deposit
+    int idx = page_index - 2; // 0..6
+    if (idx < 0 || idx > 6) return;
+    if (m_page_state[idx].loaded) return;
+    m_page_state[idx].loaded = true;
+
+    switch (idx) {
+    case 0: fetch_lottery_report(); break;
+    case 1: fetch_transaction_log(); break;
+    case 2: fetch_provider_report(); break;
+    case 3: fetch_lottery_bets(); break;
+    case 4: fetch_provider_bets(); break;
+    case 5: fetch_withdrawal_history(); break;
+    case 6: fetch_deposit_history(); break;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CREATE PAGES (UI setup + connect signals)
+// ═══════════════════════════════════════════════════════════
 
 QWidget* ReportPages::create_lottery_report_page()
 {
@@ -72,20 +271,20 @@ QWidget* ReportPages::create_lottery_report_page()
     m_quick_date_combos[0] = make_quick_date_combo(m_tr);
     flow->addWidget(m_quick_date_combos[0]);
 
-    auto* lottery_select = new QComboBox;
-    lottery_select->addItem(m_tr->t("common.search_or_type"), QVariant());
-    lottery_select->setEditable(true);
-    lottery_select->setFixedHeight(IconDefs::k_input_height);
-    lottery_select->setFixedWidth(200);
+    m_lr_lottery_select = new QComboBox;
+    m_lr_lottery_select->addItem(m_tr->t("common.search_or_type"), QVariant());
+    m_lr_lottery_select->setEditable(true);
+    m_lr_lottery_select->setFixedHeight(IconDefs::k_input_height);
+    m_lr_lottery_select->setFixedWidth(200);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_report.lottery_type_label"), lottery_select, m_lottery_report.search_labels));
+        m_tr->t("lottery_report.lottery_type_label"), m_lr_lottery_select, m_lottery_report.search_labels));
 
-    auto* username = new QLineEdit;
-    username->setPlaceholderText(m_tr->t("common.username_placeholder"));
-    username->setFixedWidth(200);
-    username->setFixedHeight(IconDefs::k_input_height);
+    m_lr_username = new QLineEdit;
+    m_lr_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
+    m_lr_username->setFixedWidth(200);
+    m_lr_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("common.username_label"), username, m_lottery_report.search_labels));
+        m_tr->t("common.username_label"), m_lr_username, m_lottery_report.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
@@ -104,6 +303,20 @@ QWidget* ReportPages::create_lottery_report_page()
         },
         {"0", "0", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00"}
     );
+
+    // Connect signals
+    connect_search_reset(m_lottery_report,
+        [this]() { m_page_state[0].current_page = 1; fetch_lottery_report(); },
+        [this]() {
+            m_lr_username->clear();
+            m_lr_lottery_select->setCurrentIndex(0);
+            m_date_pickers[0]->clear_dates();
+            m_page_state[0].current_page = 1;
+            fetch_lottery_report();
+        });
+    connect_pagination(m_lottery_report,
+        m_page_state[0].current_page, m_page_state[0].page_size, m_page_state[0].total,
+        [this]() { fetch_lottery_report(); });
 
     return m_lottery_report.page;
 }
@@ -142,12 +355,12 @@ QWidget* ReportPages::create_transaction_log_page()
     m_quick_date_combos[1] = make_quick_date_combo(m_tr);
     flow->addWidget(m_quick_date_combos[1]);
 
-    auto* username = new QLineEdit;
-    username->setPlaceholderText(m_tr->t("common.username_placeholder"));
-    username->setFixedWidth(200);
-    username->setFixedHeight(IconDefs::k_input_height);
+    m_tl_username = new QLineEdit;
+    m_tl_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
+    m_tl_username->setFixedWidth(200);
+    m_tl_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("common.username_label"), username, m_transaction_log.search_labels));
+        m_tr->t("common.username_label"), m_tl_username, m_transaction_log.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
@@ -165,6 +378,18 @@ QWidget* ReportPages::create_transaction_log_page()
         },
         {"0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0"}
     );
+
+    connect_search_reset(m_transaction_log,
+        [this]() { m_page_state[1].current_page = 1; fetch_transaction_log(); },
+        [this]() {
+            m_tl_username->clear();
+            m_date_pickers[1]->clear_dates();
+            m_page_state[1].current_page = 1;
+            fetch_transaction_log();
+        });
+    connect_pagination(m_transaction_log,
+        m_page_state[1].current_page, m_page_state[1].page_size, m_page_state[1].total,
+        [this]() { fetch_transaction_log(); });
 
     return m_transaction_log.page;
 }
@@ -198,15 +423,15 @@ QWidget* ReportPages::create_provider_report_page()
     m_quick_date_combos[2] = make_quick_date_combo(m_tr);
     flow->addWidget(m_quick_date_combos[2]);
 
-    auto* username = new QLineEdit;
-    username->setPlaceholderText(m_tr->t("common.username_placeholder"));
-    username->setFixedWidth(200);
-    username->setFixedHeight(IconDefs::k_input_height);
+    m_pr_username = new QLineEdit;
+    m_pr_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
+    m_pr_username->setFixedWidth(200);
+    m_pr_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("common.username_label"), username, m_provider_report.search_labels));
+        m_tr->t("common.username_label"), m_pr_username, m_provider_report.search_labels));
 
-    auto* provider_select = new QComboBox;
-    provider_select->addItem(m_tr->t("common.select"), QVariant());
+    m_pr_provider_select = new QComboBox;
+    m_pr_provider_select->addItem(m_tr->t("common.select"), QVariant());
     const QStringList providers = {
         "PA", "BBIN", "WM", "MINI", "KY", "PGSOFT", "LUCKYWIN", "SABA", "PT",
         "RICH88", "ASTAR", "FB", "JILI", "KA", "MW", "SBO", "NEXTSPIN", "AMB",
@@ -215,13 +440,13 @@ QWidget* ReportPages::create_provider_report_page()
         "PG NEW", "FBLIVE", "ON CASINO", "MT", "JILI NEW", "fC NEW"
     };
     for (const auto& p : providers) {
-        provider_select->addItem(p, p);
+        m_pr_provider_select->addItem(p, p);
     }
-    provider_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    provider_select->setFixedHeight(IconDefs::k_input_height);
-    provider_select->setFixedWidth(200);
+    m_pr_provider_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_pr_provider_select->setFixedHeight(IconDefs::k_input_height);
+    m_pr_provider_select->setFixedWidth(200);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("provider_report.provider_label"), provider_select, m_provider_report.search_labels));
+        m_tr->t("provider_report.provider_label"), m_pr_provider_select, m_provider_report.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
@@ -238,6 +463,19 @@ QWidget* ReportPages::create_provider_report_page()
         },
         {"0", "0", "0.00", "0.00", "0.00", "0.00"}
     );
+
+    connect_search_reset(m_provider_report,
+        [this]() { m_page_state[2].current_page = 1; fetch_provider_report(); },
+        [this]() {
+            m_pr_username->clear();
+            m_pr_provider_select->setCurrentIndex(0);
+            m_date_pickers[2]->clear_dates();
+            m_page_state[2].current_page = 1;
+            fetch_provider_report();
+        });
+    connect_pagination(m_provider_report,
+        m_page_state[2].current_page, m_page_state[2].page_size, m_page_state[2].total,
+        [this]() { fetch_provider_report(); });
 
     return m_provider_report.page;
 }
@@ -276,59 +514,59 @@ QWidget* ReportPages::create_lottery_bets_page()
     m_quick_date_combos[3] = make_quick_date_combo(m_tr);
     flow->addWidget(m_quick_date_combos[3]);
 
-    auto* username = new QLineEdit;
-    username->setPlaceholderText(m_tr->t("lottery_bets.user_placeholder"));
-    username->setFixedWidth(200);
-    username->setFixedHeight(IconDefs::k_input_height);
+    m_lb_username = new QLineEdit;
+    m_lb_username->setPlaceholderText(m_tr->t("lottery_bets.user_placeholder"));
+    m_lb_username->setFixedWidth(200);
+    m_lb_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_bets.user_label"), username, m_lottery_bets.search_labels));
+        m_tr->t("lottery_bets.user_label"), m_lb_username, m_lottery_bets.search_labels));
 
-    auto* serial_no = new QLineEdit;
-    serial_no->setPlaceholderText(m_tr->t("lottery_bets.serial_placeholder"));
-    serial_no->setFixedWidth(200);
-    serial_no->setFixedHeight(IconDefs::k_input_height);
+    m_lb_serial = new QLineEdit;
+    m_lb_serial->setPlaceholderText(m_tr->t("lottery_bets.serial_placeholder"));
+    m_lb_serial->setFixedWidth(200);
+    m_lb_serial->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_bets.serial_label"), serial_no, m_lottery_bets.search_labels));
+        m_tr->t("lottery_bets.serial_label"), m_lb_serial, m_lottery_bets.search_labels));
 
-    auto* game_select = new QComboBox;
-    game_select->addItem(m_tr->t("common.select"), QVariant());
-    game_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    game_select->setFixedHeight(IconDefs::k_input_height);
-    game_select->setFixedWidth(150);
+    m_lb_game_select = new QComboBox;
+    m_lb_game_select->addItem(m_tr->t("common.select"), QVariant());
+    m_lb_game_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_lb_game_select->setFixedHeight(IconDefs::k_input_height);
+    m_lb_game_select->setFixedWidth(150);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_bets.game_label"), game_select, m_lottery_bets.search_labels));
+        m_tr->t("lottery_bets.game_label"), m_lb_game_select, m_lottery_bets.search_labels));
 
-    auto* play_type = new QComboBox;
-    play_type->addItem(m_tr->t("common.select"), QVariant());
-    play_type->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    play_type->setFixedHeight(IconDefs::k_input_height);
-    play_type->setFixedWidth(180);
+    m_lb_play_type = new QComboBox;
+    m_lb_play_type->addItem(m_tr->t("common.select"), QVariant());
+    m_lb_play_type->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_lb_play_type->setFixedHeight(IconDefs::k_input_height);
+    m_lb_play_type->setFixedWidth(180);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_bets.game_type_label"), play_type, m_lottery_bets.search_labels));
+        m_tr->t("lottery_bets.game_type_label"), m_lb_play_type, m_lottery_bets.search_labels));
 
-    auto* play_method = new QComboBox;
-    play_method->addItem(m_tr->t("common.select"), QVariant());
-    play_method->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    play_method->setFixedHeight(IconDefs::k_input_height);
-    play_method->setFixedWidth(180);
+    m_lb_play_method = new QComboBox;
+    m_lb_play_method->addItem(m_tr->t("common.select"), QVariant());
+    m_lb_play_method->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_lb_play_method->setFixedHeight(IconDefs::k_input_height);
+    m_lb_play_method->setFixedWidth(180);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_bets.play_method_label"), play_method, m_lottery_bets.search_labels));
+        m_tr->t("lottery_bets.play_method_label"), m_lb_play_method, m_lottery_bets.search_labels));
 
-    auto* status_select = new QComboBox;
-    status_select->addItem(m_tr->t("common.select"), QVariant());
-    status_select->addItem(m_tr->t("lottery_bets.status_unpaid"), "-9");
-    status_select->addItem(m_tr->t("lottery_bets.status_win"), "1");
-    status_select->addItem(m_tr->t("lottery_bets.status_lose"), "-1");
-    status_select->addItem(m_tr->t("lottery_bets.status_draw"), "2");
-    status_select->addItem(m_tr->t("lottery_bets.status_user_cancel"), "3");
-    status_select->addItem(m_tr->t("lottery_bets.status_system_cancel"), "4");
-    status_select->addItem(m_tr->t("lottery_bets.status_abnormal"), "5");
-    status_select->addItem(m_tr->t("lottery_bets.status_manual_restore"), "6");
-    status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    status_select->setFixedHeight(IconDefs::k_input_height);
-    status_select->setFixedWidth(150);
+    m_lb_status = new QComboBox;
+    m_lb_status->addItem(m_tr->t("common.select"), QVariant());
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_unpaid"), "-9");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_win"), "1");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_lose"), "-1");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_draw"), "2");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_user_cancel"), "3");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_system_cancel"), "4");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_abnormal"), "5");
+    m_lb_status->addItem(m_tr->t("lottery_bets.status_manual_restore"), "6");
+    m_lb_status->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_lb_status->setFixedHeight(IconDefs::k_input_height);
+    m_lb_status->setFixedWidth(150);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("lottery_bets.status_label"), status_select, m_lottery_bets.search_labels));
+        m_tr->t("lottery_bets.status_label"), m_lb_status, m_lottery_bets.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
@@ -342,6 +580,23 @@ QWidget* ReportPages::create_lottery_bets_page()
         },
         {"0.00", "0.00", "0.00"}
     );
+
+    connect_search_reset(m_lottery_bets,
+        [this]() { m_page_state[3].current_page = 1; fetch_lottery_bets(); },
+        [this]() {
+            m_lb_username->clear();
+            m_lb_serial->clear();
+            m_lb_game_select->setCurrentIndex(0);
+            m_lb_play_type->setCurrentIndex(0);
+            m_lb_play_method->setCurrentIndex(0);
+            m_lb_status->setCurrentIndex(0);
+            m_date_pickers[3]->clear_dates();
+            m_page_state[3].current_page = 1;
+            fetch_lottery_bets();
+        });
+    connect_pagination(m_lottery_bets,
+        m_page_state[3].current_page, m_page_state[3].page_size, m_page_state[3].total,
+        [this]() { fetch_lottery_bets(); });
 
     return m_lottery_bets.page;
 }
@@ -379,22 +634,35 @@ QWidget* ReportPages::create_provider_bets_page()
     m_quick_date_combos[4] = make_quick_date_combo(m_tr);
     flow->addWidget(m_quick_date_combos[4]);
 
-    auto* serial_no = new QLineEdit;
-    serial_no->setPlaceholderText(m_tr->t("provider_bets.serial_placeholder"));
-    serial_no->setFixedWidth(200);
-    serial_no->setFixedHeight(IconDefs::k_input_height);
+    m_pb_serial = new QLineEdit;
+    m_pb_serial->setPlaceholderText(m_tr->t("provider_bets.serial_placeholder"));
+    m_pb_serial->setFixedWidth(200);
+    m_pb_serial->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("provider_bets.serial_label"), serial_no, m_provider_bets.search_labels));
+        m_tr->t("provider_bets.serial_label"), m_pb_serial, m_provider_bets.search_labels));
 
-    auto* platform_user = new QLineEdit;
-    platform_user->setPlaceholderText(m_tr->t("provider_bets.platform_user_placeholder"));
-    platform_user->setFixedWidth(200);
-    platform_user->setFixedHeight(IconDefs::k_input_height);
+    m_pb_platform_user = new QLineEdit;
+    m_pb_platform_user->setPlaceholderText(m_tr->t("provider_bets.platform_user_placeholder"));
+    m_pb_platform_user->setFixedWidth(200);
+    m_pb_platform_user->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("provider_bets.platform_user_label"), platform_user, m_provider_bets.search_labels));
+        m_tr->t("provider_bets.platform_user_label"), m_pb_platform_user, m_provider_bets.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
+
+    connect_search_reset(m_provider_bets,
+        [this]() { m_page_state[4].current_page = 1; fetch_provider_bets(); },
+        [this]() {
+            m_pb_serial->clear();
+            m_pb_platform_user->clear();
+            m_date_pickers[4]->clear_dates();
+            m_page_state[4].current_page = 1;
+            fetch_provider_bets();
+        });
+    connect_pagination(m_provider_bets,
+        m_page_state[4].current_page, m_page_state[4].page_size, m_page_state[4].total,
+        [this]() { fetch_provider_bets(); });
 
     return m_provider_bets.page;
 }
@@ -427,34 +695,48 @@ QWidget* ReportPages::create_withdrawal_history_page()
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("withdrawal_history.order_time_label"), m_date_pickers[5], m_withdrawal_history.search_labels));
 
-    auto* username = new QLineEdit;
-    username->setPlaceholderText(m_tr->t("common.username_placeholder"));
-    username->setFixedWidth(150);
-    username->setFixedHeight(IconDefs::k_input_height);
+    m_wh_username = new QLineEdit;
+    m_wh_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
+    m_wh_username->setFixedWidth(150);
+    m_wh_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("common.username_label"), username, m_withdrawal_history.search_labels));
+        m_tr->t("common.username_label"), m_wh_username, m_withdrawal_history.search_labels));
 
-    auto* serial_no = new QLineEdit;
-    serial_no->setPlaceholderText(m_tr->t("withdrawal_history.serial_placeholder"));
-    serial_no->setFixedWidth(300);
-    serial_no->setFixedHeight(IconDefs::k_input_height);
+    m_wh_serial = new QLineEdit;
+    m_wh_serial->setPlaceholderText(m_tr->t("withdrawal_history.serial_placeholder"));
+    m_wh_serial->setFixedWidth(300);
+    m_wh_serial->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("withdrawal_history.serial_label"), serial_no, m_withdrawal_history.search_labels));
+        m_tr->t("withdrawal_history.serial_label"), m_wh_serial, m_withdrawal_history.search_labels));
 
-    auto* status_select = new QComboBox;
-    status_select->addItem(m_tr->t("common.select"), QVariant());
-    status_select->addItem(m_tr->t("common.status_pending"), "0");
-    status_select->addItem(m_tr->t("common.status_completed"), "1");
-    status_select->addItem(m_tr->t("common.status_processing"), "2");
-    status_select->addItem(m_tr->t("common.status_failed"), "3");
-    status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    status_select->setFixedHeight(IconDefs::k_input_height);
-    status_select->setFixedWidth(200);
+    m_wh_status = new QComboBox;
+    m_wh_status->addItem(m_tr->t("common.select"), QVariant());
+    m_wh_status->addItem(m_tr->t("common.status_pending"), "0");
+    m_wh_status->addItem(m_tr->t("common.status_completed"), "1");
+    m_wh_status->addItem(m_tr->t("common.status_processing"), "2");
+    m_wh_status->addItem(m_tr->t("common.status_failed"), "3");
+    m_wh_status->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_wh_status->setFixedHeight(IconDefs::k_input_height);
+    m_wh_status->setFixedWidth(200);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("withdrawal_history.status_label"), status_select, m_withdrawal_history.search_labels));
+        m_tr->t("withdrawal_history.status_label"), m_wh_status, m_withdrawal_history.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
+
+    connect_search_reset(m_withdrawal_history,
+        [this]() { m_page_state[5].current_page = 1; fetch_withdrawal_history(); },
+        [this]() {
+            m_wh_username->clear();
+            m_wh_serial->clear();
+            m_wh_status->setCurrentIndex(0);
+            m_date_pickers[5]->clear_dates();
+            m_page_state[5].current_page = 1;
+            fetch_withdrawal_history();
+        });
+    connect_pagination(m_withdrawal_history,
+        m_page_state[5].current_page, m_page_state[5].page_size, m_page_state[5].total,
+        [this]() { fetch_withdrawal_history(); });
 
     return m_withdrawal_history.page;
 }
@@ -485,40 +767,386 @@ QWidget* ReportPages::create_deposit_history_page()
     flow->addWidget(ReportPageBuilder::make_field(
         m_tr->t("deposit_history.order_time_label"), m_date_pickers[6], m_deposit_history.search_labels));
 
-    auto* username = new QLineEdit;
-    username->setPlaceholderText(m_tr->t("common.username_placeholder"));
-    username->setFixedWidth(300);
-    username->setFixedHeight(IconDefs::k_input_height);
+    m_dh_username = new QLineEdit;
+    m_dh_username->setPlaceholderText(m_tr->t("common.username_placeholder"));
+    m_dh_username->setFixedWidth(300);
+    m_dh_username->setFixedHeight(IconDefs::k_input_height);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("common.username_label"), username, m_deposit_history.search_labels));
+        m_tr->t("common.username_label"), m_dh_username, m_deposit_history.search_labels));
 
-    auto* type_select = new QComboBox;
-    type_select->addItem(m_tr->t("common.select"), QVariant());
-    type_select->addItem(m_tr->t("deposit_history.type_deposit"), "1");
-    type_select->addItem(m_tr->t("deposit_history.type_withdraw"), "2");
-    type_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    type_select->setFixedHeight(IconDefs::k_input_height);
-    type_select->setFixedWidth(220);
+    m_dh_type = new QComboBox;
+    m_dh_type->addItem(m_tr->t("common.select"), QVariant());
+    m_dh_type->addItem(m_tr->t("deposit_history.type_deposit"), "1");
+    m_dh_type->addItem(m_tr->t("deposit_history.type_withdraw"), "2");
+    m_dh_type->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_dh_type->setFixedHeight(IconDefs::k_input_height);
+    m_dh_type->setFixedWidth(220);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("deposit_history.type_label"), type_select, m_deposit_history.search_labels));
+        m_tr->t("deposit_history.type_label"), m_dh_type, m_deposit_history.search_labels));
 
-    auto* status_select = new QComboBox;
-    status_select->addItem(m_tr->t("common.select"), QVariant());
-    status_select->addItem(m_tr->t("common.status_pending"), "0");
-    status_select->addItem(m_tr->t("common.status_completed"), "1");
-    status_select->addItem(m_tr->t("common.status_processing"), "2");
-    status_select->addItem(m_tr->t("common.status_failed"), "3");
-    status_select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    status_select->setFixedHeight(IconDefs::k_input_height);
-    status_select->setFixedWidth(180);
+    m_dh_status = new QComboBox;
+    m_dh_status->addItem(m_tr->t("common.select"), QVariant());
+    m_dh_status->addItem(m_tr->t("common.status_pending"), "0");
+    m_dh_status->addItem(m_tr->t("common.status_completed"), "1");
+    m_dh_status->addItem(m_tr->t("common.status_processing"), "2");
+    m_dh_status->addItem(m_tr->t("common.status_failed"), "3");
+    m_dh_status->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    m_dh_status->setFixedHeight(IconDefs::k_input_height);
+    m_dh_status->setFixedWidth(180);
     flow->addWidget(ReportPageBuilder::make_field(
-        m_tr->t("deposit_history.status_label"), status_select, m_deposit_history.search_labels));
+        m_tr->t("deposit_history.status_label"), m_dh_status, m_deposit_history.search_labels));
 
     flow->addWidget(make_search_button(":/icons/search", m_tr->t("common.search"), "searchBtn"));
     flow->addWidget(make_search_button(":/icons/refresh", m_tr->t("common.reset"), "resetBtn"));
 
+    connect_search_reset(m_deposit_history,
+        [this]() { m_page_state[6].current_page = 1; fetch_deposit_history(); },
+        [this]() {
+            m_dh_username->clear();
+            m_dh_type->setCurrentIndex(0);
+            m_dh_status->setCurrentIndex(0);
+            m_date_pickers[6]->clear_dates();
+            m_page_state[6].current_page = 1;
+            fetch_deposit_history();
+        });
+    connect_pagination(m_deposit_history,
+        m_page_state[6].current_page, m_page_state[6].page_size, m_page_state[6].total,
+        [this]() { fetch_deposit_history(); });
+
     return m_deposit_history.page;
 }
+
+// ═══════════════════════════════════════════════════════════
+//  FETCH DATA — API calls
+// ═══════════════════════════════════════════════════════════
+
+void ReportPages::fetch_lottery_report()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[0];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(0);
+    auto ed = get_end_date(0);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_lr_lottery_select && !m_lr_lottery_select->currentData().isNull())
+        query.addQueryItem("lottery_id", m_lr_lottery_select->currentData().toString());
+    if (m_lr_username && !m_lr_username->text().trimmed().isEmpty())
+        query.addQueryItem("username", m_lr_username->text().trimmed());
+
+    QString path = "/api/proxy/lottery-report?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_lottery_report.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[0];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_lottery_report, arr, {
+            "username", "user_parent_format", "bet_count", "bet_amount",
+            "valid_amount", "rebate_amount", "win_lose", "result",
+            "prize", "lottery_name"
+        }, s.total);
+
+        if (data.contains("total_data")) {
+            populate_summary(m_lottery_report, data["total_data"].toObject(), {
+                "total_bet_number", "total_bet_count", "total_bet_amount",
+                "total_valid_amount", "total_rebate_amount", "total_win_lose",
+                "total_result", "total_prize"
+            });
+        }
+
+        update_pagination(m_lottery_report, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+void ReportPages::fetch_transaction_log()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[1];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(1);
+    auto ed = get_end_date(1);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_tl_username && !m_tl_username->text().trimmed().isEmpty())
+        query.addQueryItem("username", m_tl_username->text().trimmed());
+
+    QString path = "/api/proxy/transaction-log?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_transaction_log.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[1];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_transaction_log, arr, {
+            "username", "user_parent_format", "deposit_count", "deposit_amount",
+            "withdrawal_count", "withdrawal_amount", "charge_fee", "agent_commission",
+            "promotion", "third_rebate", "third_activity_amount", "date"
+        }, s.total);
+
+        if (data.contains("total_data")) {
+            populate_summary(m_transaction_log, data["total_data"].toObject(), {
+                "total_deposit_amount", "total_withdrawal_amount", "total_charge_fee",
+                "total_agent_commission", "total_promotion", "total_third_rebate",
+                "total_third_activity_amount"
+            });
+        }
+
+        update_pagination(m_transaction_log, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+void ReportPages::fetch_provider_report()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[2];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(2);
+    auto ed = get_end_date(2);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_pr_username && !m_pr_username->text().trimmed().isEmpty())
+        query.addQueryItem("username", m_pr_username->text().trimmed());
+    if (m_pr_provider_select && !m_pr_provider_select->currentData().isNull()
+        && !m_pr_provider_select->currentData().toString().isEmpty())
+        query.addQueryItem("platform_id", m_pr_provider_select->currentData().toString());
+
+    QString path = "/api/proxy/provider-report?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_provider_report.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[2];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_provider_report, arr, {
+            "username", "platform_id_name", "t_bet_times", "t_bet_amount",
+            "t_turnover", "t_prize", "t_win_lose"
+        }, s.total);
+
+        if (data.contains("total_data")) {
+            populate_summary(m_provider_report, data["total_data"].toObject(), {
+                "total_bet_times", "total_bet_number", "total_bet_amount",
+                "total_turnover", "total_prize", "total_win_lose"
+            });
+        }
+
+        update_pagination(m_provider_report, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+void ReportPages::fetch_lottery_bets()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[3];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(3);
+    auto ed = get_end_date(3);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_lb_username && !m_lb_username->text().trimmed().isEmpty())
+        query.addQueryItem("username", m_lb_username->text().trimmed());
+    if (m_lb_serial && !m_lb_serial->text().trimmed().isEmpty())
+        query.addQueryItem("serial_no", m_lb_serial->text().trimmed());
+    if (m_lb_game_select && !m_lb_game_select->currentData().isNull()
+        && !m_lb_game_select->currentData().toString().isEmpty())
+        query.addQueryItem("lottery_id", m_lb_game_select->currentData().toString());
+    if (m_lb_play_type && !m_lb_play_type->currentData().isNull()
+        && !m_lb_play_type->currentData().toString().isEmpty())
+        query.addQueryItem("play_type_id", m_lb_play_type->currentData().toString());
+    if (m_lb_play_method && !m_lb_play_method->currentData().isNull()
+        && !m_lb_play_method->currentData().toString().isEmpty())
+        query.addQueryItem("play_id", m_lb_play_method->currentData().toString());
+    if (m_lb_status && !m_lb_status->currentData().isNull()
+        && !m_lb_status->currentData().toString().isEmpty())
+        query.addQueryItem("status", m_lb_status->currentData().toString());
+
+    QString path = "/api/proxy/lottery-bets?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_lottery_bets.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[3];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_lottery_bets, arr, {
+            "serial_no", "username", "create_time", "lottery_name",
+            "play_type_name", "play_name", "issue", "content",
+            "money", "rebate_amount", "result", "status_text"
+        }, s.total);
+
+        if (data.contains("total_data")) {
+            populate_summary(m_lottery_bets, data["total_data"].toObject(), {
+                "total_money", "total_rebate_amount", "total_result"
+            });
+        }
+
+        update_pagination(m_lottery_bets, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+void ReportPages::fetch_provider_bets()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[4];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(4);
+    auto ed = get_end_date(4);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_pb_serial && !m_pb_serial->text().trimmed().isEmpty())
+        query.addQueryItem("serial_no", m_pb_serial->text().trimmed());
+    if (m_pb_platform_user && !m_pb_platform_user->text().trimmed().isEmpty())
+        query.addQueryItem("platform_username", m_pb_platform_user->text().trimmed());
+
+    QString path = "/api/proxy/provider-bets?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_provider_bets.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[4];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_provider_bets, arr, {
+            "serial_no", "platform_id_name", "platform_username", "c_name",
+            "game_name", "bet_amount", "turnover", "prize",
+            "win_lose", "bet_time"
+        }, s.total);
+
+        update_pagination(m_provider_bets, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+void ReportPages::fetch_withdrawal_history()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[5];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(5);
+    auto ed = get_end_date(5);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_wh_username && !m_wh_username->text().trimmed().isEmpty())
+        query.addQueryItem("username", m_wh_username->text().trimmed());
+    if (m_wh_serial && !m_wh_serial->text().trimmed().isEmpty())
+        query.addQueryItem("serial_no", m_wh_serial->text().trimmed());
+    if (m_wh_status && !m_wh_status->currentData().isNull()
+        && !m_wh_status->currentData().toString().isEmpty())
+        query.addQueryItem("status", m_wh_status->currentData().toString());
+
+    QString path = "/api/proxy/withdrawal-history?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_withdrawal_history.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[5];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_withdrawal_history, arr, {
+            "serial_no", "create_time", "username", "user_parent_format",
+            "amount", "member_fee", "actual_amount", "status"
+        }, s.total);
+
+        update_pagination(m_withdrawal_history, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+void ReportPages::fetch_deposit_history()
+{
+    if (m_api->token().isEmpty()) return;
+    auto& s = m_page_state[6];
+
+    QUrlQuery query;
+    query.addQueryItem("page", QString::number(s.current_page));
+    query.addQueryItem("limit", QString::number(s.page_size));
+
+    auto sd = get_start_date(6);
+    auto ed = get_end_date(6);
+    if (!sd.isEmpty()) query.addQueryItem("start_date", sd);
+    if (!ed.isEmpty()) query.addQueryItem("end_date", ed);
+    if (m_dh_username && !m_dh_username->text().trimmed().isEmpty())
+        query.addQueryItem("username", m_dh_username->text().trimmed());
+    if (m_dh_type && !m_dh_type->currentData().isNull()
+        && !m_dh_type->currentData().toString().isEmpty())
+        query.addQueryItem("type", m_dh_type->currentData().toString());
+    if (m_dh_status && !m_dh_status->currentData().isNull()
+        && !m_dh_status->currentData().toString().isEmpty())
+        query.addQueryItem("status", m_dh_status->currentData().toString());
+
+    QString path = "/api/proxy/deposit-history?" + query.toString(QUrl::FullyEncoded);
+
+    m_api->get(path, [this](const ApiError& err, const QJsonObject& data) {
+        if (err.kind != ApiErrorKind::None) {
+            m_deposit_history.page_info->setText(err.message);
+            return;
+        }
+        auto& s = m_page_state[6];
+        auto arr = data["data"].toArray();
+        s.total = data["total"].toInt();
+
+        populate_table(m_deposit_history, arr, {
+            "username", "user_parent_format", "amount", "type",
+            "status", "create_time"
+        }, s.total);
+
+        update_pagination(m_deposit_history, s.current_page, s.page_size, s.total);
+        apply_theme();
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  THEME + RETRANSLATE
+// ═══════════════════════════════════════════════════════════
 
 void ReportPages::apply_theme()
 {

@@ -264,13 +264,11 @@
     "status_complete": "Hoàn tất",
     "status_processing": "Đang xử lí",
     "status_failed": "Trạng thái không thành công",
-    "col_serial": "Mã giao dịch",
     "col_order_time": "Thời gian tạo đơn",
     "col_username": "Tên tài khoản",
     "col_agent": "Thuộc đại lý",
     "col_amount": "Số tiền",
-    "col_member_fee": "Phí hội viên",
-    "col_actual_amount": "Số tiền thực tế",
+    "col_type": "Loại giao dịch",
     "col_status": "Trạng thái giao dịch"
   },
   "settings": {

@@ -60,7 +60,7 @@
           </lay-field>
 
           <!-- Table với toolbar tích hợp -->
-          <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']">
+          <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
             <template #toolbar>
               <lay-button-group>
                 <lay-button type="primary" size="xs" @click="handleAddMember">
@@ -78,15 +78,6 @@
               <lay-button type="primary" size="xs" @click="handleRebate(row)">{{ t("customers.rebate_settings") }}</lay-button>
             </template>
           </lay-table>
-          <lay-page
-            v-model="currentPage"
-            v-model:limit="pageLimit"
-            :total="pageTotal"
-            :pages="7"
-            :limits="[10, 20, 30, 50, 100]"
-            :layout="['count', 'prev', 'page', 'next', 'limits', 'refresh', 'skip']"
-            @change="handlePageChange"
-          ></lay-page>
         </template>
       </lay-card>
     </div>
@@ -127,16 +118,20 @@ const columns = computed(() => [
 const tableData = ref<any[]>([]);
 const loading = ref(false);
 
-const currentPage = ref(1);
-const pageLimit = ref(10);
-const pageTotal = ref(0);
+const pagination = reactive({
+  current: 1,
+  limit: 10,
+  total: 0,
+  limits: [10, 20, 30, 50, 100],
+  layout: ["count", "prev", "page", "next", "limits", "refresh", "skip"],
+});
 
 async function fetchCustomers() {
   loading.value = true;
   try {
     const params: Record<string, any> = {
-      page: currentPage.value,
-      limit: pageLimit.value,
+      page: pagination.current,
+      limit: pagination.limit,
     };
     if (searchForm.username) params.username = searchForm.username;
     if (searchForm.status) params.status = searchForm.status;
@@ -145,7 +140,7 @@ async function fetchCustomers() {
 
     const res = await api.get("/api/customers", { params });
     tableData.value = res.data.data || [];
-    pageTotal.value = res.data.total || 0;
+    pagination.total = res.data.total || 0;
   } catch (err: any) {
     feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");
   } finally {
@@ -161,7 +156,7 @@ function statusTagType(status: string) {
 }
 
 function handleSearch() {
-  currentPage.value = 1;
+  pagination.current = 1;
   fetchCustomers();
 }
 
@@ -171,13 +166,13 @@ function handleReset() {
   searchForm.status = null;
   searchForm.sortField = "";
   searchForm.sortDir = "desc";
-  currentPage.value = 1;
+  pagination.current = 1;
   fetchCustomers();
 }
 
-function handlePageChange({ current, limit }: { current: number; limit: number }) {
-  currentPage.value = current;
-  pageLimit.value = limit;
+function handlePageChange(page: any) {
+  pagination.current = page.current;
+  pagination.limit = page.limit;
   fetchCustomers();
 }
 

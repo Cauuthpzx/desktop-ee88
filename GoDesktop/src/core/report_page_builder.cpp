@@ -128,8 +128,11 @@ ReportPageWidgets ReportPageBuilder::build_page(
     w.table->setAlternatingRowColors(false);
     w.table->setShowGrid(true);
     w.table->horizontalHeader()->setHighlightSections(false);
+    w.table->setFrameShape(QFrame::NoFrame);
+    w.table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    w.table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    tg_layout->addWidget(w.table, 1);
+    tg_layout->addWidget(w.table, 0);
 
     // Pagination
     w.pagination_bar = new QWidget;
@@ -177,7 +180,8 @@ ReportPageWidgets ReportPageBuilder::build_page(
     pg_layout->addStretch();
     tg_layout->addWidget(w.pagination_bar);
 
-    card_layout->addWidget(table_group, 1);
+    card_layout->addWidget(table_group, 0);
+    card_layout->addStretch();
     page_layout->addWidget(w.card, 1);
 
     return w;
@@ -312,7 +316,10 @@ void ReportPageBuilder::apply_page_theme(ReportPageWidgets& w, ThemeManager* the
 
     // Table toolbar
     w.table_toolbar->setStyleSheet(QString(
-        "QWidget#tableToolbar { background: %1; border: 1px solid %2; border-bottom: none; }"
+        "QWidget#tableToolbar { background: %1;"
+        "  border-top: 1px solid %2; border-left: 1px solid %2;"
+        "  border-right: 1px solid %2; border-bottom: none;"
+        "  padding-right: 2px; }"
     ).arg(bg2, border));
 
     auto tool_icon_style = QString(
@@ -325,19 +332,23 @@ void ReportPageBuilder::apply_page_theme(ReportPageWidgets& w, ThemeManager* the
 
     // Table
     w.table->setStyleSheet(QString(
-        "QTableWidget { background: %1; color: %2; border: 1px solid %3;"
+        "QTableWidget { background: %1; color: %2;"
+        "  border-left: 1px solid %3; border-right: none;"
+        "  border-top: 1px solid %3; border-bottom: none;"
         "  gridline-color: %3; font-size: 13px; }"
-        "QTableWidget::item { padding: 4px 8px; border: none; }"
+        "QTableWidget::item { padding: 4px 8px; }"
         "QTableWidget::item:selected { background: %4; color: %2; }"
         "QHeaderView::section { background: %5; color: %2; border: none;"
         "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
-        "  padding: 6px 8px; font-size: 13px; font-weight: 400; }"
-        "QHeaderView::section:last { border-right: none; }"
+        "  padding: 6px 8px; font-size: 13px; font-weight: 600; }"
+        "QHeaderView::section:last { border-right: 1px solid %3; }"
     ).arg(bg, text1, border, bg_hover, bg2));
 
     // Pagination
     w.pagination_bar->setStyleSheet(QString(
-        "QWidget#paginationBar { background: %1; border: 1px solid %2; border-top: none; }"
+        "QWidget#paginationBar { background: %1;"
+        "  border-top: none; border-left: 1px solid %2;"
+        "  border-right: 1px solid %2; border-bottom: 1px solid %2; }"
     ).arg(bg, border));
 
     auto page_btn_style = QString(
@@ -374,7 +385,7 @@ void ReportPageBuilder::apply_page_theme(ReportPageWidgets& w, ThemeManager* the
             "QHeaderView::section { background: %4; color: %2; border: none;"
             "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
             "  padding: 6px 8px; font-size: 13px; font-weight: 400; }"
-            "QHeaderView::section:last { border-right: none; }"
+            "QHeaderView::section:last { border-right: 1px solid %3; }"
         ).arg(bg, text1, border, bg2));
     }
 }

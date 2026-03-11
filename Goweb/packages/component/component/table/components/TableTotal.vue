@@ -85,7 +85,7 @@ const stylees = computed(() => {
                 "
                 :style="
                   commonGetStylees(column, {
-                    whiteSpace: column.ellipsisTooltip ? 'nowrap' : 'normal',
+                    whiteSpace: 'nowrap',
                   })
                 "
                 v-html="renderTotalRowCell(column)"

@@ -264,13 +264,11 @@
     "status_complete": "Complete",
     "status_processing": "Processing",
     "status_failed": "Failed",
-    "col_serial": "Transaction ID",
     "col_order_time": "Order Time",
     "col_username": "Username",
     "col_agent": "Agent",
     "col_amount": "Amount",
-    "col_member_fee": "Member Fee",
-    "col_actual_amount": "Actual Amount",
+    "col_type": "Transaction Type",
     "col_status": "Transaction Status"
   },
   "settings": {

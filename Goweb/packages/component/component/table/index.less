@@ -24,14 +24,9 @@
 }
 
 .table-total-wrapper .layui-table td {
-  // border-top: 1px solid #eee !important;
-  border-right: 1px solid #eee !important;
   border-top: none;
   border-bottom: none;
-}
-
-.table-total-wrapper .layui-table td:last-child {
-  border-right: none !important;
+  border-right: none;
 }
 
 .layui-table-view {
@@ -71,10 +66,10 @@
 }
 
 .layui-table-box-header {
-  min-height: 50px;
-  line-height: 30px;
+  min-height: 36px;
+  line-height: 26px;
   background-color: #fafafa;
-  padding: 10px 15px;
+  padding: 5px 15px;
   border-bottom: 1px solid #eee;
 }
 
@@ -123,10 +118,10 @@
 .layui-table td,
 .layui-table th {
   position: relative;
-  padding: 9px 8px;
+  padding: 7px 8px;
   min-height: 20px;
-  height: 40px;
-  line-height: 20px;
+  height: 38px;
+  line-height: 22px;
   font-size: 14px;
 }
 
@@ -200,6 +195,7 @@
 .layui-table-view .layui-table th {
   border-top: none;
   border-left: none;
+  border-right: none;
 }
 
 .layui-table-view .layui-table td.layui-table-col-special,
@@ -434,8 +430,8 @@
 }
 
 .layui-table-cell {
-  height: 28px;
-  line-height: 28px;
+  height: 38px;
+  line-height: 38px;
   position: relative;
   box-sizing: border-box;
 }
@@ -460,8 +456,18 @@
 
 .layui-table-cell-content {
   display: flex;
-  word-break: break-word;
   align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+
+  > * {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
 }
 
 .layui-table-cell-expand-icon {

@@ -194,7 +194,7 @@ export default defineComponent({
             style={commonGetStylees(
               column,
               {
-                whiteSpace: column.ellipsisTooltip ? "nowrap" : "normal",
+                whiteSpace: "nowrap",
               },
               renderCellClassOrStyle("cellStyle", {
                 data,

@@ -553,6 +553,7 @@ void SettingsDialog::apply_theme()
         "QHeaderView::section { background: %5; color: %2; border: none;"
         "  border-bottom: 1px solid %3; border-right: 1px solid %3;"
         "  padding: 6px; font-size: 12px; font-weight: normal; }"
+        "QHeaderView::section:last { border-right: none; }"
     ).arg(bg, fg, border_light, bg_hover, bg2));
 }
 

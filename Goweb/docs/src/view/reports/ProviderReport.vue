@@ -86,7 +86,7 @@
       </lay-form>
     </lay-field>
 
-    <lay-table :columns="columns" :data-source="tableData" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
+    <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
     </lay-table>
 
     <div class="summary-section">
@@ -98,13 +98,16 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from "vue";
+import { reactive, ref, computed, onMounted } from "vue";
 import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
+import api from "../../utils/api";
+import feedback from "../../utils/feedback";
 
 const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
+const loading = ref(false);
 
 const searchForm = reactive({
   username: "",
@@ -151,20 +154,53 @@ const pagination = reactive({
   layout: ["prev", "page", "next", "skip", "count", "limit"],
 });
 
+async function fetchData() {
+  loading.value = true;
+  try {
+    const params: Record<string, any> = {
+      page: pagination.current,
+      limit: pagination.limit,
+    };
+    if (dateForm.dateRange?.[0]) params.start_date = dateForm.dateRange[0];
+    if (dateForm.dateRange?.[1]) params.end_date = dateForm.dateRange[1];
+    if (searchForm.username) params.username = searchForm.username;
+    if (searchForm.platformId) params.platform_id = searchForm.platformId;
+
+    const res = await api.get("/api/proxy/provider-report", { params });
+    tableData.value = res.data.data || [];
+    pagination.total = res.data.total || 0;
+    if (res.data.total_data) {
+      summaryData.value = [res.data.total_data];
+    }
+  } catch (err: any) {
+    feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");
+  } finally {
+    loading.value = false;
+  }
+}
+
 function handlePageChange(page: any) {
   pagination.current = page.current;
   pagination.limit = page.limit;
+  fetchData();
 }
 
 function handleSearch() {
-  console.log("search", { ...dateForm, ...searchForm });
+  pagination.current = 1;
+  fetchData();
 }
 
 function handleReset() {
   resetDate();
   searchForm.username = "";
   searchForm.platformId = null;
+  pagination.current = 1;
+  fetchData();
 }
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <style scoped>

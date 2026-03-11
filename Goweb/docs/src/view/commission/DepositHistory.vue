@@ -47,17 +47,20 @@
       </lay-form>
     </lay-field>
 
-    <lay-table :columns="columns" :data-source="tableData" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
+    <lay-table :columns="columns" :data-source="tableData" :loading="loading" :default-toolbar="['filter', 'export', 'print']" :page="pagination" @change="handlePageChange">
     </lay-table>
   </PageLayout>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from "vue";
+import { reactive, ref, computed, onMounted } from "vue";
 import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
+import api from "../../utils/api";
+import feedback from "../../utils/feedback";
 
 const { t } = useI18n();
+const loading = ref(false);
 
 const searchForm = reactive({
   dateRange: [] as string[],
@@ -85,8 +88,32 @@ const pagination = reactive({
   layout: ["prev", "page", "next", "skip", "count", "limit"],
 });
 
+async function fetchData() {
+  loading.value = true;
+  try {
+    const params: Record<string, any> = {
+      page: pagination.current,
+      limit: pagination.limit,
+    };
+    if (searchForm.dateRange?.[0]) params.start_date = searchForm.dateRange[0];
+    if (searchForm.dateRange?.[1]) params.end_date = searchForm.dateRange[1];
+    if (searchForm.username) params.username = searchForm.username;
+    if (searchForm.type) params.type = searchForm.type;
+    if (searchForm.status) params.status = searchForm.status;
+
+    const res = await api.get("/api/proxy/deposit-history", { params });
+    tableData.value = res.data.data || [];
+    pagination.total = res.data.total || 0;
+  } catch (err: any) {
+    feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");
+  } finally {
+    loading.value = false;
+  }
+}
+
 function handleSearch() {
-  console.log("search", searchForm);
+  pagination.current = 1;
+  fetchData();
 }
 
 function handleReset() {
@@ -94,12 +121,19 @@ function handleReset() {
   searchForm.username = "";
   searchForm.type = null;
   searchForm.status = null;
+  pagination.current = 1;
+  fetchData();
 }
 
 function handlePageChange(page: any) {
   pagination.current = page.current;
   pagination.limit = page.limit;
+  fetchData();
 }
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <style scoped>

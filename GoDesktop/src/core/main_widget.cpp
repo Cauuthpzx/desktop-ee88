@@ -48,7 +48,7 @@ void MainWidget::setup_ui()
     // Sub-widgets
     m_home_page = new HomePage(m_theme, m_tr, this);
     m_customers_page = new CustomersPage(m_api, m_theme, m_tr, this);
-    m_report_pages = new ReportPages(m_theme, m_tr, this);
+    m_report_pages = new ReportPages(m_api, m_theme, m_tr, this);
 
     m_content_stack = new QStackedWidget;
     m_content_stack->addWidget(m_home_page);                                  // 0
@@ -402,6 +402,8 @@ void MainWidget::navigate_to(int index)
     // Lazy load data khi chuyển trang
     if (index == 1)
         m_customers_page->load_data();
+    else if (index >= 2 && index <= 8)
+        m_report_pages->load_page(index);
 
     apply_theme();
 }

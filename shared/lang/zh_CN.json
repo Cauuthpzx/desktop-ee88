@@ -264,13 +264,11 @@
     "status_complete": "已完成",
     "status_processing": "处理中",
     "status_failed": "失败",
-    "col_serial": "交易编号",
     "col_order_time": "创建时间",
     "col_username": "用户名",
     "col_agent": "所属代理",
     "col_amount": "金额",
-    "col_member_fee": "会员手续费",
-    "col_actual_amount": "实际金额",
+    "col_type": "交易类型",
     "col_status": "交易状态"
   },
   "settings": {
