@@ -149,6 +149,7 @@ import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
 import api from "../../utils/api";
 import feedback from "../../utils/feedback";
+import { sortByTime } from "../../utils/sort_by_time";
 
 const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate({ onlyTodayYesterday: true });
@@ -219,7 +220,7 @@ async function fetchData() {
     if (searchForm.status) params.status = searchForm.status;
 
     const res = await api.get("/api/proxy/lottery-bets", { params });
-    tableData.value = res.data.data || [];
+    tableData.value = sortByTime(res.data.data || [], "create_time");
     pagination.total = res.data.total || 0;
     if (res.data.total_data) {
       summaryData.value = [res.data.total_data];

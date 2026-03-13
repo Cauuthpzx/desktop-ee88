@@ -8,7 +8,7 @@
 
 ApiClient::ApiClient(QObject* parent)
     : QObject(parent)
-    , m_base_url("http://localhost:8080")
+    , m_base_url("https://max-hub.online")
 {
 }
 

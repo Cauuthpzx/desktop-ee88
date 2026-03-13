@@ -58,6 +58,7 @@ import { useI18n } from "layui-component/index";
 import PageLayout from "../../components/PageLayout.vue";
 import api from "../../utils/api";
 import feedback from "../../utils/feedback";
+import { sortByTime } from "../../utils/sort_by_time";
 
 const { t } = useI18n();
 const loading = ref(false);
@@ -102,7 +103,7 @@ async function fetchData() {
     if (searchForm.status) params.status = searchForm.status;
 
     const res = await api.get("/api/proxy/deposit-history", { params });
-    tableData.value = res.data.data || [];
+    tableData.value = sortByTime(res.data.data || [], "create_time");
     pagination.total = res.data.total || 0;
   } catch (err: any) {
     feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");

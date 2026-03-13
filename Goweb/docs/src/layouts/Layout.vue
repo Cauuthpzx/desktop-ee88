@@ -891,6 +891,7 @@ export default {
   position: absolute;
   width: calc(100% - 200px);
   height: calc(100% - 60px);
+  overflow-y: auto;
 }
 
 .layui-layout-document .layui-header .layui-form-switch {

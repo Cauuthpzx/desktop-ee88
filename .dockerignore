@@ -1,0 +1,11 @@
+.git
+GoDesktop/
+Goweb/node_modules/
+Goweb/.pnpm-store/
+Goweb/play/
+Goserver/
+*.exe
+*.dll
+.env
+.env.local
+.claude/

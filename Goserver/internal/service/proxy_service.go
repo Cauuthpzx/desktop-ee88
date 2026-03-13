@@ -355,6 +355,9 @@ func (s *ProxyService) fetchAllInternal(ctx context.Context, path string, params
 			mergeTotalDataField(totalData, k, v)
 		}
 	}
+	// Sort merged items theo thời gian giảm dần (mới nhất trước)
+	sortItemsByTime(allItems)
+
 	// Total = số items thực tế sau merge (không cộng dồn count upstream)
 	totalCount := len(allItems)
 	slog.Info("Merge done", "path", path, "success_agents", successCount, "total_items", totalCount)
@@ -599,6 +602,45 @@ func toFloat64(v interface{}) float64 {
 	default:
 		return 0
 	}
+}
+
+// sortItemsByTime sort items theo thời gian giảm dần (mới nhất trước).
+// Thử các field phổ biến: create_time, bet_time, date, login_time, register_time.
+func sortItemsByTime(items []json.RawMessage) {
+	if len(items) <= 1 {
+		return
+	}
+
+	type indexedTime struct {
+		time string
+		idx  int
+	}
+	times := make([]indexedTime, len(items))
+	for i, raw := range items {
+		var partial map[string]interface{}
+		_ = json.Unmarshal(raw, &partial)
+
+		var t string
+		for _, field := range []string{"create_time", "bet_time", "date", "login_time", "register_time"} {
+			if v, ok := partial[field]; ok {
+				if s, ok2 := v.(string); ok2 && s != "" {
+					t = s
+					break
+				}
+			}
+		}
+		times[i] = indexedTime{time: t, idx: i}
+	}
+
+	sort.SliceStable(times, func(a, b int) bool {
+		return times[a].time > times[b].time
+	})
+
+	sorted := make([]json.RawMessage, len(items))
+	for i, t := range times {
+		sorted[i] = items[t.idx]
+	}
+	copy(items, sorted)
 }
 
 // formatNumber format float64 thành string: integer nếu tròn, 2 decimal nếu không.

@@ -23,7 +23,7 @@ MSYS_BIN = "C:/msys64/mingw64/bin"
 GOSERVER_ENV = {
     "DB_PASSWORD": "hiepmun2021",
     "DB_HOST": "localhost",
-    "DB_PORT": "5432",
+    "DB_PORT": "5433",
     "DB_USER": "postgres",
     "DB_NAME": "goserver",
     "JWT_SECRET": "maxhub-dev-jwt-secret-2026",
@@ -721,11 +721,11 @@ class App(tk.Tk):
         panel.log("═══ Database Status ═══", "system")
 
         # Check if PostgreSQL port 5432 is listening
-        info = get_port_info(5432)
+        info = get_port_info(int(GOSERVER_ENV.get("DB_PORT", "5432")))
         if info:
-            panel.log(f"  PostgreSQL :5432 — {info['name']} (PID {info['pid']}) [{info['status']}]", "success")
+            panel.log(f"  PostgreSQL :{GOSERVER_ENV['DB_PORT']} — {info['name']} (PID {info['pid']}) [{info['status']}]", "success")
         else:
-            panel.log("  PostgreSQL :5432 — KHÔNG CHẠY", "error")
+            panel.log("  PostgreSQL :{GOSERVER_ENV['DB_PORT']} — KHÔNG CHẠY", "error")
             panel.log("  Hãy khởi động PostgreSQL trước.", "system")
             return
 
@@ -805,7 +805,7 @@ class App(tk.Tk):
         """Quét các port quan trọng, log vào Goserver panel."""
         panel = self.panels["Goserver"]
         panel.log("═══ Quét port ═══", "system")
-        for port in [8080, 5173, 5432, 3000, 3001, 4173]:
+        for port in [8080, 5173, int(GOSERVER_ENV.get("DB_PORT", "5432")), 3000, 3001, 4173]:
             info = get_port_info(port)
             if info:
                 panel.log(

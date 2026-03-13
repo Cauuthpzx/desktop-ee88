@@ -17,9 +17,10 @@
         <cite>{{ t("home.tagline") }}</cite>
       </div>
       <div class="site-download">
-        <router-link class="layui-inline site-down site-down-primary" to="/zh-CN/components">
-          {{ t("home.explore") }}
-        </router-link>
+        <a class="layui-inline site-down site-down-download" href="/GoDesktop-v1.0.zip" download>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          {{ t("home.download_pc") }}
+        </a>
         <a
           class="layui-inline site-down"
           href="javascript:void(0);"
@@ -209,6 +210,26 @@ const toggleSidebar = () => {
   background: #16baaa;
   border-color: #16baaa;
   color: #fff;
+}
+
+.site-download .site-down-download {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: #fff;
+  font-size: 15px;
+  padding: 0 28px;
+  height: 42px;
+  line-height: 42px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-download .site-down-download:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  transform: translateY(-2px);
 }
 
 .site-welcome {

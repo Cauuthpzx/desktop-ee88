@@ -29,6 +29,7 @@ function map_shared(shared: Record<string, any>, locale: string) {
       description: shared.home.description,
       tagline: shared.home.tagline,
       explore: shared.home.explore,
+      download_pc: shared.home.download_pc,
       lightMode: shared.home.light_mode,
       darkMode: shared.home.dark_mode,
       welcome: shared.home.welcome,

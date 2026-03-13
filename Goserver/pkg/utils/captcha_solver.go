@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os/exec"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -68,11 +67,7 @@ func (cs *CaptchaSolver) ensureWorker() error {
 	// Chặn child inherit parent stdout handle — tránh pipe leak khi worker exit.
 	devnull, _ := os.Open(os.DevNull)
 	cmd.Stderr = devnull
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
-		}
-	}
+	setSysProcAttr(cmd)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("stdin pipe: %w", err)

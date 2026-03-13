@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS agents (
     login_attempts INTEGER NOT NULL DEFAULT 0,
     last_login_at TIMESTAMP,
     auto_login BOOLEAN NOT NULL DEFAULT false,
+    encrypt_public_key TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -70,6 +71,22 @@ CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 CREATE INDEX IF NOT EXISTS idx_agents_is_active ON agents(is_active);
 `
 
+const migrateAddEncryptKey = `
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'agents' AND column_name = 'encrypt_public_key'
+    ) THEN
+        ALTER TABLE agents ADD COLUMN encrypt_public_key TEXT NOT NULL DEFAULT '';
+    ELSE
+        UPDATE agents SET encrypt_public_key = '' WHERE encrypt_public_key IS NULL;
+        ALTER TABLE agents ALTER COLUMN encrypt_public_key SET NOT NULL;
+        ALTER TABLE agents ALTER COLUMN encrypt_public_key SET DEFAULT '';
+    END IF;
+END $$;
+`
+
 const migrateEmailToUsername = `
 DO $$
 BEGIN
@@ -85,6 +102,9 @@ END $$;
 func Migrate(db *sqlx.DB) error {
 	slog.Info("Running database migrations...")
 	if _, err := db.Exec(schema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(migrateAddEncryptKey); err != nil {
 		return err
 	}
 	if _, err := db.Exec(migrateEmailToUsername); err != nil {

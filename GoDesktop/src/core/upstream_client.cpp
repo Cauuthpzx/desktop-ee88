@@ -13,6 +13,41 @@
 #include <algorithm>
 #include <memory>
 
+// ── Sort merged items theo thời gian giảm dần (mới nhất trước) ──
+// Thử các field phổ biến: create_time, bet_time, date
+static void sort_items_by_time(QJsonArray& items)
+{
+    if (items.size() <= 1) return;
+
+    // Chuyển QJsonArray → QVector để sort
+    QVector<QJsonValue> vec;
+    vec.reserve(items.size());
+    for (const auto& v : items)
+        vec.append(v);
+
+    std::stable_sort(vec.begin(), vec.end(), [](const QJsonValue& a, const QJsonValue& b) {
+        auto oa = a.toObject();
+        auto ob = b.toObject();
+
+        // Thử các time field phổ biến
+        QString ta, tb;
+        for (const auto& field : {"create_time", "bet_time", "date", "login_time", "register_time"}) {
+            ta = oa[QLatin1String(field)].toString();
+            if (!ta.isEmpty()) {
+                tb = ob[QLatin1String(field)].toString();
+                break;
+            }
+        }
+        if (ta.isEmpty()) return false; // Không tìm thấy field → giữ nguyên
+        return ta > tb; // Giảm dần
+    });
+
+    // Ghi lại vào QJsonArray
+    items = QJsonArray();
+    for (const auto& v : vec)
+        items.append(v);
+}
+
 static const char* k_default_base_url = "https://a2u4k.ee88dly.com";
 static const char* k_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                    "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -447,6 +482,9 @@ void UpstreamClient::fetch_all_internal(const QString& path,
         QString merged_key;
 
         void finalize() {
+            // Sort merged items theo thời gian giảm dần
+            sort_items_by_time(all_items);
+
             // Build merged cache
             if (self) {
                 MergedCacheEntry merged;

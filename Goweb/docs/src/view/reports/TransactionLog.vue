@@ -60,6 +60,7 @@ import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
 import api from "../../utils/api";
 import feedback from "../../utils/feedback";
+import { sortByTime } from "../../utils/sort_by_time";
 
 const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
@@ -128,7 +129,7 @@ async function fetchData() {
     if (searchForm.username) params.username = searchForm.username;
 
     const res = await api.get("/api/proxy/transaction-log", { params });
-    tableData.value = res.data.data || [];
+    tableData.value = sortByTime(res.data.data || [], "date");
     pagination.total = res.data.total || 0;
     if (res.data.total_data) {
       summaryData.value = [res.data.total_data];

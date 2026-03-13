@@ -89,6 +89,7 @@ import { reactive, ref, computed, onMounted } from "vue";
 import { useI18n } from "layui-component/index";
 import api from "../utils/api";
 import feedback from "../utils/feedback";
+import { sortByTime } from "../utils/sort_by_time";
 
 const { t } = useI18n();
 
@@ -139,7 +140,8 @@ async function fetchCustomers() {
     if (searchForm.sortDir) params.sort_dir = searchForm.sortDir;
 
     const res = await api.get("/api/customers", { params });
-    tableData.value = res.data.data || [];
+    const timeField = searchForm.sortField === "last_login" ? "login_time" : "register_time";
+    tableData.value = sortByTime(res.data.data || [], timeField);
     pagination.total = res.data.total || 0;
   } catch (err: any) {
     feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");

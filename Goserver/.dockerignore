@@ -1,0 +1,12 @@
+.git
+.env
+.env.local
+tmp/
+logs/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+.aider*

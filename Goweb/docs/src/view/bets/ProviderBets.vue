@@ -57,6 +57,7 @@ import PageLayout from "../../components/PageLayout.vue";
 import { useQuickDate } from "../../composables/useQuickDate";
 import api from "../../utils/api";
 import feedback from "../../utils/feedback";
+import { sortByTime } from "../../utils/sort_by_time";
 
 const { t } = useI18n();
 const { quickDateValues, dateForm, onQuickDateChange, resetDate } = useQuickDate();
@@ -103,7 +104,7 @@ async function fetchData() {
     if (searchForm.platformUsername) params.platform_username = searchForm.platformUsername;
 
     const res = await api.get("/api/proxy/provider-bets", { params });
-    tableData.value = res.data.data || [];
+    tableData.value = sortByTime(res.data.data || [], "bet_time");
     pagination.total = res.data.total || 0;
   } catch (err: any) {
     feedback.msgError(err.response?.data?.error || "Tải dữ liệu thất bại");

@@ -41,6 +41,11 @@
           <div class="pill"><span class="dot orange"></span>AI Powered</div>
           <div class="pill"><span class="dot blue"></span>Enterprise</div>
         </div>
+
+        <a href="/GoDesktop-v1.0.zip" download class="download-btn">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          {{ t('download_pc') }}
+        </a>
       </div>
 
       <!-- RIGHT PANEL — Form -->
@@ -354,6 +359,7 @@ const i18n: Record<string, Record<string, string>> = {
   vi: {
     brand_tagline: "Quản lý thông minh,<br>Kết nối mọi thứ",
     brand_desc: "Nền tảng quản lý tập trung giúp bạn kiểm soát, tự động hóa và tối ưu hiệu suất làm việc.",
+    download_pc: "Tải bản PC",
     tab_login: "Đăng nhập",
     tab_register: "Đăng ký",
     login_title: "Chào mừng trở lại",
@@ -405,6 +411,7 @@ const i18n: Record<string, Record<string, string>> = {
   en: {
     brand_tagline: "Smart Management,<br>Connect Everything",
     brand_desc: "A centralized management platform to help you control, automate, and optimize your workflow.",
+    download_pc: "Download PC",
     tab_login: "Login",
     tab_register: "Register",
     login_title: "Welcome Back",
@@ -456,6 +463,7 @@ const i18n: Record<string, Record<string, string>> = {
   zh: {
     brand_tagline: "智能管理,<br>连接一切",
     brand_desc: "一个集中管理平台，帮助您控制、自动化和优化工作流程。",
+    download_pc: "下载PC版",
     tab_login: "登录",
     tab_register: "注册",
     login_title: "欢迎回来",
@@ -975,6 +983,30 @@ onMounted(() => {
   z-index: 2;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--cyan), var(--orange));
+  border: none;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 255, 255, 0.3);
 }
 
 .pill {
